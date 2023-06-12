@@ -1,1 +1,0 @@
-"use strict";(self.webpackChunkmy_website=self.webpackChunkmy_website||[]).push([[790],{5503:e=>{e.exports=JSON.parse('{"title":"Data Structure","slug":"/category/data-structure","permalink":"/RulerChen-Website/docs/category/data-structure","navigation":{"next":{"title":"\u4f75\u67e5\u96c6(Disjoint Set)","permalink":"/RulerChen-Website/docs/Data Structure/test"}}}')}}]);
