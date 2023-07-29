@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://RulerChen.github.io/RulerChen-Website/blog</id>
     <title>RulerChen Blog</title>
-    <updated>2023-07-29T04:45:47.000Z</updated>
+    <updated>2023-07-29T04:47:56.000Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://RulerChen.github.io/RulerChen-Website/blog"/>
     <subtitle>RulerChen Blog</subtitle>
@@ -11,7 +11,7 @@
         <title type="html"><![CDATA[2023 PCHome Frontend Intern]]></title>
         <id>https://RulerChen.github.io/RulerChen-Website/blog/PCHome Intern</id>
         <link href="https://RulerChen.github.io/RulerChen-Website/blog/PCHome Intern"/>
-        <updated>2023-07-29T04:45:47.000Z</updated>
+        <updated>2023-07-29T04:47:56.000Z</updated>
         <summary type="html"><![CDATA[2023 年在 PCHome 前端實習的心得]]></summary>
         <content type="html"><![CDATA[<p>TBD</p>]]></content>
         <author>
