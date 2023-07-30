@@ -4,7 +4,7 @@
         <title>RulerChen Blog</title>
         <link>https://RulerChen.github.io/RulerChen-Website/blog</link>
         <description>RulerChen Blog</description>
-        <lastBuildDate>Sun, 30 Jul 2023 09:55:02 GMT</lastBuildDate>
+        <lastBuildDate>Sun, 30 Jul 2023 10:08:22 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <generator>https://github.com/jpmonette/feed</generator>
         <language>zh-Hant</language>
@@ -12,7 +12,7 @@
             <title><![CDATA[2023 PCHome Frontend Intern]]></title>
             <link>https://RulerChen.github.io/RulerChen-Website/blog/PCHome Intern</link>
             <guid>https://RulerChen.github.io/RulerChen-Website/blog/PCHome Intern</guid>
-            <pubDate>Sun, 30 Jul 2023 09:55:02 GMT</pubDate>
+            <pubDate>Sun, 30 Jul 2023 10:08:22 GMT</pubDate>
             <description><![CDATA[2023 年在 PCHome 前端實習的心得]]></description>
             <content:encoded><![CDATA[<p>TBD</p>]]></content:encoded>
             <category>2023 PCHome Frontend Summer Intern</category>
