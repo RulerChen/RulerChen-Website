@@ -1,0 +1,18 @@
+[
+  {
+    "title": "Frontend Intern",
+    "name": "PChome",
+    "icon": "img/pchome.jpg",
+    "iconBg": "#fff",
+    "date": "2023 Jul. - 2023 Aug.",
+    "points": ["React", "Next.js", "TypeScript"]
+  },
+  {
+    "title": "大學二年級",
+    "name": "國立台灣大學 - 資訊管理學系",
+    "icon": "img/ntu.png",
+    "iconBg": "#fff",
+    "date": "2022 Sep. - 2023 Jun.",
+    "points": ["Data Structure and Algorithm", "MERN Stack"]
+  }
+]

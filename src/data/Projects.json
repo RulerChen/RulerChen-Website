@@ -1,0 +1,46 @@
+[
+  {
+    "id": 1,
+    "projectTitle": "寶物交易平台",
+    "projectDescribe": "由 MERN 打造的交易平台，可以提供安全的帳號密碼交易",
+    "projectImage": "img/project/1-1.png",
+    "githubUrl": "",
+    "deployUrl": "",
+    "tech": [
+      {
+        "name": "React",
+        "tag": "https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB"
+      },
+      {
+        "name": "Node.js",
+        "tag": "https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white"
+      },
+      {
+        "name": "Express.js",
+        "tag": "https://img.shields.io/badge/Express.js-000000?style=for-the-badge&logo=express&logoColor=white"
+      },
+      {
+        "name": "MongoDB",
+        "tag": "https://img.shields.io/badge/MongoDB-4EA94B?style=for-the-badge&logo=mongodb&logoColor=white"
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "projectTitle": "餐廳介紹官網",
+    "projectDescribe": "為一間餐廳打造的官網，可以為用戶提供菜單和推薦商品，並接入線上的停車場api",
+    "projectImage": "img/project/2-1.png",
+    "githubUrl": "https://github.com/RulerChen/ssbookscoffee_offical_website",
+    "deployUrl": "",
+    "tech": [
+      {
+        "name": "React",
+        "tag": "https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB"
+      },
+      {
+        "name": "Material UI",
+        "tag": "https://img.shields.io/badge/Material%20UI-007FFF?style=for-the-badge&logo=mui&logoColor=white"
+      }
+    ]
+  }
+]

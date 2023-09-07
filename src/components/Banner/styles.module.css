@@ -1,0 +1,105 @@
+@font-face {
+  font-family: 'Roboto Mono';
+  src: url('../../../static/font/RobotoMono-Bold.ttf') format('truetype');
+}
+
+.homeContainer {
+  height: calc(100vh - 60px);
+  width: 100%;
+}
+
+.homeRow {
+  display: flex;
+  width: 90%;
+  height: 60%;
+  margin-top: 10%;
+  margin-bottom: 15%;
+  margin-left: auto;
+  margin-right: auto;
+  font-family: 'Roboto Mono', monospace;
+}
+
+.imgDiv {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 50%;
+  padding: 30px;
+  animation-name: fadeUp;
+  animation-duration: 2s;
+}
+
+.profilePic {
+  object-fit: contain;
+  width: 400px;
+}
+
+.home_details {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 500px;
+  font-family: 'Roboto Mono', monospace;
+  animation-name: fadeUp;
+  animation-duration: 2s;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .imgDiv {
+    display: none;
+  }
+  .home_details {
+    align-items: center;
+  }
+}
+
+.personal_profile__workContainer {
+  margin-bottom: 40px;
+  height: 150px;
+  width: 100%;
+}
+
+.personal_profile__name {
+  font-size: 44px;
+  line-height: 50px;
+  font-weight: 700;
+  margin-top: 40px;
+  margin-bottom: 10px;
+  text-align: left;
+}
+
+.personal_profile__work {
+  font-size: 20px;
+  line-height: 24px;
+  text-align: left;
+}
+
+.socialMedia {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.socialMedia a {
+  font-size: 50px;
+  color: white;
+  margin-right: 40px;
+  opacity: 0.5;
+}
+
+.socialMedia a:hover {
+  opacity: 1;
+}
