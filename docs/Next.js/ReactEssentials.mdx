@@ -1,0 +1,166 @@
+---
+title: '[Next.js] React Essentials'
+sidebar_position: '950'
+description: 'React Essentials in Next.js'
+keywords: ['React', 'Next.js', 'React Essentials']
+---
+
+## Server Components
+
+server components 可以帶來更好的性能，而 client components 則可以帶來更好的互動性。
+
+### Server Components 的思考
+
+<img
+  src="https://nextjs.org/_next/image?url=%2Fdocs%2Fdark%2Fthinking-in-server-components.png&w=1920&q=75&dpl=dpl_3oDWc9cSfQSRuDKxnDZFWn3czuMQ"
+  style={{ width: '900px' }}
+  alt="server components"
+/>
+
+如果我們將頁面拆成一個個的小組件，我們會發現這些東西大部分都是非互動性的，我們可以在 server 端就渲染。
+
+### 為甚麼要使用 Server Components
+
+server components 可以讓開發人員更好的利用 server infrastructure，可以在 server 端獲取資料，並且降低 javascript bundle size 來提升效能。
+
+有了 server components，初始頁面的加載將會更快，並且 client 端的 javascript bundle size 也會更小。
+client side 的 javascript bundle size 會變得可快取和預測，只有需要互動的組件才需要添加 javascript。
+
+當你使用 Next.js 時，你的初始頁面將在 server 端渲染，然後這個 HTML 頁面會在連瀏覽器中漸進增強 ( progressively enhanced )，
+並用非同步的方式加載 Next 和 React 的 runtime 來為頁面添加互動性。
+
+在 Next.js 13 App Router 中，所有的組件預設都是 server components。
+
+## Client Components
+
+你可以在檔案的最上方宣告 `'use client'` 來讓組件成為 client components。
+
+```tsx showLineNumbers
+'use client';
+
+import { useState } from 'react';
+
+export default function Counter() {
+  const [count, setCount] = useState(0);
+
+  return (
+    <div>
+      <p>You clicked {count} times</p>
+      <button onClick={() => setCount(count + 1)}>Click me</button>
+    </div>
+  );
+}
+```
+
+`'use client'` 是 server-only 和 client 的分界點，導入其中的都是 client components。
+
+## 何時應該使用 Server Components 或 Client Components
+
+import image2 from '../../static/img/next/react essential/2.png';
+
+<img
+  src={image2}
+  style={{ width: '900px' }}
+  alt="when to use server components or client components"
+/>
+
+## 模式
+
+### 將 Client components 移到底部
+
+舉例來說，如果你的 layout 中有一個可互動的搜尋框，你可以單獨將搜尋框變成子組件，而不是讓整個檔案變成 client components。
+
+```tsx title=app/layout.tsx showLineNumbers
+import SearchBar from './searchbar';
+import Logo from './logo';
+
+// Layout is a Server Component by default
+export default function Layout({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <nav>
+        <Logo />
+        <SearchBar />
+      </nav>
+      <main>{children}</main>
+    </>
+  );
+}
+```
+
+### 將 Client 和 Server components 結合
+
+client 和 server components 可以在一棵 component tree 中共存。
+
+React 會做的處理如下：
+
+- React 會在傳送給 client 之前渲染好所有的 server components，包括被包在 client components 中的 server components，而 client components 則會被跳過。
+- 在 client side 中， React 會渲染 client components，並將它插入到 server components 中。
+- 在初始頁面渲染期間，server 和 client components 都會被預渲染成 HTML。
+
+### 將 Server components 放到 Client components 中
+
+在 Next 中並不支援在 client components 中直接 import server components，所以我們要用將 server components 包成 children 。
+
+```tsx title=app/clients-components.tsx showLineNumbers
+'use client';
+
+// You cannot import a Server Component into a Client Component.
+'use client';
+
+import { useState } from 'react';
+
+export default function ExampleClientComponent({ children }: { children: React.ReactNode }) {
+  const [count, setCount] = useState(0);
+
+  return (
+    <>
+      <button onClick={() => setCount(count + 1)}>{count}</button>
+
+      {children}
+    </>
+  );
+}
+```
+
+### 從 Server components 傳遞 props 給 Client components
+
+資料必須是可序列化的(serializable)，因此我們不能傳遞 function 之類的東西。
+
+### 將 server-only 的 code 排除在 Client components 之外 (poisoning)
+
+你可以使用 `server-only` 來避免這個問題。
+
+## Context
+
+我們無法在 server components 中使用 React Context，因為它沒有 React State。
+
+```tsx title=app/theme-provider.tsx showLineNumbers
+'use client';
+
+import { createContext } from 'react';
+
+export const ThemeContext = createContext({});
+
+export default function ThemeProvider({ children }) {
+  return <ThemeContext.Provider value="dark">{children}</ThemeContext.Provider>;
+}
+```
+
+```tsx title=app/pages.tsx showLineNumbers
+import ThemeProvider from './theme-provider';
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html>
+      <body>
+        <ThemeProvider>{children}</ThemeProvider>
+      </body>
+    </html>
+  );
+}
+```
+
+### 在 Server components 中共享 fetch requests
+
+`fetch` 會自動去除重複的請求，因此我們不需要使用 props 來傳遞。

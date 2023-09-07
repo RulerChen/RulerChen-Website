@@ -1,0 +1,157 @@
+---
+title: '[雜談] 關於前端 Render 的各種方式 (CSR SSG SSR)'
+sidebar_position: '1000'
+description: '包含了 CSR SSR SSG 等等的各種前端渲染方法的介紹'
+keywords: ['Render', 'SSR', 'CSR', 'Frontend', '前端渲染']
+---
+
+## Performance Terminology
+
+### 載入速度
+
+- FCP (First Contentful Paint) : 瀏覽器渲染第一個元素所需的時間
+- FMP (First Meaningful Paint) : 能在畫面上看到有意義的內容所需的時間
+- LCP (Largest Contentful Paint) : 畫面上最大的元素被渲染所需的時間
+- TTFB (Time To First Byte) : 從發出請求到收到第一個位元組的時間，表示瀏覽器與伺服器建立連接並開始下載頁面內容所需的時間
+
+### 互動反應性
+
+- TTI (Time To Interactive) : 瀏覽器變得可交互所需的時間 (Ex: 按鈕可以點擊)
+- TBT (Total Blocking Time) : 在加載過程中，用戶被阻止交互的總時間
+- FID (First Input Delay) : 用戶首次與頁面交互時頁面響應的時間
+- INP (Interaction to Next Paint) : 用戶與頁面交互到下一個頁面渲染完成的時間
+
+### 視覺穩定性
+
+- CLS (Cumulative Layout Shift) : 圖片偏移的距離 (載入期間改變位置)
+
+## SEO 簡介
+
+搜尋引擎最佳化一直是很多公司所關注的議題，因為透過搜尋引擎的流量，可以讓公司的網站獲得更多的曝光率，進而獲得更多的用戶。
+
+在 Google 目前所公布的 [Core Web Vitals](https://support.google.com/webmasters/answer/9205520?hl=en)
+中除了是否提供 RWD (行動裝置友善) 和 HTTPS 以外，最重要的就是包含了 LCP、FID、INP、CLS 這幾項 (隨時都會變動)。
+
+## CSR (Client Side Render)
+
+Client Side Render (客戶端渲染)，顧名思義就是將所有的渲染工作都交給瀏覽器來完成，CSR 的渲染大概如下:
+
+1. 透過網址連到網站，並發送請求給伺服器
+2. 伺服器回傳一個空的 HTML 容器，在 `create-react-app` 中，這個容器是 `<div id="root"></div>`
+3. 瀏覽器下載相關的 javascript bundle，在這段時間內頁面會是白的
+4. 執行 javascript bundle，透過 React 將元件渲染到 HTML 容器中
+
+<img
+  src="https://web-dev.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/JFxoxQe847ntctVOdn5u.png?auto=format&w=845"
+  style={{ width: '900px' }}
+  alt="CSR"
+/>
+
+優點 :
+
+- 頁面的交互性很強，因為渲染都在客戶端完成，不須重新下載 HTML，只需要在客戶端重新渲染變動的部分
+- 最快的 TTFB，因為伺服器只回傳一個空的 HTML 容器，不需要等待伺服器渲染
+
+缺點 :
+
+- SEO 表現不好，因為一開始的頁面是空的，Google 的機器人就會把你丟到後面的 queue 去排隊等著被搜
+- 在手機或一些較老舊的電腦上表現會不好，因為需要下載大量的 javascript bundle，並且需要等待 javascript bundle 執行完畢才能看到頁面
+
+## CSR with pre-rendering
+
+這個方法是為了解決 CSR 的 SEO 問題。
+我們可以預渲染 HTML，讓機器人在抓取頁面時，可以抓到完整的 HTML。
+
+import image2 from '../../static/img/web/render/2.png';
+
+<img src={image2} style={{ width: '900px' }} alt="CSR with pre-rendering" />
+
+優點 :
+
+- 解決了 CSR 的 SEO 問題
+
+缺點 :
+
+- 建構時間很長
+- 缺乏靈活性
+
+## SSR with hydration
+
+在第一次加載的時候提供靜態的 HTML 檔案，之後就由客戶端的 javascript 接手工作。
+
+<img
+  src="https://hackmd.io/_uploads/Hk8H0V-jn.png"
+  style={{ width: '900px' }}
+  alt="SSR with hydration"
+/>
+
+優點 :
+
+- 沒有 CSR 的白畫面問題
+- FCP 表現不錯
+
+缺點 :
+
+- TTI 較差
+- 產生重覆的 HTML
+- 開發較為困難，程式碼需要可以跑在瀏覽器和 Node.js 上
+
+## ISR (Incremental Static Regeneration)
+
+產生靜態檔案並設定一個快取時間，當快取時間過期時就重新獲取資料。
+
+<img src="https://hackmd.io/_uploads/Sk_z6HWon.png" style={{ width: '900px' }} alt="ISR" />
+
+優點 :
+
+- 載入速度快，因為是靜態檔案
+
+缺點 :
+
+- 用戶可能會看到過期介面
+
+## SSG (Static Site Generator)
+
+在 build 的時候進行渲染，並將渲染結果儲存成靜態的 HTML 檔案，因此適合存放不會改變內容的東西。
+
+<img src="https://hackmd.io/_uploads/r14--BWoh.png" style={{ width: '900px' }} alt="SSG" />
+
+優點 :
+
+- 都是靜態頁面，因此很好搭配 CDN 來減輕伺服器負擔
+- 非常適合 SEO
+
+缺點 :
+
+- 只要頁面變動就必須重新打包
+- 需要打包所有的頁面變成靜態檔案
+
+## SSR (Server Side Render)
+
+在古早以前 (PHP 的時代)，瀏覽器都是直接跟伺服器要完整的 HTML 檔案。
+
+<img
+  src="https://web-dev.imgix.net/image/T4FyVKpzu4WKF1kBNvXepbi08t52/SRsl2UcHyJquzuJkdTHR.png?auto=format&w=845"
+  style={{ width: '900px' }}
+  alt="SSR"
+/>
+
+優點 :
+
+- 非常適合 SEO
+- 非常快的 FCP，因為客戶端不需要下載過多的 javascript
+
+缺點 :
+
+- 跳轉頁面時需重新載入，用戶體驗極差 (INP 差)
+- 伺服器負擔大
+
+## 總結
+
+<img src="https://hackmd.io/_uploads/HJ1TJNZj2.png" style={{ width: '900px' }} alt="總結" />
+
+## 參考資料
+
+- [Rendering on the Web](https://web.dev/rendering-on-the-web/)
+- [Web.dev](https://web.dev/learn-core-web-vitals/?utm_source=lighthouse&utm_medium=devtools)
+- [[教學] SSR 與 CSR 深度解析：從渲染方式到效能優化](https://shubo.io/rendering-patterns/)

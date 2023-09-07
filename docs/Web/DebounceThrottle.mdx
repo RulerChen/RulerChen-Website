@@ -1,0 +1,116 @@
+---
+title: "[Javascript] Debounce (防抖) 和 Throttle (節流)"
+sidebar_position: "10"
+description: ""
+keywords: ["Javascript", "Debounce", "防抖", "Throttle", "節流"]
+---
+
+## 什麼是 Debounce (防抖)
+
+在搜尋框時，如果我們每輸入一個字都要發送請求，那麼會造成伺服器的負擔，這時候我們可以使用 Debounce 來解決這個問題。
+
+Debounce 的做法是直到最後一次輸入後再經過一段時間才會發送請求。
+
+```html title="debounce.html" showLineNumbers
+  <body>
+    <input type="text" />
+    <h2>Default: <span id="default"></span></h2>
+    <h2>Debounce: <span id="debounce"></span></h2>
+    <div class="result"></div>
+
+    <script>
+      const input = document.querySelector("input");
+      const result = document.querySelector(".result");
+      const debounceText = document.querySelector("#debounce");
+
+      input.addEventListener("input", (e) => {
+        updateDebounceText(e.target.value);
+        renderAPIData(e.target.value);
+      });
+
+      const updateDebounceText = debounce((text) => {
+        debounceText.textContent = text;
+      }, 1500);
+
+      function debounce(callback, time = 1000) {
+        let timer;
+        return (...args) => {
+          clearTimeout(timer);
+          timer = setTimeout(() => {
+            callback(...args);
+          }, time);
+        };
+      }
+    </script>
+  </body>
+</html>
+```
+
+## 什麼是 Throttle (節流)
+
+在滾動頁面時，如果我們每滾動一點就要發送請求，那麼會造成伺服器的負擔，這時候我們可以使用 Throttle 來解決這個問題。
+
+Throttle 的做法是在一段時間內只發送一次請求。
+
+```html title=throttle.html showLineNumbers
+    <body>
+    <div class="result">
+      <p>123</p>
+      <p>123</p>
+      <p>123</p>
+      <p>123</p>
+      <p>123</p>
+      <p>123</p>
+      <p>123</p>
+      <p>123</p>
+      <p>123</p>
+      <p>123</p>
+      <p>123</p>
+      <p>123</p>
+      <p>123</p>
+      <p>123</p>
+      <p>123</p>
+      <p>123</p>
+      <p>123</p>
+      <p>123</p>
+    </div>
+    <script>
+      const result = document.querySelector(".result");
+
+      function throttle(callback, time = 1000) {
+        let timer;
+        return function () {
+          let context = this;
+          let args = arguments;
+          if (timer) {
+            return;
+          }
+
+          timer = setTimeout(() => {
+            callback.apply(context, args);
+            timer = null;
+          }, time);
+        };
+      }
+
+      function scroll() {
+        let clientHeight = document.documentElement.clientHeight;
+        let scrollTop = document.documentElement.scrollTop;
+        let scrollHeight = document.documentElement.scrollHeight;
+
+        console.log(scrollTop + clientHeight, scrollHeight);
+        if ((scrollTop + clientHeight) / scrollHeight >= 0.9) {
+          console.log("bottom...");
+          for (let i = 0; i <= 10; i++) {
+            let p = document.createElement("p");
+            p.textContent = "456456";
+            result.appendChild(p);
+          }
+        }
+      }
+
+      document.addEventListener("scroll", throttle(scroll));
+    </script>
+  </body>
+</html>
+```

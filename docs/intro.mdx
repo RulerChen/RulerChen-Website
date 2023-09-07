@@ -1,0 +1,166 @@
+---
+title: Intro
+description: A Intro Page
+sidebar_position: "1"
+keywords: ["intro", "introduction", "hello world", "介紹"]
+---
+
+## Introduction
+
+This website is built with [Docusaurus 2](https://v2.docusaurus.io/), a modern static website generator.
+
+## Markdown
+
+### Admonitions
+
+#### Code
+
+```markdown title="Admonitions.md" showLineNumbers=True
+:::note
+
+Some **content** with _Markdown_ `syntax`. Check [this `api`](#).
+
+:::
+
+:::tip
+
+Some **content** with _Markdown_ `syntax`. Check [this `api`](#).
+
+:::
+
+:::info
+
+Some **content** with _Markdown_ `syntax`. Check [this `api`](#).
+
+:::
+
+:::caution
+
+Some **content** with _Markdown_ `syntax`. Check [this `api`](#).
+
+:::
+
+:::danger
+
+Some **content** with _Markdown_ `syntax`. Check [this `api`](#).
+
+:::
+```
+
+#### Demo
+
+:::note
+
+Some **content** with _Markdown_ `syntax`. Check [this `api`](#).
+
+:::
+
+:::tip
+
+Some **content** with _Markdown_ `syntax`. Check [this `api`](#).
+
+:::
+
+:::info
+
+Some **content** with _Markdown_ `syntax`. Check [this `api`](#).
+
+:::
+
+:::caution
+
+Some **content** with _Markdown_ `syntax`. Check [this `api`](#).
+
+:::
+
+:::danger
+
+Some **content** with _Markdown_ `syntax`. Check [this `api`](#).
+
+:::
+
+## JSX
+
+### import components
+
+```jsx title="Component.jsx" showLineNumbers=True
+import Component from "@site/src/components/Component";
+```
+
+### using Tabs
+
+#### Code
+
+```jsx title="Tabs.jsx" showLineNumbers=True
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
+
+<Tabs
+  defaultValue="apple"
+  values={[
+    { label: "Apple", value: "apple" },
+    { label: "Orange", value: "orange" },
+    { label: "Banana", value: "banana" },
+  ]}
+>
+  <TabItem value="apple">This is an apple 🍎</TabItem>
+  <TabItem value="orange">This is an orange 🍊</TabItem>
+  <TabItem value="banana">This is a banana 🍌</TabItem>
+</Tabs>;
+```
+
+#### Demo
+
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
+
+<Tabs
+  defaultValue="apple"
+  values={[
+    { label: "Apple", value: "apple" },
+    { label: "Orange", value: "orange" },
+    { label: "Banana", value: "banana" },
+  ]}
+>
+  <TabItem value="apple">This is an apple 🍎</TabItem>
+  <TabItem value="orange">This is an orange 🍊</TabItem>
+  <TabItem value="banana">This is a banana 🍌</TabItem>
+</Tabs>
+
+### using Details
+
+#### Code
+
+```jsx title="Detail.jsx" showLineNumbers=True
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
+
+<details>
+  <summary>Samples of parsing failures</summary>
+
+  <Tabs groupId="jsx-and-md">
+    <TabItem value="Problem">
+      <div>
+        <span style={{ color: "red" }}>Highlighted text</span> but afterwards _Markdown_ <strong> doesn't work </strong>
+      </div>
+    </TabItem>
+  </Tabs>
+</details>;
+```
+
+#### Demo
+
+<details>
+<summary>Samples of parsing failures</summary>
+
+<Tabs groupId="jsx-and-md">
+<TabItem value="Problem">
+<div>
+
+<span style={{ color: "red" }}>Highlighted text</span> but afterwards _Markdown_ <strong> doesn't work </strong>
+
+</div>
+</TabItem>
+</Tabs>
+
+</details>
