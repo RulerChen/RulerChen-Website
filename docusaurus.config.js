@@ -54,7 +54,7 @@ const config = {
         sitemap: {
           changefreq: 'daily',
           priority: 0.5,
-          ignorePatterns: ['/docs/intro/', '/blog/', '/blog/archive/'],
+          ignorePatterns: ['/RulerChen-Website/blog/archive/', '/RulerChen-Website/search/', '/RulerChen-Website/docs/intro/'],
           filename: 'sitemap.xml',
         }
       })
