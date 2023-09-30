@@ -51,7 +51,16 @@ const config = {
           trackingID: 'G-8BEHDPLQMG',
           anonymizeIP: true
         },
-      })
+      }),
+      '@docusaurus/preset-classic',
+      {
+        sitemap: {
+          changefreq: 'daliy',
+          priority: 0.5,
+          ignorePatterns: ['/docs/intro/', '/blog/', '/blog/archive/'],
+          filename: 'sitemap.xml',
+        },
+      },
     ]
   ],
 

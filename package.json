@@ -16,6 +16,7 @@
   "dependencies": {
     "@docsearch/react": "^3.5.0",
     "@docusaurus/core": "2.4.1",
+    "@docusaurus/plugin-sitemap": "^2.4.3",
     "@docusaurus/preset-classic": "2.4.1",
     "@mdx-js/react": "^1.6.22",
     "clsx": "^1.2.1",
@@ -29,8 +30,8 @@
   },
   "devDependencies": {
     "@docusaurus/module-type-aliases": "2.4.1",
-    "gh-pages": "^5.0.0",
-    "@giscus/react": "^2.3.0"
+    "@giscus/react": "^2.3.0",
+    "gh-pages": "^5.0.0"
   },
   "browserslist": {
     "production": [
