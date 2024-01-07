@@ -1,0 +1,43 @@
+---
+title: '[Docker] Docker 簡介'
+sidebar_position: '10'
+description: 'Docker 簡介'
+keywords: ['Docker Introduction', 'Docker 簡介']
+---
+
+# 甚麼是容器 (Container)
+
+容器是一種快速的打包技術，可以將應用程式和它的依賴項打包到一個映像檔中，使我們可以輕易地攜帶和搬遷。
+
+容器又被稱作 Linux Container (LXC)， 是一種作業系統層級的虛擬化技術，
+主要透過 Namespace 來隔離各個 Container 的資源，包含 Process、Network、File System、User、IPC、UTS 等等，
+以及 Cgroups 來限制各個 Container 的資源使用量，包含 CPU、Memory、Disk I/O、Network 等等。
+
+![](/img/docker/2.webp)
+
+容器具有以下特點：
+
+- 輕量化： 跟虛擬機相比，容器不需要 Guest OS，因此容器的體積比虛擬機小很多。
+
+![](/img/docker/1.webp)
+
+- 可移植性： 容器可以在任何支援容器的機器上運行，而不需要任何修改。
+- 標準化： 容器的格式是標準化的(runtime、image)，因此可以很容易地將容器部署到任何支援容器的機器上。
+
+# 甚麼是 Docker
+
+Docker 是一個容器的實例(Instance)，是一種 client-server 架構的應用程式，
+Docker client 使用 REST API 並透過 UNIX 的 socker 來跟 Docker daemon 溝通，
+而 Docker daemon 則是一個在背景或遠端執行的服務，
+以下是 Docker 的主要元件：
+
+![](/img/docker/3.webp)
+
+- Docker Daemon: 負責監聽 Docker API 請求，管理 Docker 物件，例如 Image、Container、Network、Volume 等等，同時也可以跟其他 Docker Daemon 進行溝通。
+- Docker Client: 負責跟 Docker Daemon 溝通，並將使用者的請求轉換成 Docker API 請求。
+- Docker Registry: 負責儲存 Docker Image，其中比較有名的是 Docker Hub。
+- Docker Object: 包含了以下幾種物件
+  - Image: 一個唯讀的模板，可以用來建立 Container，大部分是由官方提供的 Image 加上一些使用者的指令組成。
+  - Container: 一個 Image 的執行實例。
+  - Volume: 用來儲存 Container 的資料，可以被 Container 進行讀寫，主要方式有 Bind Mount、Volume 兩種。
+  - Network: 用來連接 Container 的網路介面，使 Container 可以互相溝通。
