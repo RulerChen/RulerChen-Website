@@ -42,5 +42,31 @@
         "tag": "https://img.shields.io/badge/Material%20UI-007FFF?style=for-the-badge&logo=mui&logoColor=white"
       }
     ]
+  },
+  {
+    "id": 3,
+    "projectTitle": "Join us",
+    "projectDescribe": "一個可以讓用戶新增和管理各種活動的平台",
+    "projectImage": "img/project/3-1.png",
+    "githubUrl": "https://github.com/RulerChen/112-1-Database-Final",
+    "deployUrl": "",
+    "tech": [
+      {
+        "name": "React",
+        "tag": "https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB"
+      },
+      {
+        "name": "Express.js",
+        "tag": "https://img.shields.io/badge/Express.js-000000?style=for-the-badge&logo=express&logoColor=white"
+      },
+      {
+        "name": "PostgreSQL",
+        "tag": "https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white"
+      },
+      {
+        "name": "shadcn/ui",
+        "tag": "https://img.shields.io/badge/shadcn%2Fui-000000?style=for-the-badge&logo=SHADCNUI&logoColor=white"
+      }
+    ]
   }
 ]

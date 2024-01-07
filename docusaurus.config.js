@@ -119,6 +119,7 @@ const config = {
         copyright: `Copyright © ${new Date().getFullYear()} RulerChen, Inc. Built with Docusaurus.`
       },
       prism: {
+        additionalLanguages: ['powershell'],
         theme: lightTheme,
         darkTheme: darkTheme
       }
