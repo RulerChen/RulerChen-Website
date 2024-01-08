@@ -1,11 +1,11 @@
 ---
-title: '[Docker] Docker 簡介'
+title: '[Docker] Docker Introduction'
 sidebar_position: '10'
 description: 'Docker 簡介'
 keywords: ['Docker Introduction', 'Docker 簡介']
 ---
 
-# 甚麼是容器 (Container)
+## 甚麼是容器 (Container)
 
 容器是一種快速的打包技術，可以將應用程式和它的依賴項打包到一個映像檔中，使我們可以輕易地攜帶和搬遷。
 
@@ -24,11 +24,12 @@ keywords: ['Docker Introduction', 'Docker 簡介']
 - 可移植性： 容器可以在任何支援容器的機器上運行，而不需要任何修改。
 - 標準化： 容器的格式是標準化的(runtime、image)，因此可以很容易地將容器部署到任何支援容器的機器上。
 
-# 甚麼是 Docker
+## 甚麼是 Docker
 
 Docker 是一個容器的實例(Instance)，是一種 client-server 架構的應用程式，
-Docker client 使用 REST API 並透過 UNIX 的 socker 來跟 Docker daemon 溝通，
-而 Docker daemon 則是一個在背景或遠端執行的服務，
+Docker client 使用 Restful API 並透過 UNIX 的 socket 來跟 Docker daemon 溝通，
+而 Docker daemon 則是一個在背景或遠端執行的服務。
+
 以下是 Docker 的主要元件：
 
 ![](/img/docker/3.webp)
