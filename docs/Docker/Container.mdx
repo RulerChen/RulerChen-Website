@@ -5,4 +5,53 @@ description: Docker Container
 keywords: [Docker Container, Docker 容器]
 ---
 
-# 甚麼是 Docker Container
+## 甚麼是 Docker Container
+
+Docker Container 是一個正在運行中的 Docker Image，
+它複製了 Docker Image 並在上面增加了一層可寫的層(container layer)，
+可以允許使用者在上面進行修改。
+
+## Container 跟 VM 的優缺點
+
+- 由於 Container 只是一個運行在 Host OS 上的 Process，因此所需的資源較少，啟動速度也較快。
+
+- VM 由於在硬體層以上都做了虛擬化，因此安全性較高，隔離性也較好。
+
+## 容器的簡易操作
+
+- 建立容器: 將容器的 80 port 對應到 Host 的 3001 port，加上 `-d` 可以讓容器在背景執行，加上 `--name` 可以指定容器名稱
+  ```bash
+  docker container run -p 3001:80 nginx
+  ```
+- 列出所有容器
+  ```bash
+  docker container ls -a
+  ```
+- 啟動容器
+  ```bash
+  docker container start <container id>
+  ```
+- 重新啟動容器
+  ```bash
+  docker container restart <container id>
+  ```
+- 關閉容器
+  ```bash
+  docker container stop <container id>
+  ```
+- 刪除容器: 加上 `-f` 可以強制刪除
+  ```bash
+  docker container rm <container id>
+  ```
+- 刪除所有容器
+  ```bash
+  docker container rm $(docker container ls -aq)
+  ```
+- 查看容器的 log: 加上 `-f` 可以持續監控 log
+  ```bash
+  docker container logs <container id>
+  ```
+- 進入容器: 加上 `-it` 可以進入互動模式
+  ```bash
+  docker container exec -it <container id> sh
+  ```
