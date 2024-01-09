@@ -4,3 +4,55 @@ sidebar_position: '40'
 description: Docker Volumes
 keywords: [Docker, Volumes]
 ---
+
+## 甚麼是 Docker Volumes
+
+在預設的情況下，容器中的檔案會被保存在容器的可寫層中。當容器被刪除時，這些檔案也會被刪除，
+且因為讀寫層是與容器綁定的，所以容器中的檔案也無法被其他容器存取。
+
+Docker 提供了兩種方式來解決這個問題，分別是 Data Volumes 與 Bind Mounts。
+
+## Docker Volumes 基本操作
+
+在 windows 上，我們無法直接訪問到 docker volume 的位置。
+
+- 拉取 MYSQL Image
+
+```bash
+docker pull mysql
+```
+
+- 建立容器
+
+  ```bash
+  docker container run -d --name mysql --env MYSQL_ROOT_PASSWORD=<password> -v <volumes_name>:/var/lib/mysql mysql
+  ```
+
+- 檢查 Volume 詳細資訊
+
+  ```bash
+  docker volume inspect mysql-data
+  ```
+
+- 刪除 Volume
+  ```bash
+  docker volume rm mysql-data
+  ```
+
+## Bind Mounts
+
+Bind Mounts 是將本地端的目錄掛載到容器中，這樣容器中的檔案就可以被本地端的目錄存取。
+
+- 建立容器: 可以使用 `${PWD}` 來取得目前的路徑
+
+  ```bash
+  docker container run -d --name mysql --env MYSQL_ROOT_PASSWORD=<password> -v <local_path>:/var/lib/mysql mysql
+  ```
+
+## 多個主機間共享 Volume
+
+假如我們有多台 Linux 的主機想要共享 Volume，且這三台主機互相都可以使用 SSH 連線，我們可以使用 SSHFS 來達成這個目的。
+
+除此之外，像 AWS S3 之類的雲端儲存服務也有提供 driver 來幫助我們達成這個目的。
+
+[參考連結](https://dockertips.readthedocs.io/en/latest/docker-volume/multi-host-share.html)

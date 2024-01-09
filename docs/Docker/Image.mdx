@@ -50,7 +50,7 @@ CMD ["node", "app.js"]
 - `WORKDIR`：設定工作目錄。
 - `COPY`：複製檔案或目錄到 Docker Image 中。
 - `RUN`：用於執行指令，像是安裝套件等等。
-- `EXPOSE`：設定 Container 的對外 Port。
+- `EXPOSE`：告訴使用者監聽的 Port，但實際上並不會開啟 Port，需要使用 `-p` 參數來開啟 Port。
 - `CMD`：設定 Container 啟動時要執行的指令。
 
 除此之外，還有一些其他的指令

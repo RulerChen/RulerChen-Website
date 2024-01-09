@@ -4,3 +4,81 @@ sidebar_position: '50'
 description: Docker Network
 keywords: [Docker Network]
 ---
+
+## 甚麼是 Docker Network
+
+在一個 Web Service 中，我們可能會有很多個 Container ，包括 Web Server、Application Server 或 Database 等等，
+我們需要透過 Docker Network 來讓這些 Container 之間可以互相溝通。
+
+## Docker Network Type
+
+Docker Network 有六種類型，分別是：
+
+- Bridge Network: 預設的網路，用來讓 Container 之間可以互相溝通。
+- Host Network: Container 與主機共享同一個網路，這樣就不需要經過 Port Forwarding 和 NAT。
+- none Network: Container 不會連接到任何網路，只有 loopback 介面，這樣就不會有網路連線。
+- Overlay Network: 用來讓多個 Docker Daemon 之間可以互相溝通，Docker Swarm 會使用到這個網路。
+- Macvlan Network: 可以指定 Container 一個 MAC Address。
+- IPvlan Network: 可以指令 Container 一個 IPv4 或 IPv6 Address。
+
+## Bridge Network
+
+Docker 預設會建立一個 Bridge Network，當我們建立一個 Container 時，Docker 會自動將 Container 加入 Bridge Network 中，
+這樣就可以讓 Container 之間可以互相溝通。
+
+我們可以透過 `docker network inspect bridge` 來查看 Bridge Network 的資訊。
+
+![docker-network-bridge](/img/docker/5.webp)
+
+如圖所示，我們每個 Container 都有一個 eht0，用來表示 Container 默認的網路接口，
+而 docker0 就是 Bridge Network 的網路接口，他會開 veth 的接口來連接到每個 Container 的 eth0。
+
+如果我們要在容器內連通外部網路，再經過 Bridge Network 的時候，會透過 NAT 來轉換 IP，使其可以連通外部網路。
+
+## 創建自己的 Network
+
+我們可以透過 `docker network create` 來創建自己的 Network，同時也可以指定 Network 的類型。
+
+```bash
+docker network create -d bridge my-bridge-network
+```
+
+在創建容器時，我們可以透過 `--network` 來指定容器要加入的 Network。
+
+```bash
+docker container run -d --name my-nginx --network my-bridge-network nginx
+```
+
+也可以將現有的容器加入到 Network 中。
+
+```bash
+docker network connect my-bridge-network my-nginx
+```
+
+也可以將 Container 從 Network 中移除。
+
+```bash
+docker network disconnect my-bridge-network my-nginx
+```
+
+:::info
+有一點要特別注意的是，預設的 bridge network 是不支援容器之間的 DNS 查詢的，也就是它無法透過容器名稱來查詢 IP。
+:::
+
+舉例來說，如果我們有兩個容器 box1 和 box2，
+我們使用 `docker container exec -it box1 ping box2` 來 ping box2，會發現 ping 不到。
+在有多個容器的執行環境裡面，我們可能會因為容器的創建順序導致 IP 不一樣，這樣就會造成容器之間無法溝通。
+
+## Docker Port Forwarding
+
+在 Docker 中，如果我們要讓外部的網路可以連進容器，我們可以透過 Port Forwarding 來達成。
+
+在這張圖中，host2 如果想拿到 host1 的 nginx 網頁，就可以透過 host1 的轉發來達成。
+
+![docker-port-forwarding](/img/docker/6.png)
+
+```bash
+docker container run -d --name host1 -p 8080:80 nginx
+```
+
+透過上面這行指令，我們就可以把 nginx 的 80 port 轉發到 host1 的 8080 port。
