@@ -14,12 +14,12 @@ keywords: [Docker Network]
 
 Docker Network 有六種類型，分別是：
 
-- Bridge Network: 預設的網路，用來讓 Container 之間可以互相溝通。
-- Host Network: Container 與主機共享同一個網路，這樣就不需要經過 Port Forwarding 和 NAT。
-- none Network: Container 不會連接到任何網路，只有 loopback 介面，這樣就不會有網路連線。
-- Overlay Network: 用來讓多個 Docker Daemon 之間可以互相溝通，Docker Swarm 會使用到這個網路。
-- Macvlan Network: 可以指定 Container 一個 MAC Address。
-- IPvlan Network: 可以指令 Container 一個 IPv4 或 IPv6 Address。
+- bridge: 預設的網路，用來讓 Container 之間可以互相溝通。
+- host: Container 與主機共享同一個網路，這樣就不需要經過 Port Forwarding 和 NAT。
+- none: Container 不會連接到任何網路，只有 loopback 介面，這樣就不會有網路連線。
+- overlay: 用來讓多個 Docker Daemon 之間可以互相溝通，Docker Swarm 會使用到這個網路。
+- macvlan: 可以指定 Container 一個 MAC Address。
+- ipvlan: 可以指令 Container 一個 IPv4 或 IPv6 Address。
 
 ## Bridge Network
 

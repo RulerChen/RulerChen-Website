@@ -4,3 +4,159 @@ sidebar_position: '60'
 description: Docker Compose
 keywords: [Docker Compose]
 ---
+
+## 甚麼是 Docker Compose
+
+在之前的介紹裡面，我們所講述的大部分只是單一的物件，
+但在實際的開發中，我們往往會需要多個物件來運作，
+我們可能會同時需要前端，後端，資料庫等等的服務，
+在 docker compose 中，我們可以透過一個 `docker-compose.yaml` 檔來定義我們所需要的服務，
+並使用 `docker compose up` 來啟動這些服務。
+
+## Docker Compose 指令
+
+- 啟動 docker compose
+
+  重新構建並啟動服務
+
+  ```bash
+  docker compose up -d --build
+  ```
+
+  刪除無用的容器
+
+  ```bash
+  docker compose up -d --remove-orphans
+  ```
+
+- 重新啟動 docker compose
+
+  常用於掛載 VOLUME 後，重新啟動服務
+
+  ```bash
+  docker compose restart
+  ```
+
+- 停止 docker compose
+
+  ```bash
+  docker compose stop
+  ```
+
+- 刪除 docker compose
+
+  ```bash
+  docker compose down
+  ```
+
+- 覆寫 docker compose
+
+  在 dev 和 prod 環境中，我們可能會有不同的設定，
+  我們可以透過 `docker-compose.dev.yaml` 和 `docker-compose.prod.yaml` 來覆寫 `docker-compose.yaml` 的設定。
+
+  [覆寫範例](https://docker.robertchang.me/compose/extend-column#docker-compose-%E7%9A%84%E8%A6%86%E5%AF%AB%E6%AA%94%E6%A1%88)
+
+  ```bash
+  docker compose -f docker-compose.yaml -f docker-compose.dev.yaml up -d
+  ```
+
+- 水平擴展
+
+  ```bash
+  docker compose up -d --scale web=3
+  ```
+
+## Docker Compose 範例
+
+[參考範例來源](https://github.com/dockersamples/example-voting-app)
+
+```yaml
+services:
+  vote:
+    build:
+      context: ./vote # Dockerfile 所在的資料夾
+      target: dev # 指定 Dockerfile 的 target
+    depends_on: # 指定依賴的服務
+      redis:
+        condition: service_healthy # 當 redis 服務健康時才啟動
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost'] # 健康檢查
+      interval: 15s # 每 15 秒檢查一次
+      timeout: 5s # 檢查逾時時間
+      retries: 3 # 重試次數
+      start_period: 10s # 啟動後 10 秒後才開始檢查
+    volumes:
+      - ./vote:/usr/local/app # 掛載本地資料夾到容器中
+    ports:
+      - '5000:80'
+    networks:
+      - front-tier
+      - back-tier
+
+  result:
+    build: ./result
+    entrypoint: nodemon --inspect=0.0.0.0 server.js
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./result:/usr/local/app
+    ports:
+      - '5001:80'
+      - '127.0.0.1:9229:9229'
+    networks:
+      - front-tier
+      - back-tier
+
+  worker:
+    build:
+      context: ./worker
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    networks:
+      - back-tier
+
+  redis:
+    image: redis:alpine
+    volumes:
+      - './healthchecks:/healthchecks'
+    healthcheck:
+      test: /healthchecks/redis.sh
+      interval: '5s'
+    networks:
+      - back-tier
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: 'postgres'
+      POSTGRES_PASSWORD: 'postgres'
+    volumes:
+      - 'db-data:/var/lib/postgresql/data'
+      - './healthchecks:/healthchecks'
+    healthcheck:
+      test: /healthchecks/postgres.sh
+      interval: '5s'
+    networks:
+      - back-tier
+
+  seed:
+    build: ./seed-data
+    profiles: ['seed']
+    depends_on:
+      vote:
+        condition: service_healthy
+    networks:
+      - front-tier
+    restart: 'no'
+
+volumes:
+  db-data:
+
+networks:
+  front-tier:
+  back-tier:
+```
