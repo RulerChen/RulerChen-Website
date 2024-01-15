@@ -1,0 +1,72 @@
+---
+title: '[Algo] Knuth Morris Pratt (KMP)'
+sidebar_position: '10'
+description: KMP 演算法
+keywords: [KMP, 字串, 搜尋, 演算法]
+---
+
+## 簡介
+
+KMP 演算法是一種比較兩個字串的演算法，其主要目的是在於找出字串中是否有另一個字串的存在，並且找出其存在的位置。
+相較於傳統的暴力法，KMP 演算法可以在 $O(n+m)$ 的時間複雜度內完成，其中 $n$ 為主字串的長度，$m$ 為子字串的長度。
+
+## Next 表
+
+Next 表是 KMP 演算法的核心，其主要目的是在於找出子字串中的最長相同前綴與後綴的長度，並且將其儲存起來，以供後續比較使用。
+
+我們以 `ABACABAB` 為例，其 Next 表為 `0 0 1 0 1 2 3 2`。
+
+```cpp
+vector<int> next(string& s) {
+    vector<int> n(s.size(), 0); // 創建一個長度跟子字串一樣長的 next 表
+
+    for (int i = 1, prefix = 0; i < s.size();) { // prefix 為最長相同前綴與後綴的長度， i 為字串的位置
+        if (s[i] == s[prefix]) { // 如果相同，則將 prefix + 1，並且將其儲存到 next 表中，並將字串的位置 +1
+            n[i] = ++prefix;
+            ++i;
+        } else if (prefix != 0) { // 如果不相同，則將 prefix 設為 next[prefix - 1]
+            prefix = n[prefix - 1];
+        } else {
+            n[i] = 0; // 如果 prefix 為 0 且不相同，則將 next[i] 設為 0，並將字串的位置 +1
+            ++i;
+        }
+    }
+    return n;
+}
+```
+
+除此之外，也有另一種建構 Next 表的方式，會導致 Next 表出現 -1 的情況，可以參考
+[這篇文章](https://yeefun.github.io/kmp-algorithm-for-beginners/#%E9%82%A3%E4%BA%9B%E9%95%B7%E5%BE%97%E4%B8%8D%E5%A4%AA%E4%B8%80%E6%A8%A3%E7%9A%84-next-%E8%A1%A8)。
+
+## KMP 演算法
+
+建構好 Next 表後，我們就可以開始進行 KMP 演算法的比較了。
+
+```cpp
+int kmp(string s, string t) {
+    vector<int> n = next(t); // 建構 Next 表
+
+    for (int i = 0, j = 0; i < s.size();) {
+        if (s[i] == t[j]) { // 如果相同，則將 i 與 j 都 +1
+            ++i;
+            ++j;
+        } else if (j > 0) { // 如果不相同，則將 j 設為 next[j - 1]
+            j = n[j - 1];
+        } else { // 如果 j 為 0 且不相同，則將 i +1
+            ++i;
+        }
+        if (j == t.size()) { // 如果 j 等於子字串的長度，則代表找到了子字串，回傳 i - j (子字串的起始位置)
+            return i - j;
+        }
+    }
+    return -1; // 如果找不到，則回傳 -1
+}
+```
+
+## 練習
+
+- [Leetcode 28. Find the Index of the First Occurrence in a String (Easy)](https://leetcode.com/problems/find-the-index-of-the-first-occurrence-in-a-string/)
+
+## 參考資料
+
+- [KMP 詳解](https://www.youtube.com/watch?v=af1oqpnH1vA&t=220s)，蠻好懂的影片，但是他的程式碼有錯誤。
