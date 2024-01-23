@@ -1,0 +1,61 @@
+---
+title: '[K8s] Kubernetes Introduction'
+sidebar_position: '10'
+description: 'Kubernetes 簡介'
+keywords: ['Kubernetes', 'k8s']
+---
+
+## Kubernetes 簡介
+
+Kubernetes 是一個開源的容器化平台，用於自動化部署、擴展和管理容器化應用程式。
+
+在現代的軟體開發中，廣泛使用了容器化技術來開發和部屬應用程式，
+因此需要有一種方法確保容器的狀態使服務可以不間斷的正常運作，
+而 Kubernetes 就是用來解決這個問題的。
+Kubernetes 提供了一個可彈性運行的分散式系統的框架，
+讓我們可以統一使用設定檔來輕鬆管理容器的狀態。
+
+Kubernetes 提供了以下重要功能(包含但不限於):
+
+- `Service Discovery & Load Balancing`: Kubernetes 可以自動分配網路和 DNS，並且可以自動做負載均衡。
+- `Storage Orchestration`: Kubernetes 可以自動掛載儲存系統，例如：本地儲存、公有雲服務商等等。
+- `Automated Rollouts & Rollbacks`: Kubernetes 可以自動部屬和更新應用程式，並且可以回滾到之前的版本。
+- `Automatic Bin Packing`: Kubernetes 可以自動分配容器到可用的資源上，並且可以平衡資源的使用。
+- `Self-Healing`: Kubernetes 可以自動重啟失敗的容器，並且可以替換不正常的容器。
+- `Secret & Configuration Management`: Kubernetes 可以管理機密和應用程式的設定。
+- `Horizontal Scaling`: Kubernetes 可以自動擴展應用程式，並且可以根據 CPU 使用量或其他資源的使用量來自動擴展。
+- `Batch Execution`: Kubernetes 可以自動執行批次工作，並且可以自動重啟失敗的批次工作。
+
+## Kubernetes 安裝
+
+官網上提供了許多安裝方式，其中我比較推薦的是使用 kubeadm，可以使用 Vagrant 和 VirtualBox 來建立虛擬機，並使用 kubeadm 來安裝 Kubernetes，
+安裝方式可以參考
+[Vagrant](https://learn-k8s-from-scratch.readthedocs.io/en/latest/k8s-install/vagrant.html)
+和
+[kubeadm](https://learn-k8s-from-scratch.readthedocs.io/en/latest/k8s-install/kubeadm.html)，
+並記得修改版本號碼，我使用的版本是 1.28.0。
+
+如果想要有更簡單的安裝方法的話也可以使用 Docker Desktop 來安裝。
+
+## Kubernetes 架構
+
+{/* ![k8s-architecture](/img/k8s/1.jpg) */}
+
+![k8s-architecture](/img/k8s/10.svg)
+
+Kubernetes 集群都會有至少一個 Master Node 作為負責溝通和分配工作的 Control Plane Components，
+以及多個 Worker Node 來執行工作。
+
+Master 節點包含以下組件：
+
+- `kube-apiserver`: 提供 Kubernetes API 服務，用於管理 Kubernetes 集群。
+- `kube-scheduler`: 透過每個 Node 的資源使用量以及其他限制條件來把新建立的 Pod 分配到適合的 Node 上
+- `kube-controller-manager`: 用於保證集群中的實際狀態與期望狀態一致，例如當 Pod 被刪除時，會自動建立一個新的 Pod。
+- `cloud-controller-manager`: 用於管理雲端提供商的資源。
+- `etcd`: 一個分散式的 key-value 儲存庫，用於儲存 Kubernetes 集群的所有資料，以便在 crush 或重啟時恢復。
+
+Worker Node 節點包含以下組件：
+
+- `kubelet`: 負責管理 Pod，並與 Master 節點溝通。
+- `kube-proxy`: 負責網路代理，並維護網路規則。
+- `container runtime`: 負責執行容器，例如 Docker。

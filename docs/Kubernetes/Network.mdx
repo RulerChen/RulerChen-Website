@@ -1,0 +1,40 @@
+---
+title: '[K8s] Kubernetes Network'
+sidebar_position: '45'
+description: 'Kubernetes Network'
+keywords: ['Kubernetes', 'Network']
+---
+
+## 甚麼是 Network
+
+在 kubernetes 的網路中，我們需要考慮到以下幾個部分：
+
+- Container 與 Container 在同一個 Pod 中的網路
+- Pod 與 Pod 之間的網路
+- Pod 與 Service 之間的網路
+- 外部網路與 Service 之間的網路
+
+後面兩種都是透過 Service 來進行管理，因此我們先來看看前兩種。
+
+## Container 與 Container 在同一個 Pod 中的網路
+
+由於在同一個 Pod 中的 Container 是共享同一個網路命名空間，因此可以透過 `localhost` 來進行溝通。
+
+## Pod 與 Pod 之間的網路
+
+![k8s-network](/img/k8s/5.webp)
+
+Pod 與 Pod 之間的網路，是透過 CNI(Container Network Interface) 來進行管理，
+而 CNI 會透過網路插件來進行管理，例如：Flannel 等等。
+
+## Ingress
+
+![k8s-ingress](/img/k8s/6.webp)
+
+Ingress 是一個 API 物件，它會將外部的網路流量導入到 kubernetes 的集群中，
+並且將流量導入到 Service 中，而 Service 會將流量導入到 Pod 中。
+
+Ingress 有兩個部分:
+
+- Ingress Resource: 用來定義流量導入的規則 (routing rules)
+- Ingress Controller: 用來實現 Ingress Resource 的規則，像是 nginx-ingress-controller

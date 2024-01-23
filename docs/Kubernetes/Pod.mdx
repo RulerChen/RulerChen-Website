@@ -1,0 +1,97 @@
+---
+title: '[K8s] Kubernetes Pod'
+sidebar_position: '15'
+description: 'Kubernetes Pod'
+keywords: [kubernetes, pod]
+---
+
+## 甚麼是 Pod
+
+Pod 是可以在 Kubernetes 中創建和調度的最小單位，Pod 可以包含一個或多個容器，這些容器共享存儲、網路和其他資源。
+
+在大部分情況下，一個 Pod 都只包含一個容器，但是也有一種邊車模式是例外(sidecar)，
+即一個主容器和一個或多個邊車容器，邊車容器可以為主容器提供輔助服務，例如日誌收集、資料庫同步等。
+
+![Pod](/img/k8s/2.webp)
+
+## 創建一個 Pod
+
+主要有兩種方式，一種是使用 `kubectl run` 命令，另一種是使用 Pod 的配置文件。
+
+```bash
+kubectl run client --image=busybox --command -- bin/sh -c "sleep 100000"
+```
+
+```yaml title="pod.yaml"
+apiVersion: v1
+kind: Pod
+metadata:
+  name: client
+spec:
+  containers:
+    - name: client
+      image: busybox
+      command:
+        - sh
+        - -c
+        - 'sleep 1000000'
+```
+
+```bash
+kubectl apply -f pod.yaml
+```
+
+## 常用指令
+
+```bash
+kubectl run web --image=nginx --dry-run=<pod-name> -o yaml > nginx.yml # 生成 Pod 配置文件
+
+kubectl diff -f <.yaml> # 比較 Pod 配置文件的差異
+
+kubectl get pods -o wide # 查看 Pod 的詳細信息
+
+kubectl get pods <pod-name> -o yaml # 查看 Pod 的配置文件
+
+kubectl describe pod <pod-name> # 查看 <pod-name> 的詳細信息
+
+kubectl delete pod <pod-name> # 刪除 <pod-name>
+
+kubectl exec <pod-name> -it -- sh # 進入 <pod-name> Pod 的容器，如果 Pod 中有多個容器，可以使用 -c 指定容器名稱
+
+kubectl get pod <pod-name> -v 6 # 查看 Pod 的詳細日誌，v 的值越大，日誌越詳細，加上 -w 可以實時查看日誌
+```
+
+## Static Pod
+
+Static Pod 是一種特殊的 Pod，它不由 Kubernetes API Server 管理，
+而是由 kubelet 進程管理的，kubelet 會定期監聽本地文件夾，如果發現有新的 Pod 配置文件，就會創建對應的 Pod。
+Static Pod 的配置文件必須放在 `/etc/kubernetes/manifests` 目錄下，並且文件名必須以 `.yaml` 或 `.yml` 結尾。
+
+Static Pod 的用途是在 Kubernetes 集群中部署一些基礎組件，例如 kube-proxy、kube-scheduler 等。
+
+## Init Container
+
+![Init Container](/img/k8s/3.webp)
+
+Init Container 是 Pod 中的一種特殊容器，它會在 Pod 中的其他容器啟動之前啟動，
+並且它們都是串行啟動的，即一個 Init Container 啟動成功之後，才會啟動下一個 Init Container，
+直到所有的 Init Container 啟動成功之後，Pod 中的其他容器才會啟動，可以用於初始化 Pod 中的一些資源。
+
+## Pod 的生命週期
+
+![Pod 的生命週期](/img/k8s/4.webp)
+
+Pod 的生命週期分為 Pending、Running、Succeeded、Failed、Unknown 五個階段。
+
+- Pending：Pod 已經被 Kubernetes 接受，但是容器尚未創建，像是在等待容器的 Image 下載。
+- Running：Pod 中的容器已經被創建，並且至少有一個容器處於執行中。
+- Succeeded：Pod 中的所有容器都已經成功終止，並且不會再啟動。
+- Failed：Pod 中的所有容器都已經終止，並且至少有一個容器因為失敗而終止。
+- Unknown：Pod 的狀態無法確定，通常是由於與 Pod 通信時出現異常導致的。
+
+## Pod 的終止流程
+
+- 當執行刪除 Pod 的命令時，API Server 會設定一個終止時間，默認是 30 秒，同時將狀態設定為 Terminating。
+- Pod 所在的 Node 上的 kubelet 收到終止 Pod 的請求之後，會向 Pod 中的容器發送 SIGTERM 信號，然後等 Container 退出。
+- 如果在終止時間到期之前，Pod 中的容器都沒有退出，kubelet 會向 Pod 中的容器發送 SIGKILL 信號，強制終止容器。
+- 如果在到期之前就全部退出，Pod 的資訊就會正常的被 API Server 刪除。

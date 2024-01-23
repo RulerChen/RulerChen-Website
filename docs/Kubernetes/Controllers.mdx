@@ -1,0 +1,173 @@
+---
+title: '[K8s] Kubernetes Controllers'
+sidebar_position: '20'
+description: Kubernetes Controllers
+keywords: [kubernetes, controllers]
+---
+
+## 甚麼是 Controllers
+
+Controllers 是 Kubernetes 的核心元件之一，它們負責監控 Kubernetes 中的資源狀態，並且確保資源的狀態符合使用者所定義的狀態。
+
+## Controllers 的種類
+
+Kubernetes 中有許多種類的 Controllers，以下列出幾種常見的 Controllers：
+
+- Pod Controllers
+  - ReplicaSet
+  - Deployment
+  - DaemonSet
+  - StatefulSet
+  - Job
+  - CronJob
+- Node Controllers
+- Service Controllers
+- Endpoint Controllers
+
+## ReplicaSet
+
+ReplicaSet 是 kubernetes 最基本的 Pod Controller，它可以確保 Pod 的數量符合使用者所定義的數量，
+基本上我們不會直接使用 ReplicaSet，而是使用 Deployment 來管理 ReplicaSet。
+
+## Deployment
+
+我們可以描述 Deployment 的目標狀態，Deployment 會確保目標狀態與實際狀態一致。
+
+Deployment 會創建 ReplicaSet 來確保目標狀態中的 Pod 數量與實際狀態中的 Pod 數量一致，
+與 ReplicaSet 不同的是，Deployment 提供了很多方式來更新 Pod。
+
+```bash
+kubectl create deployment web --image=nginx:1.14.2
+kubectl scale deployment web --replicas=5
+
+kubectl delete deployment web
+```
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: web
+  name: web
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+        - image: nginx:1.14.2
+          name: nginx
+```
+
+### RollingUpdate
+
+Deployment 預設使用 RollingUpdate 策略，當我們更新 Deployment 的 Pod Template 時，Deployment 會逐步更新 Pod，
+我們可以透過 maxSurge 與 maxUnavailable 來控制更新 Pod 的數量。
+
+- maxSurge：最多可以新增多少個 Pod
+- maxUnavailable：最多可以容忍多少個 Pod 停機
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  labels:
+    app: web
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: web
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.14.2
+```
+
+### Recreate
+
+Deployment 也可以使用 Recreate 策略，當我們更新 Deployment 的 Pod Template 時，Deployment 會先刪除所有的 Pod，再重新創建 Pod。
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: web
+  name: web
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: web
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.14.2
+```
+
+### Rollout
+
+我們也可以使用 Deployment 來回滾 Pod 的版本。
+
+```bash
+kubectl rollout history deployment web # 查看歷史版本
+kubectl rollout history deployment web --revision=1 # 查看特定版本
+kubectl rollout undo deployment web --to-revision=1 # 回滾到特定版本
+```
+
+### Restart
+
+Deployment 也可以用來重啟 Pod，我們會創建一個新的 replicaset 來創建 Pod。
+
+```bash
+kubectl rollout restart deployment web
+```
+
+### 部屬策略
+
+我們可以使用 Deployment 來完成 Blue-Green 部屬或 Canary 之類的部屬模式。
+
+- [Blue-Green](https://ithelp.ithome.com.tw/articles/10290317)
+- [Canary](https://ithelp.ithome.com.tw/articles/10290852)
+
+## StatefulSet
+
+StatefulSet 是 kubernetes 中用來管理有狀態的應用程式的 Controller，
+有狀態應用是指需要持久化存儲或穩定、唯一網路標識的應用。
+例如資料庫、訊息佇列和檔案系統都是有狀態應用。
+
+StatefulSet 用來管理某個 Pod 的部屬和擴展，它會確保 Pod 的網路標識符、持久化存儲和 Pod 的部屬順序。
+
+## DaemonSet
+
+DaemonSet 會確保每個 Node 上都有一個 Pod，當我們新增或刪除 Node 時，DaemonSet 會自動新增或刪除 Pod。
+
+## Job & CronJob
+
+Job 可以用於一次性的工作，一般是腳本之類的，當 Job 完成後，Pod 會被刪除。
+
+CronJob 可以用於週期性的工作，當 CronJob 完成後，Pod 會被刪除。

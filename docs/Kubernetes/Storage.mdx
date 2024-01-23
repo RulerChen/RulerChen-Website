@@ -1,0 +1,39 @@
+---
+title: '[K8s] Kubernetes Storage'
+sidebar_position: '50'
+description: Kubernetes Storage
+keywords: [kubernetes, Storage]
+---
+
+## 甚麼是 Storage
+
+跟 Docker Volumn 一樣，Kubernetes 也將 Storage 分成兩種：
+
+- Persistent Volumn: 會一直存在，不會因為 Pod 被刪除而消失，不應該與任何 Pod 綁定
+- Volumn: 為了在一個 Pod 中的 Container 之間共享資料，生命週期與 Pod 相同
+
+## EmptyDir
+
+EmptyDir 是一個空的目錄，生命週期與 Pod 相同，當 Pod 被刪除時，EmptyDir 也會被刪除。
+
+## HostPath
+
+HostPath 是一個目錄，生命週期與主機相同，可以掛載主機上的檔案
+
+## Persistent Volumn (PV) & Persistent Volumn Claim (PVC)
+
+PV 是一塊由管理員提供的儲存空間(nfs、local...)，PVC 是使用者向管理員申請的儲存空間，PVC 會綁定 PV，並且提供給 Pod 使用。
+
+## Environment Variables
+
+我們可以透過環境變數的方式，將參數傳遞給 Pod，一旦 Pod 創建之後就無法更改環境變數。
+
+## Secrets
+
+Secrets 是一種安全的方式，將敏感資料傳遞給 Pod，例如：密碼、金鑰等等。
+Secrets 本身不加密(可設置)，只是將資料以 base64 編碼，需要搭配如 RBAC 等機制，才能確保安全。
+可以設定成不可修改(immutable)。
+
+## ConfigMap
+
+ConfigMap 可以用來將非機密性的資料保存到鍵值對中。

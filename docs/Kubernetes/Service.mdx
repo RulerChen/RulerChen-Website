@@ -1,0 +1,44 @@
+---
+title: '[K8s] Kubernetes Service'
+sidebar_position: '30'
+description: Kubernetes Service
+keywords: [kubernetes, service]
+---
+
+## 甚麼是 Service
+
+Service 是 Kubernetes 中的一個概念，它是一個抽象層，用來定義一個應用程式的一個邏輯集合，
+這個邏輯集合可以是一個 Pod 或是一個 Pod 的群集，Service 會提供一個固定的 IP 位址，
+讓其他的應用程式可以透過這個 IP 位址來存取這個 Service，而不需要知道背後的 Pod 的 IP 位址，
+這樣的好處是當 Pod 的 IP 位址改變時，不需要修改其他應用程式的設定，只需要修改 Service 的設定即可。
+
+Service 有以下幾種:
+
+- ClusterIP
+- NodePort
+- LoadBalancer
+- ExternalName
+
+## ClusterIP
+
+ClusterIP 是 Kubernetes 中預設的 Service，它會提供一個固定的 IP 位址，
+讓其他的應用程式可以透過這個 IP 位址來存取這個 Service，而不需要知道背後的 Pod 的 IP 位址。
+
+## NodePort
+
+NodePort 會將 Service 的 Port 對應到每個 Node 的 Port 上，這樣就可以透過 Node 的 IP 位址加上對應的 Port 來存取 Service。
+
+## LoadBalancer
+
+LoadBalancer 會在 Cloud Provider 上建立一個 Load Balancer，並將 Service 的 Port 對應到 Load Balancer 的 Port 上，
+這樣就可以透過 Load Balancer 的 IP 位址加上對應的 Port 來存取 Service。
+
+## ExternalName
+
+ExternalName 會將 Service 的名稱對應到一個外部的名稱，這樣就可以透過 Service 的名稱來存取外部的名稱。
+
+## Service Discovery
+
+Service Discovery 是 Kubernetes 中的一個概念，
+可以讓我我們在不知道 Pod 的 IP 位址的情況下，透過 Service 的名稱來存取 Pod，
+預設是 `{service_name}.{namespace}.svc.cluster.local`。

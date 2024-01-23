@@ -1,0 +1,162 @@
+---
+title: '[K8s] Kubernetes Scheduler'
+sidebar_position: '25'
+description: Kubernetes Scheduler
+keywords: [kubernetes, scheduler]
+---
+
+## 甚麼是 Scheduler
+
+Scheduling 就是將 Pod 分配到 Node 上的過程，主要是通過 kube-scheduler 這個組件來實現的，
+我們可以設定 Pod 的調度策略，讓 Pod 能夠被分配到我們想要的 Node 上。
+
+![kube-scheduler](/img/k8s/1.png)
+
+kube-scheduler 主要分成以下這幾個階段:
+
+- 過濾掉不符合條件的 Node
+- 排序優先級
+- 將 Node 與 Pod 綁定
+
+## Node Selector
+
+Node Selector 是一種最簡單的調度策略，我們可以在 Pod 的 spec 中指定一個 label，
+然後在 Node 的 spec 中也指定一個 label，當 Pod 的 label 與 Node 的 label 相符時，
+Pod 就會被分配到該 Node 上。
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: web
+spec:
+  containers:
+    - name: hello-world
+      image: nginx
+  nodeSelector:
+    hardware: local_gpu
+```
+
+## Affinity
+
+有兩種方式，分別是 preferredDuringSchedulingIgnoredDuringExecution 和 requiredDuringSchedulingIgnoredDuringExecution。
+
+### preferredDuringSchedulingIgnoredDuringExecution
+
+表示 Pod 優先被調度到符合條件的 Node 上，下面的範例表示 Pod 優先被調度到 type=test 的 Node 上。
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-preferred
+spec:
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 1
+          preference:
+            matchExpressions:
+              - key: type
+                operator: In
+                values:
+                  - test
+  containers:
+    - name: nginx
+      image: nginx
+```
+
+### requiredDuringSchedulingIgnoredDuringExecution
+
+表示 Pod 一定要被調度到符合條件的 Node 上，下面的範例表示 Pod 一定要被調度到 type=test 的 Node 上。
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-require
+spec:
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: type
+                operator: In
+                values:
+                  - test
+  containers:
+    - name: nginx
+      image: nginx
+```
+
+### Pod Affinity
+
+除了 Node Affinity 之外，還有 Pod Affinity，表示 Pod 與 Pod 之間的關係，可以將 Pod 調度到與它們相關的 Pod 所在的 Node 上。
+
+## Taints and Tolerations
+
+Taints 指的是可以讓 Node 有排斥特定 Pod 的能力。
+
+```bash
+kubectl taint nodes node1 key=value:NoSchedule
+```
+
+Tolerations 是在 Pod 中指定 Taints 的 key 和 value，
+表示 Pod 可以被調度到具有特定 Taints 的 Node 上。
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+        - image: nginx
+          name: nginx
+      tolerations:
+        - key: 'color'
+          operator: 'Equal'
+          value: 'red'
+          effect: 'NoSchedule'
+```
+
+## Cordon and Drain
+
+Cordon 就是將 Node 標記為不可調度，但已經在運行中的 Pod 不受影響。
+
+```bash
+kubectl cordon node1
+kubectl uncordon node1
+```
+
+Drain 就是將 Node 上的 Pod 都刪除，並且將 Node 標記為不可調度。
+
+```bash
+kubectl drain node1
+```
+
+## Manual Scheduling
+
+可以通過 spec.nodeName 來指定 Pod 要調度到哪個 Node 上，即使該 Node 標記為不可調度或是有 taint 也可以。
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-manual
+spec:
+  containers:
+    - name: nginx
+      image: nginx:latest
+  nodeName: node1
+```
