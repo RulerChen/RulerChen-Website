@@ -5,7 +5,7 @@ description: Kubernetes Controllers
 keywords: [kubernetes, controllers]
 ---
 
-## 甚麼是 Controllers
+## Controllers 簡介
 
 Controllers 是 Kubernetes 的核心元件之一，它們負責監控 Kubernetes 中的資源狀態，並且確保資源的狀態符合使用者所定義的狀態。
 
@@ -141,7 +141,7 @@ kubectl rollout undo deployment web --to-revision=1 # 回滾到特定版本
 
 ### Restart
 
-Deployment 也可以用來重啟 Pod，我們會創建一個新的 replicaset 來創建 Pod。
+Deployment 也可以用來重啟 Pod，會創建一個新的 replicaset 來創建 Pod。
 
 ```bash
 kubectl rollout restart deployment web
