@@ -5,35 +5,395 @@ description: Kubernetes Storage
 keywords: [kubernetes, Storage]
 ---
 
-## 甚麼是 Storage
+## Storage Overview
 
 跟 Docker Volumn 一樣，Kubernetes 也將 Storage 分成兩種：
 
-- Persistent Volumn: 會一直存在，不會因為 Pod 被刪除而消失，不應該與任何 Pod 綁定
+- Persistent Volumn: 會一直存在，不會因為 Pod 被刪除而消失，不與任何 Pod 綁定
 - Volumn: 為了在一個 Pod 中的 Container 之間共享資料，生命週期與 Pod 相同
 
 ## EmptyDir
 
 EmptyDir 是一個空的目錄，生命週期與 Pod 相同，當 Pod 被刪除時，EmptyDir 也會被刪除。
 
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: multicontainer-pod
+spec:
+  containers:
+    - name: producer
+      image: busybox
+      command:
+        [
+          'sh',
+          '-c',
+          'while true; do echo $(hostname) $(date) >> /var/log/index.html; sleep 10; done'
+        ]
+      volumeMounts:
+        - name: webcontent
+          mountPath: /var/log
+    - name: consumer
+      image: nginx
+      ports:
+        - containerPort: 80
+      volumeMounts:
+        - name: webcontent
+          mountPath: /usr/share/nginx/html
+  volumes:
+    - name: webcontent
+      emptyDir: {}
+```
+
 ## HostPath
 
-HostPath 是一個目錄，生命週期與主機相同，可以掛載主機上的檔案
+HostPath 是一個目錄，生命週期與主機相同，可以掛載主機上的檔案。
 
-## Persistent Volumn (PV) & Persistent Volumn Claim (PVC)
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: multicontainer-pod
+spec:
+  containers:
+    - name: producer
+      image: busybox
+      command:
+        [
+          'sh',
+          '-c',
+          'while true; do echo $(hostname) $(date) >> /var/log/index.html; sleep 10; done'
+        ]
+      volumeMounts:
+        - name: webcontent
+          mountPath: /var/log
+    - name: consumer
+      image: nginx
+      ports:
+        - containerPort: 80
+      volumeMounts:
+        - name: webcontent
+          mountPath: /usr/share/nginx/html
+  volumes:
+    - name: webcontent
+      hostPath:
+        path: /tmp
+        type: Directory
+```
 
-PV 是一塊由管理員提供的儲存空間(nfs、local...)，PVC 是使用者向管理員申請的儲存空間，PVC 會綁定 PV，並且提供給 Pod 使用。
+## PV & PVC
+
+![image](/img/k8s/2.png)
+
+PV(Persistent Volumn) 是一塊由管理員提供的儲存空間(nfs、hostpath、cloud)。
+
+PVC(Persistent Volumn Claim) 是使用者向管理員申請的儲存空間，PVC 可以請求儲存大小和存取模式。
+
+### Workflow
+
+- 管理員創建 PV
+
+```yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-nfs
+spec:
+  capacity:
+    storage: 4Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  nfs:
+    server: 192.168.56.20
+    path: '/export/volumes/pod'
+```
+
+- 使用者創建 PVC
+
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-nfs
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+```
+
+- 在 Pod 中定義 Volumn
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      volumes:
+        - name: webcontent
+          persistentVolumeClaim:
+            claimName: pvc-nfs
+      containers:
+        - image: nginx
+          name: nginx
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: webcontent
+              mountPath: '/usr/share/nginx/html/web-app'
+```
+
+### Storage Lifecycle
+
+- Binding: PVC 與 PV 綁定
+- Using: Pod 使用 PVC
+- Reclaim: 刪除 PVC，PV 基於 reclaim policy 決定是刪除空間(deleted)或是保留空間(retained，資料保留但狀態變成 Released，需要手動清除)
 
 ## Environment Variables
 
-我們可以透過環境變數的方式，將參數傳遞給 Pod，一旦 Pod 創建之後就無法更改環境變數。
+我們有三種方式來傳遞環境變數給 Pod，一旦 Pod 建立，環境變數就不能修改。
+
+- command line arguments
+- environment variables
+- configMap
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-env
+spec:
+  containers:
+    - name: producer
+      image: busybox
+      command: ['sh', '-c', 'while true; do echo $NAME >> /tmp/index.html; sleep 10; done']
+      env:
+        - name: NAME
+          value: Hello World
+```
 
 ## Secrets
 
-Secrets 是一種安全的方式，將敏感資料傳遞給 Pod，例如：密碼、金鑰等等。
-Secrets 本身不加密(可設置)，只是將資料以 base64 編碼，需要搭配如 RBAC 等機制，才能確保安全。
-可以設定成不可修改(immutable)。
+secret 可以將敏感資料以物件的方式傳給 Pod，
+常用於傳遞憑證、密碼等敏感資料。
+
+- 使用 base64 編碼
+- 可以設置加密
+- 存在 etcd 中
+- 以 namespace 區分
+- 如果無法訪問到 secret，Pod 會被拒絕
+- 可以設定可修改或不可修改
+
+### Create secret
+
+可以直接使用 kubectl 建立 secret
+
+```bash
+kubectl create secret generic mysql-secret \
+  --from-literal=MYSQL_ROOT_PASSWORD=root \
+  --from-literal=MYSQL_USER=demo \
+  --from-literal=MYSQL_PASSWORD=demo
+```
+
+如果要使用 yaml 檔案來建立 secret，需要將敏感資料先進行 base64 編碼。
+
+```bash
+echo demo | base64 # ZGVtbw==
+echo ZGVtbw== | base64 --decode # demo
+```
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysql-secret
+type: Opaque
+data:
+  MYSQL_PASSWORD: ZGVtbw==
+  MYSQL_ROOT_PASSWORD: cm9vdA==
+  MYSQL_USER: ZGVtbw==
+```
+
+或是使用 config file
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysecret
+type: Opaque
+stringData:
+  config.yaml: |
+    MYSQL_ROOT_PASSWORD: root
+    MYSQL_PASSWORD: demo
+    MYSQL_USER: demo
+```
+
+### Example
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mysql
+spec:
+  containers:
+    - name: mysql
+      image: mysql:8.0
+      env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: MYSQL_ROOT_PASSWORD
+        - name: MYSQL_USER
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: MYSQL_USER
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: MYSQL_PASSWORD
+```
+
+或是比較簡潔的寫法
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mysql
+spec:
+  containers:
+    - name: mysql
+      image: mysql:8.0
+      envFrom:
+        - secretRef:
+            name: mysql-secret
+```
+
+也可以放在 volume 中
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-env
+spec:
+  volumes:
+    - name: appconfig
+      secret:
+        secretName: mysql-secret
+  containers:
+    - name: busybox
+      image: busybox
+      command: ['sh', '-c', 'while true; do echo $(date) >> /tmp/index.html; sleep 10; done']
+      volumeMounts:
+        - name: appconfig
+          mountPath: '/etc/appconfig'
+```
 
 ## ConfigMap
 
-ConfigMap 可以用來將非機密性的資料保存到鍵值對中。
+ConfigMap 可以用來將非機密性的資料保存到鍵值對中，用法大致上跟 secret 一樣。
+
+### Create ConfigMap
+
+```bash
+kubectl create configmap appconfig \
+  --from-literal=MYSQL_ROOT_PASSWORD=root \
+  --from-literal=MYSQL_USER=demo \
+  --from-literal=MYSQL_PASSWORD=demo
+```
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: appconfig
+data:
+  MYSQL_ROOT_PASSWORD: root
+  MYSQL_USER: demo
+  MYSQL_PASSWORD: demo
+```
+
+### Example
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mysql
+spec:
+  containers:
+    - name: mysql
+      image: mysql:8.0
+      env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            configMapKeyRef:
+              name: appconfig
+              key: MYSQL_ROOT_PASSWORD
+        - name: MYSQL_USER
+          valueFrom:
+            configMapKeyRef:
+              name: appconfig
+              key: MYSQL_USER
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            configMapKeyRef:
+              name: appconfig
+              key: MYSQL_PASSWORD
+```
+
+或是比較簡潔的寫法
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mysql
+spec:
+  containers:
+    - name: mysql
+      image: mysql:8.0
+      envFrom:
+        - configMapRef:
+            name: appconfig
+```
+
+也可以放在 volume 中
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-env
+spec:
+  volumes:
+    - name: appconfig
+      configMap:
+        name: appconfig
+  containers:
+    - name: busybox
+      image: busybox
+      command: ['sh', '-c', 'while true; do echo $(date) >> /tmp/index.html; sleep 10; done']
+      volumeMounts:
+        - name: appconfig
+          mountPath: '/etc/appconfig'
+```

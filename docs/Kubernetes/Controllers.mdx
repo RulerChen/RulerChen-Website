@@ -5,11 +5,11 @@ description: Kubernetes Controllers
 keywords: [kubernetes, controllers]
 ---
 
-## Controllers 簡介
+## Controllers Overview
 
 Controllers 是 Kubernetes 的核心元件之一，它們負責監控 Kubernetes 中的資源狀態，並且確保資源的狀態符合使用者所定義的狀態。
 
-## Controllers 的種類
+## Controllers Category
 
 Kubernetes 中有許多種類的 Controllers，以下列出幾種常見的 Controllers：
 
@@ -147,7 +147,7 @@ Deployment 也可以用來重啟 Pod，會創建一個新的 replicaset 來創�
 kubectl rollout restart deployment web
 ```
 
-### 部屬策略
+### Deployment Strategy
 
 我們可以使用 Deployment 來完成 Blue-Green 部屬或 Canary 之類的部屬模式。
 

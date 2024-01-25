@@ -5,14 +5,187 @@ description: 'Kubernetes Security'
 keywords: ['Kubernetes Security']
 ---
 
-## Kubernetes Security
+## Security Overview
 
-我們主要會介紹兩部分，一個是 Authentication，另一個是 Authorization。
+在 kubernetes 中，我們需要辨認使用者的身份，並且限制使用者的權限，以避免使用者不當的操作，
+這其中包含了 Authentication(身分驗證)、Authorization(授權)、Admission Control(准入控制)。
 
-## PKI (Public Key Infrastructure)
+身分驗證主要有幾種方式:
 
-## 產生新的使用者
+- Client Certificate
+- Token
+- OpenID
+- Webhook
 
-## RBAC (Role-Based Access Control)
+授權主要有幾種方式:
+
+- ABAC(Attribute-Based Access Control)
+- RBAC(Role-Based Access Control)
+- Webhook
+- Node
+
+![k8s-security](/img/k8s/8.png)
+
+我們的可以使用以下程式碼來知道當前集群的資訊。
+
+```bash
+kubectl config view --raw
+```
+
+```bash
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: DATA+OMITTED
+    server: https://kubernetes.docker.internal:6443
+  name: docker-desktop
+contexts:
+- context:
+    cluster: docker-desktop
+    user: docker-desktop
+  name: docker-desktop
+current-context: docker-desktop
+kind: Config
+preferences: {}
+users:
+- name: docker-desktop
+  user:
+    client-certificate-data: DATA+OMITTED
+    client-key-data: DATA+OMITTED
+```
+
+主要會包含三個部分:
+
+- cluster: 代表 kubernetes 集群的資訊，包含了 server 的位置、ca 證書等等。
+- context: 紀錄你與集群要如何進行溝通，包含 cluster、namespace、user。
+- user: 代表當前使用者的身份，包含了使用者的證書等等。
+
+## Create user
+
+- 生成私鑰
+- 生成證書簽名請求
+- 創建 `CertificateSigning` 請求的物件
+- 接受 `CertificateSigning` 請求
+
+```bash
+openssl genrsa -out demouser.key 2048
+
+openssl req -new -key demouser.key -out demouser.csr -subj "/CN=demouser"
+
+cat demouser.csr | base64 | tr -d "\n"
+```
+
+接著我們需要創建一個 `CertificateSigningRequest` 物件，並且將上面的 base64 資訊貼上。
+
+```bash
+apiVersion: certificates.k8s.io/v1
+kind: CertificateSigningRequest
+metadata:
+    name: demouser
+spec:
+    groups:
+    - system:authenticated
+    request: <put the base64 encoded csr here>
+    signerName: kubernetes.io/kube-apiserver-client
+    usages:
+    - client auth
+```
+
+```bash
+kubectl certificate approve demouser
+
+kubectl get certificatesigningrequests demouser -o jsonpath='{.status.certificate}' | base64 --decode > demouser.crt
+```
+
+接著就可以新增使用者
+
+```bash
+kubectl config set-credentials demouser --client-key=demouser.key --client-certificate=demouser.crt --embed-certs=true
+
+kubectl config get-users
+```
+
+再新增一個 context
+
+```bash
+kubectl config get-contexts
+
+kubectl config set-context demo --user=demouser --cluster=kubernetes
+
+kubectl config use-context demo
+```
+
+## RBAC
+
+RBAC 是 Role-Based Access Control 的縮寫，主要是透過角色來控制使用者的權限，分成 Role、ClusterRole 兩種。
+
+- Role: 只能控制單一 namespace 的權限
+- ClusterRole: 可以控制整個 cluster 的權限
+
+```bash
+kubectl create role demorole --verb=* --resource=pods --namespace ns1
+
+kubectl create clusterrole democlusterrole --verb=* --resource=pods
+```
+
+接著我們需要進行 Binding，將 Role 與 User 進行綁定。
+
+```bash
+kubectl create rolebinding demorolebinding --role=demorole --user=demouser --namespace ns1
+
+kubectl create clusterrolebinding democlusterrolebinding --clusterrole=democlusterrole --user=demouser
+```
+
+最後我們可以測試看看是否有權限。
+
+```bash
+# create some resource
+kubectl config use-context kubernetes-admin@kubernetes
+kubectl create namespace ns1
+kubectl create deployment web1 --namespace=ns1 --image=gcr.io/google-samples/hello-app:1.0 --port=8080 --replicas=2
+
+kubectl auth can-i list pod
+yes
+
+kubectl auth can-i list pod --as demouser
+no
+```
 
 ## Service Account
+
+kubernetes 中有兩種用戶，一種是 normal user ，另一種是 service account，service account 主要是給 pod 使用的，用來連接 API Server 獲得資源。
+
+```bash
+kubectl create serviceaccount demosa
+```
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: client
+spec:
+  serviceAccount: demosa
+  containers:
+    - name: client
+      image: xiaopeng163/net-box:latest
+      command:
+        - sh
+        - -c
+        - 'sleep 1000000'
+```
+
+接著我們需要進行授權，讓 demosa 可以獲得資源。
+
+```bash
+kubectl auth can-i list pods --as=system:serviceaccount:default:demosa # no
+
+kubectl create role demorole --verb=get,list --resource=pods
+kubectl create rolebinding demorolebinding --role=demorole --serviceaccount=default:demosa
+
+kubectl auth can-i list pods --as=system:serviceaccount:default:demosa # yes
+```
+
+```
+
+```
