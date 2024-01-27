@@ -1,0 +1,60 @@
+---
+title: '[TF] Terraform Introduction'
+sidebar_position: '5'
+description: Terraform Introduction
+keywords: [Terraform Introduction]
+---
+
+## Terraform Overview
+
+Terraform 是一款由 HashiCorp 所開發的 Infrastructure as Code (IaC) 工具，IaC 是一種自動化管理和佈署基礎設施的方法，
+將基礎設施的定義以程式碼的方式撰寫，透過程式碼的管理，可以讓基礎設施的管理更加的彈性、快速、可靠。
+
+Terraform 的可以做到的事情主要有以下幾個:
+
+- 多雲平台的支援: Terraform 可以支援多種的雲平台，例如: AWS、Azure、GCP、AliCloud、VMware、OpenStack 等等。
+- 基礎設施即程式碼: Terraform 的定義是以程式碼的方式撰寫，可以透過程式碼的管理，可以讓基礎設施的管理更加的彈性、快速、可靠。
+- 基礎設施的版本控制: Terraform 的定義是以程式碼的方式撰寫，可以透過版本控制的方式來管理基礎設施的變更。
+
+## Terraform simple example
+
+使用 Terraform 來建立一個簡單的 GCP Storage Bucket。
+
+可以先前往 Terraform 官網下載 Terraform 的執行檔，並且將 Terraform 的執行檔放到環境變數的路徑中，並檢查 Terraform 是否安裝成功。
+
+```bash
+terraform --version
+
+Terraform v1.7.1
+on windows_amd64
+```
+
+如果是在本地的話，需要先安裝 GCP 的 SDK 並且設定好 GCP 的認證，可以參考 [GCP SDK](https://cloud.google.com/sdk/docs/install?hl=zh-tw)。
+
+接著可以用 Terraform 簡單建立一個 gcs 的服務
+
+```tf title="main.tf"
+provider "google" {
+ project = "<your gcp project>"
+ region = "asia-east1"
+}
+resource "google_storage_bucket" "quick-start-gcs" {
+ name = "quick-start-gcs-bucket"
+ location = "asia-east1"
+ force_destroy = true
+}
+```
+
+```bash
+# 初始化
+terraform init
+
+# 檢查定義是否正確
+terraform validate
+
+# 預覽
+terraform plan
+
+# 執行
+terraform apply
+```
