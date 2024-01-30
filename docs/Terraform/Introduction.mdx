@@ -49,6 +49,9 @@ resource "google_storage_bucket" "quick-start-gcs" {
 # 初始化
 terraform init
 
+# 格式化
+terraform fmt
+
 # 檢查定義是否正確
 terraform validate
 
@@ -57,4 +60,11 @@ terraform plan
 
 # 執行
 terraform apply
+
+# 刪除
+terraform destroy
 ```
+
+## Terraform Basic
+
+![Terraform Basic](/img/terraform/1.png)
