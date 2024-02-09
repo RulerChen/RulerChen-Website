@@ -62,7 +62,7 @@ const ProjectCard = ({
       )}
 
       {deployUrl && (
-        <a href={channelUrl} target="_blank" rel="noreferrer noopenner">
+        <a href={deployUrl} target="_blank" rel="noreferrer noopenner">
           <button
             className={[styles.button, colorMode === 'light' && styles.buttonLight].join(' ')}
             role="button"
@@ -74,9 +74,6 @@ const ProjectCard = ({
 
       <div className={styles.tiltSkillContainer}>
         {tech?.map(techInfo => (
-          // <p key={techInfo.name} style={{ color: techInfo.color, fontSize: "14px" }}>
-          //   {techInfo.name}{" "}
-          // </p>
           <img key={techInfo.name} src={techInfo.tag} alt={techInfo.name} />
         ))}
       </div>
