@@ -72,5 +72,35 @@
         "tag": "https://img.shields.io/badge/Socket.io-010101?&style=for-the-badge&logo=Socket.io&logoColor=white"
       }
     ]
+  },
+  {
+    "id": 4,
+    "projectTitle": "GEN-EXPRESS-CLI",
+    "projectDescribe": "一個可以讓用戶快速打造 Express.js 專案的 CLI 工具",
+    "projectImage": "img/project/4-1.png",
+    "githubUrl": "https://github.com/RulerChen/gen-express-cli",
+    "deployUrl": "https://www.npmjs.com/package/gen-express-cli",
+    "tech": [
+      {
+        "name": "Node.js",
+        "tag": "https://img.shields.io/badge/Node%20js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white"
+      },
+      {
+        "name": "Express.js",
+        "tag": "https://img.shields.io/badge/Express.js-000000?style=for-the-badge&logo=express&logoColor=white"
+      },
+      {
+        "name": "Eslint",
+        "tag": "https://img.shields.io/badge/eslint-3A33D1?style=for-the-badge&logo=eslint&logoColor=white"
+      },
+      {
+        "name": "TypeScript",
+        "tag": "https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white"
+      },
+      {
+        "name": "Jest",
+        "tag": "https://img.shields.io/badge/Jest-C21325?style=for-the-badge&logo=jest&logoColor=white"
+      }
+    ]
   }
 ]
