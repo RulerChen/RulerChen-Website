@@ -5,17 +5,28 @@ description: Docker Container
 keywords: [Docker Container, Docker 容器]
 ---
 
+## 甚麼是容器 (Container)
+
+容器是一種快速的打包技術，可以將應用程式和它的依賴項打包到一個映像檔中，使我們可以輕易地攜帶和搬遷。
+
+容器又被稱作 Linux Container (LXC)， 是一種作業系統層級的虛擬化技術，
+主要透過 Namespace 來隔離各個 Container 的資源，包含 Process、Network、File System、User、IPC、UTS 等等，
+以及 Cgroups 來限制各個 Container 的資源使用量，包含 CPU、Memory、Disk I/O、Network 等等。
+
+![](/img/docker/2.webp)
+![](/img/docker/1.webp)
+
+容器具有以下特點：
+
+- 輕量化： 跟虛擬機相比，容器不需要 Guest OS，因此容器的體積比虛擬機小很多。
+- 可移植性： 容器可以在任何支援容器的機器上運行，而不需要任何修改。
+- 標準化： 容器的格式是標準化的(runtime、image)，因此可以很容易地將容器部署到任何支援容器的機器上。
+
 ## 甚麼是 Docker Container
 
 Docker Container 是一個正在運行中的 Docker Image，
 它複製了 Docker Image 並在上面增加了一層可寫的層(container layer)，
 可以允許使用者在上面進行修改。
-
-## Container 跟 VM 的優缺點
-
-- 由於 Container 只是一個運行在 Host OS 上的 Process，因此所需的資源較少，啟動速度也較快。
-
-- VM 由於在硬體層以上都做了虛擬化，因此安全性較高，隔離性也較好。
 
 ## 容器的簡易操作
 

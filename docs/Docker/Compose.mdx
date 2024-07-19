@@ -68,95 +68,138 @@ keywords: [Docker Compose]
 
 ## Docker Compose 範例
 
-[參考範例來源](https://github.com/dockersamples/example-voting-app)
+這裡我使用了一個簡單的範例來展示如何使用 docker compose，
+在這個 microservice 的專案中，我使用了三個微服務的系統，
+並且連接到 redis、postgres 和 rabbitmq 這三個服務，
+其中我認為最需要注意的是 healthcheck，我們通常需要為服務設定 healthcheck 來避免啟動失敗。
 
 ```yaml
 services:
-  vote:
-    build:
-      context: ./vote # Dockerfile 所在的資料夾
-      target: dev # 指定 Dockerfile 的 target
-    depends_on: # 指定依賴的服務
-      redis:
-        condition: service_healthy # 當 redis 服務健康時才啟動
-    healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost'] # 健康檢查
-      interval: 15s # 每 15 秒檢查一次
-      timeout: 5s # 檢查逾時時間
-      retries: 3 # 重試次數
-      start_period: 10s # 啟動後 10 秒後才開始檢查
-    volumes:
-      - ./vote:/usr/local/app # 掛載本地資料夾到容器中
-    ports:
-      - '5000:80'
-    networks:
-      - front-tier
-      - back-tier
-
-  result:
-    build: ./result
-    entrypoint: nodemon --inspect=0.0.0.0 server.js
-    depends_on:
-      db:
-        condition: service_healthy
-    volumes:
-      - ./result:/usr/local/app
-    ports:
-      - '5001:80'
-      - '127.0.0.1:9229:9229'
-    networks:
-      - front-tier
-      - back-tier
-
-  worker:
-    build:
-      context: ./worker
-    depends_on:
-      redis:
-        condition: service_healthy
-      db:
-        condition: service_healthy
-    networks:
-      - back-tier
-
   redis:
-    image: redis:alpine
-    volumes:
-      - './healthchecks:/healthchecks'
+    container_name: redis
+    image: redis:7.2-alpine
+    restart: always
+    command: redis-server --loglevel warning
     healthcheck:
-      test: /healthchecks/redis.sh
-      interval: '5s'
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    volumes:
+      - ./volumns/redis:/data
+    ports:
+      - '6379:6379'
     networks:
-      - back-tier
+      - loginhub
 
-  db:
-    image: postgres:15-alpine
+  postgres_auth:
+    container_name: postgres_auth
+    image: postgres:16.1-alpine
+    restart: always
     environment:
-      POSTGRES_USER: 'postgres'
-      POSTGRES_PASSWORD: 'postgres'
-    volumes:
-      - 'db-data:/var/lib/postgresql/data'
-      - './healthchecks:/healthchecks'
+      POSTGRES_DB: loginhub_auth
+      POSTGRES_USER: loginhub
+      POSTGRES_PASSWORD: loginhub
     healthcheck:
-      test: /healthchecks/postgres.sh
-      interval: '5s'
+      test: ['CMD-SHELL', "sh -c 'pg_isready -U loginhub -d loginhub_auth'"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    volumes:
+      - ./volumns/postgres-auth:/var/lib/postgresql/data
+    ports:
+      - '5432:5432'
     networks:
-      - back-tier
+      - loginhub
 
-  seed:
-    build: ./seed-data
-    profiles: ['seed']
+  rabbitmq:
+    container_name: rabbitmq
+    image: rabbitmq:3.13.4-management-alpine
+    restart: always
+    environment:
+      RABBITMQ_DEFAULT_USER: loginhub
+      RABBITMQ_DEFAULT_PASS: loginhub
+    healthcheck:
+      test: rabbitmq-diagnostics -q status
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    volumes:
+      - ./volumns/rabbitmq:/var/lib/rabbitmq
+    ports:
+      - '5672:5672'
+      - '15672:15672'
+    networks:
+      - loginhub
+
+  gateway:
+    container_name: gateway
+    build:
+      context: ./backend/1-gateway
+      dockerfile: Dockerfile.dev
+    restart: always
+    env_file:
+      - path: ./backend/1-gateway/.env
+        required: true
+    environment:
+      - AUTH_BASE_URL=http://auth:8000
+      - REDIS_HOST=redis
+    ports:
+      - '8001:8000'
     depends_on:
-      vote:
+      redis:
         condition: service_healthy
+        restart: true
     networks:
-      - front-tier
-    restart: 'no'
+      - loginhub
 
-volumes:
-  db-data:
+  notification:
+    container_name: notification
+    build:
+      context: ./backend/2-notification
+      dockerfile: Dockerfile.dev
+    restart: always
+    env_file:
+      - path: ./backend/2-notification/.env
+        required: true
+    environment:
+      - RABBITMQ_ENDPOINT=amqp://loginhub:loginhub@rabbitmq:5672
+    ports:
+      - '8002:8000'
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+        restart: true
+    networks:
+      - loginhub
+
+  auth:
+    container_name: auth
+    build:
+      context: ./backend/3-auth
+      dockerfile: Dockerfile.dev
+    restart: always
+    env_file:
+      - path: ./backend/3-auth/.env
+        required: true
+    environment:
+      - RABBITMQ_ENDPOINT=amqp://loginhub:loginhub@rabbitmq:5672
+      - DATABASE_HOST=postgres_auth
+    ports:
+      - '8003:8000'
+    depends_on:
+      postgres_auth:
+        condition: service_healthy
+        restart: true
+      rabbitmq:
+        condition: service_healthy
+        restart: true
+    networks:
+      - loginhub
 
 networks:
-  front-tier:
-  back-tier:
+  loginhub:
 ```
