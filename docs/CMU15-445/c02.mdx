@@ -1,0 +1,386 @@
+---
+title: 'Modern SQL'
+sidebar_position: '2'
+description: CMU15-445/645 Modern SQL
+keywords: [CMU15-445/645, Modern SQL, CMU15-445/645 筆記]
+---
+
+## SQL History
+
+1971 年，IBM 發明了第一個查詢語言叫做 SEQUEL (Structured English Query Language)，
+接著又在 1983 年推出了採用了其語法的 DB2，SEQUEL 也隨之改名為 SQL (Structured Query Language)，
+並加入了 ANSI 和 ISO 的標準。
+
+- SQL:1999 Regular expressions, Triggers
+- SQL:2003 XML, Windows, Sequences
+- SQL:2008 Truncation, Fancy sorting
+- SQL:2011 Temporal DBs, Pipelined DML
+- SQL:2016 JSON, Polymorphic tables
+
+## SQL Introduction
+
+與傳統的 relational algebra 相比，SQL 採用的是 bag (無序可重覆) 而非 set (無序不可重覆)。
+
+SQL 語法可以被分為三類
+
+- DML (Data Manipulation Language) : 查詢、插入、更新、刪除資料
+- DDL (Data Definition Language) : 定義 table、view、index 等等
+- DCL (Data Control Language) : 定義權限 (資安相關)
+
+接下來會介紹常用語法，使用的資料表如下
+
+![sample table](/img/cmu15-445/c02/image.png)
+
+```SQL
+CREATE TABLE student(
+    sid INT PRIMARY KEY,
+    name VARCHAR(16),
+    login VARCHAR(32) UNIQUE,
+    age SMALLINT,
+    gpa FLOAT
+);
+
+CREATE TABLE course(
+    cid VARCHAR(32) PRIMARY KEY,
+    name VARCHAR(32) NOT NULL
+);
+
+CREATE TABLE enrolled(
+    sid INT REFERENCES student(sid),
+    cid VARCHAR(32) REFERENCES course(cid),
+    grade CHAR(1)
+);
+
+INSERT INTO student (sid, name, login, age, gpa) VALUES
+(53666, 'RZA', 'rza@cs', 44, 4.0),
+(53688, 'Bieber', 'jbieber@cs', 27, 3.9),
+(53655, 'Tupac', 'shakur@cs', 25, 3.5);
+
+INSERT INTO course (cid, name) VALUES
+('15-445', 'Database Systems'),
+('15-721', 'Advanced Database Systems'),
+('15-826', 'Data Mining'),
+('15-799', 'Special Topics in Databases');
+
+INSERT INTO enrolled (sid, cid, grade) VALUES
+(53666, '15-445', 'C'),
+(53688, '15-721', 'A'),
+(53688, '15-826', 'B'),
+(53655, '15-445', 'B'),
+(53666, '15-721', 'C');
+```
+
+### Joins
+
+可以用於連接兩張 table，並且可以依據不同的條件來連接。
+
+包含了
+
+- Inner Join
+- Left Join
+- Right Join
+- Full Join
+- Cross Join
+
+```SQL
+SELECT * FROM student AS s JOIN enrolled AS e ON s.sid = e.sid;
+```
+
+### Aggregates
+
+常見的包括 `COUNT`, `SUM`, `AVG`, `MIN`, `MAX` 等等。
+
+```SQL
+SELECT COUNT(login) AS cnt
+FROM student
+WHERE login LIKE '%@cs';
+
+SELECT COUNT(*) AS cnt
+FROM student
+WHERE login LIKE '%@cs';
+
+SELECT COUNT(1) AS cnt
+FROM student
+WHERE login LIKE '%@cs';
+
+SELECT COUNT(1+1+1) AS cnt
+FROM student
+WHERE login LIKE '%@cs';
+```
+
+```SQL
+SELECT AVG(gpa), COUNT(sid)
+FROM student
+WHERE login LIKE '%@cs';
+```
+
+```SQL
+SELECT COUNT(DISTINCT login)
+FROM student
+WHERE login LIKE '%@cs';
+```
+
+Aggregates function 不能與其他欄位同時出現在 SELECT 子句中，
+因此下面的寫法是錯誤的
+
+```SQL
+SELECT AVG(s.gpa), e.cid
+FROM enrolled AS e JOIN student AS s
+ON e.sid = s.sid;
+```
+
+需要使用 `GROUP BY` 子句來解決這個問題，所有非聚合函數的欄位都必須出現在 `GROUP BY` 子句中。
+
+```SQL
+SELECT AVG(s.gpa), e.cid
+FROM enrolled AS e JOIN student AS s
+ON e.sid = s.sid
+GROUP BY e.cid;
+```
+
+如果要過濾的話，可以使用 `HAVING` 子句
+
+```SQL
+SELECT AVG(s.gpa), e.cid
+FROM enrolled AS e JOIN student AS s
+ON e.sid = s.sid
+GROUP BY e.cid
+HAVING AVG(s.gpa) > 3.8;
+```
+
+### String Operations
+
+不同的資料庫有不同的比較字串以及大小寫敏感度
+
+![string operations](/img/cmu15-445/c02/image-1.png)
+
+也可以在 `LIKE` 中使用 `%` 或 `_` 來進行字串比較，
+`%` 代表任意長度的字串 (包括空字串)，`_` 代表任意單一字元。
+
+```SQL
+SELECT *
+FROM enrolled AS e
+WHERE e.cid LIKE '15-%';
+
+SELECT *
+FROM student AS s
+WHERE s.login LIKE '%@c_';
+```
+
+SQL-92 中定義了一些字串函數，例如
+
+```SQL
+SELECT SUBSTRING(name,1,5) AS abbrv_name
+FROM student WHERE sid = 53688
+
+SELECT * FROM student AS s
+WHERE UPPER(s.name) LIKE 'KAN%'
+```
+
+除此之外，各個資料庫有不同的字串函數，例如
+
+```SQL
+-- SQL-92
+SELECT name FROM student
+WHERE login = LOWER(name) || '@cs'
+
+-- MSSQL
+SELECT name FROM student
+WHERE login = LOWER(name) + '@cs'
+
+-- MySQL
+SELECT name FROM student
+WHERE login = CONCAT(LOWER(name), '@cs')
+```
+
+### Date and Time
+
+不同的 DBMS 差異非常大，所以需要依據不同的 DBMS 來撰寫 SQL 語法。
+
+```SQL
+-- PostgreSQL
+SELECT NOW();
+
+SELECT CURRENT_TIMESTAMP;
+
+SELECT CAST('2023-08-01' AS DATE) - CAST('2023-01-02' AS DATE) AS diff;
+```
+
+### Output Redirection
+
+可以將查詢結果儲存到另一張已經存在且有相同欄位結構的 table 中，
+
+```SQL
+-- MySQL
+CREATE TABLE CourseIds (
+    SELECT DISTINCT cid FROM enrolled
+);
+
+-- PostgreSQL
+SELECT DISTINCT cid
+INTO TEMPORARY CourseIds
+FROM enrolled;
+```
+
+也可以用於 insert 語句中，將查詢結果插入到另一張 table 中
+
+```SQL
+-- PostgreSQL
+INSERT INTO CourseIds (cid)
+(SELECT DISTINCT cid FROM enrolled);
+```
+
+### Output Control
+
+可以使用 `ORDER BY` 子句來排序查詢結果，
+語法為 `ORDER BY <column*> [ASC|DESC]`，
+預設為 ASC，可以依據多個欄位進行排序。
+
+```SQL
+SELECT sid, grade FROM enrolled
+WHERE cid = '15-721'
+ORDER BY 2;
+
+SELECT sid FROM enrolled
+WHERE cid = '15-721'
+ORDER BY grade DESC, sid ASC;
+```
+
+也可以使用 `LIMIT` 子句來限制查詢結果的數量，
+語法為 `LIMIT <number> [OFFSET <number>]`，
+
+```SQL
+SELECT * FROM student
+ORDER BY sid
+LIMIT 1 OFFSET 1;
+```
+
+還有一種使用 `FETCH` 的方法，語法如下 (WITH TIES 會將相同的資料列全部取出)
+
+```SQL
+SELECT sid, name
+FROM student
+WHERE login LIKE '%@cs'
+ORDER BY gpa
+OFFSET 10 ROWS
+FETCH FIRST 10 ROWS WITH TIES;
+```
+
+```SQL
+SELECT sid, name
+FROM student
+WHERE login LIKE '%@cs'
+FETCH FIRST 10 ROWS ONLY;
+```
+
+### Window Functions
+
+可以對每一個欄位進行一些運算，例如 `RANK`、`ROW_NUMBER`、`DENSE_RANK` 等等。
+
+```SQL
+SELECT *, ROW_NUMBER() OVER () AS row_num
+FROM enrolled;
+```
+
+```SQL
+SELECT cid, sid,
+       ROW_NUMBER() OVER (PARTITION BY cid)
+FROM enrolled
+ORDER BY cid;
+```
+
+選每堂課成績最高的學生
+
+```SQL
+SELECT * FROM (
+  SELECT *,
+         RANK() OVER (PARTITION BY cid ORDER BY grade ASC) AS rank
+    FROM enrolled
+  ) AS ranking
+WHERE ranking.rank = 1;
+```
+
+### Nested Queries
+
+包含了 inner query 以及 outer query，
+inner query 會先執行，然後再執行 outer query，
+且 inner query 可以使用 outer query 中的欄位。
+
+可以支持 `NOT`、`IN`、`ANY`、`ALL`、`EXISTS` 等等。
+
+```SQL
+SELECT sid, name
+FROM student
+WHERE sid >= ALL (
+    SELECT sid FROM enrolled
+);
+
+SELECT sid, name FROM student
+WHERE sid IN (
+    SELECT MAX(sid) FROM enrolled
+);
+
+SELECT sid, name FROM student
+WHERE sid IN (
+    SELECT sid
+    FROM enrolled
+    ORDER BY sid DESC LIMIT 1
+);
+```
+
+除此之外也可以使用 `LATERAL` 子句來進行查詢，
+`LATERAL` 子句可以將一個查詢的結果作為另一個查詢的輸入。
+
+```SQL
+SELECT *
+FROM (
+    SELECT 1 AS x
+) AS t1,
+LATERAL (
+    SELECT t1.x+1 AS y
+) AS t2;
+```
+
+```SQL
+SELECT * FROM course AS c,
+LATERAL (
+    SELECT COUNT(*) AS cnt
+    FROM enrolled
+    WHERE enrolled.cid = c.cid
+) AS t1,
+LATERAL (
+    SELECT AVG(gpa) AS avg
+    FROM student AS s
+    JOIN enrolled AS e ON s.sid = e.sid
+    WHERE e.cid = c.cid
+) AS t2;
+```
+
+### Common Table Expressions
+
+ctes 可以幫助我們將複雜的查詢分解成更小的部分，
+並且重複使用。
+
+```SQL
+WITH cteName AS (
+    SELECT 1
+)
+SELECT * FROM cteName;
+```
+
+```SQL
+WITH cteSource(maxId) AS (
+    SELECT MAX(sid)
+    FROM enrolled
+)
+SELECT name
+FROM student, cteSource
+WHERE student.sid = cteSource.maxId;
+```
+
+## References
+
+- [CMU 15-445/645: Introduction to Database Systems](https://15445.courses.cs.cmu.edu/fall2023/)
+- [CMU 15-445/645: Introduction to Database Systems Youtube 2023 Fall](https://www.youtube.com/watch?v=XGMoq-D_mao&list=PLSE8ODhjZXjbj8BMuIrRcacnQh20hmY9g&index=2)
+- [Notes 1](https://zhenghe.gitbook.io/open-courses/cmu-15-445-645-database-systems/advanced-sql)
+- [Join 方法](https://akebee.com/sql-join/)
