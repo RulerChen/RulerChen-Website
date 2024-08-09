@@ -4,3 +4,383 @@ sidebar_position: '3'
 description: CMU15-445/645 Database Storage
 keywords: [CMU15-445/645, Database Storage, CMU15-445/645 筆記]
 ---
+
+## Database Storage
+
+這堂課會專注在 disk-oriented 的 DBMS 上，也就是說所有的資料都會被存在 non-volatile 的硬碟上。
+
+![storage](/img/cmu15-445/c03/image.png)
+
+- volatile :
+  - 當電源關閉時，資料會遺失
+  - 支持快速的 random access，可以由 byte address 直接存取
+- non-volatile :
+  - 當電源關閉時，資料不會遺失
+  - 資料主要以 block 或是 page 的形式存在硬碟上
+  - 如果我們想要存取某個資料，我們需要將 page 讀進記憶體中，然後再透過 offset 來存取我們想要的資料
+  - 通常擅於使用 sequential access 來存取資料
+
+除此之外，也有一種較為少見的持久性記憶體，像是 Intel 的 Optane。
+
+![speed](/img/cmu15-445/c03/image-1.png)
+
+DBMS 中通常都會自己實作 disk manager 來負責處理在 volatile (記憶體) 與 non-volatile (硬碟) 之間的資料移動，
+這是因為 disk I/O 通常會是 DBMS 中的效能瓶頸。
+
+對於 disk manager 來說，它的目標如下：
+
+- 使 DBMS 可以管理超過記憶體大小的資料
+- 盡量減少 DISK I/O 的次數
+- 透過演算法減少 random access 的次數
+
+## Disk-Oriented DBMS Overview
+
+![overview](/img/cmu15-445/c03/image-2.png)
+
+在資料庫中，所有的資料都會在硬碟上固定大小的 page 中，
+第一頁是目錄頁，可以告訴我們那些檔案被放在哪裡。
+
+當 execution engine 需要存取某個資料時， buffer pool 會先從 disk 中讀取目錄，並且依據目錄中的資訊把 page 讀進記憶體中，
+最後再返還給 execution engine 這個 page 的 pointer。
+
+## DBMS v.s. OS
+
+DBMS 的目標是希望可以支持超過記憶體大小的資料庫，
+且在讀取硬碟時不要有過多的停頓以及可以同時處理多個查詢。
+就像 virtual memory 一樣，有一個很大的 address space 和作業系統從硬碟引入 page 的地方。
+
+作業系統提供了 `mmap` 這個函式，可以讓我們把硬碟中的資料映射到記憶體中，
+但是基於正確性以及性能的考慮，我們幾乎不會在 DBMS 中使用 `mmap`，
+特別是需要寫入時 (read-only 可以考慮使用)，
+主要會包括以下幾個問題
+
+- Transaction 的安全性 : OS 會在任何時間點把 dirty page 寫回硬碟，影響 DBMS 的 ACID
+- IO 停頓 : DBMS 不知道哪些頁面在內存中。在 page fault 時，OS 會使線程停頓
+- 錯誤處理 : 難以驗證頁面。任何訪問都可能導致 DBMS 必須處理 SIGBUS 信號
+- 性能問題 : OS 無法知道 DBMS 的查詢，因此無法最佳化頁面順序
+
+我們可以改為使用以下的方式
+
+- `madvise` : 告訴 OS 我們需要哪些頁面
+- `mlock` : 告訴 OS 哪些頁面不能被寫入
+- `msync` : 通知 OS 將某些記憶體寫到硬碟上
+
+DBMS 幾乎不會使用 OS 自帶的硬碟管理機制，
+這是因為 DBMS 可以比 OS 知道更多的事情，因此可以更好的提升效率，包括
+
+- 將 dirty page 寫回硬碟的時機
+- prefetch
+- Buffer replacement policy (當 buffer pool 滿了時，要釋放哪些頁面)
+- Thread / process scheduling
+
+## File Storage
+
+DBMS 會將所有資料儲存成一個或多個檔案，OS 並不會知道怎麼解讀這些檔案。
+storage manager 會負責管理這些檔案，
+追蹤那些資料被寫到了哪個 page 上，以及那些 page 還有空間等等。
+
+### Database Page
+
+DBMS 會將一個或多個檔案中固定大小的區域稱為 page，
+page 可以包含不同種類的資料，像是 table 的資料、索引、log 等等，
+不同種類的資料不會存在同一個 page 中。
+
+每個頁面都一個獨立的 id，DBMS 會透過 indirection layer 將 page id 與 file path 跟 offset 對應起來。
+
+在 DBMS 中有三種不同的 page
+
+- Hardware page : 通常是 4kb
+- OS page : 4kb
+- Database page : 1-16kb
+
+不同的 DBMS 有不同的 page size，
+像是 MySQL 使用 16kb，而 PostgreSQL 使用 8kb。
+
+同時 DBMS 也有不同的儲存頁面的方式，常見的有
+
+- Heap File Organization
+- Tree File Organization
+- Sequential / Sorted File Organization (ISAM)
+- Hashing File Organization
+
+### Database Heap File
+
+有很多種方式可以得到 DBMS 所需要的 page，而 heap file 是一種方式。
+heap file 是一個無序的集合，其中的 tuple 都是隨機排序的。
+
+我們需要的 api 包括 create、get、write、delete、iterate。
+
+有兩種方式可以定位一個 page
+
+- Linked List : 有一個 header page 儲存指向 free page 和 data page 的指標，但如果要找到某個 page 需要從頭開始找
+
+![linked-list](/img/cmu15-445/c03/image-3.png)
+
+- Page Directory : 有一個目錄頁，可以告訴我們那些 page 是存在哪裡
+
+![page-directory](/img/cmu15-445/c03/image-4.png)
+
+## Page Layout
+
+![page-header](/img/cmu15-445/c03/image-5.png)
+
+每個 page 會被分成 header 跟 data 兩個部分，在 page header 中，可能會包含以下資訊
+
+- page size
+- DBMS version
+- checksum
+- transaction visibility
+- compression information
+
+有些資料庫也會儲存一些統計值等等。
+
+對於 data 部分，有以下幾種儲存方式
+
+- Tuple-oriented storage
+- Log-structured storage
+- Index-organize storage
+
+### Tuple-oriented Storage
+
+#### Strawman Idea
+
+![strawman](/img/cmu15-445/c03/image-6.png)
+
+在 header 中記錄 tuple 的數量，並持續往下寫入 tuple。
+
+這個方法有兩個明顯的缺點
+
+- 當刪除 tuple 時，每次新增新的 tuple 就需要遍歷整個 page
+- 當欄位有可變長度的時會無法處理
+
+#### Slotted Page
+
+![slotted-page](/img/cmu15-445/c03/image-7.png)
+
+在 header 中會有一個 slot array，記錄每個 tuple 的 offset 以及長度。
+
+新增 tuple 時，先新增一個 slot 到 slotted array 中，然後再寫入 tuple，
+並由兩端向中間生長，這樣當兩者相遇的時候就知道 page 已經滿了。
+刪除 tuple 時，只需要將 slot array 中的 slot 移除即可。
+如果我們要進行壓縮，可以將所有的 tuple 移到一端，然後更新 slot array。
+
+### Log-structured Storage
+
+在 tuple-oriented storage 中，有一些問題無法被解決
+
+- fragmentation : 當 tuple 被刪除時，會造成空洞，或者是只有一個 tuple 的 page
+- useless disk IO : 當更新 tuple 時，會需要 load 一整個 page
+- random disk IO : 當一次要更新很多 tuple 時，會需要讀取很多個不同的 page
+
+log-structured storage 是一種解決這些問題的方式，
+它不會更新原本的 page，而是將更新的內容寫到新的 page 上，
+這種方式原本被稱作 log-structured merge tree (LSM tree)。
+
+![log-structured](/img/cmu15-445/c03/image-9.png)
+
+在這個儲存模式下，DBMS 不會再維護 tuple，而是將所有的變更按照時間順序寫到 log 中，
+然後再依照順序寫到 disk 上，要注意的是，一旦寫到 disk 上，就無法再更改，
+一般情況下會在 page 被填滿時才會寫到 disk 上，但在 transaction commit 時也會直接寫到 disk 上。
+
+![log-structured-2](/img/cmu15-445/c03/image-10.png)
+
+這種方式的優點在於更新、刪除的速度都很快，但是如果遇到查詢的話，就需要從頭開始讀取 log，
+因此通常會搭配 index 來使用。
+
+![log-structured-3](/img/cmu15-445/c03/image-11.png)
+
+為了減少所需的空間，DBMS 會定期將 log 進行壓縮，並且將相同的操作合併在一起。
+在經過合併後，我們就不需要維護原本的時間順序了 (因為每個 key 都只剩下一個 value)，
+DBMS 會將其依照 id 來進行排序，這種資料結構叫做 Sorted String Table (SSTables)。
+
+![log-structured-4](/img/cmu15-445/c03/image-12.png)
+
+壓縮的方法有兩種
+
+- universal compaction
+- level compaction
+
+Log-structured storage 因為 RockDB 的出現而變得相當常見，
+但他也有一些問題
+
+- Write Amplification
+- Compaction Overhead
+
+### Index-organized Storage
+
+![index-organized](/img/cmu15-445/c03/image-13.png)
+
+不管是 tuple-oriented storage 還是 log-structured storage，都需要透過 index 來進行查詢。
+在 index-organized storage 中，我們會將 tuple 當成 index 中的值，
+並且使用類似 slot page 的方式來儲存，同時依據 key 來進行排序。
+
+## Tuple Layout
+
+![tuple-layout](/img/cmu15-445/c03/image-8.png)
+
+tuple 是一連串的 bytes 組合而成，DBMS 的任務就是要將這些 bytes 解析成我們需要的資料，
+且一樣是由 header 跟 data 兩個部分組成。
+
+header 通常包含了 NULL 的 bitmap 以及 transaction visibility。
+
+通常情況下，資料擺放的順序會是 create table 時的順序，
+但是為了提高效能， DBMS 有可能會將關聯的表的內容先 join，
+這種模式叫做 denormaliza，
+好處是可以減少 IO 次數，但是缺點是會增加更新的複雜度。
+
+DBMS 會將每個 tuple 設定一個 id 代表他在資料庫中的具體位置，
+如 postgres 中的 ctid。
+
+```SQL
+-- postgres 16
+CREATE TABLE test (id INT, name VARCHAR(10));
+INSERT INTO test VALUES (1, 'a'), (2, 'b'), (3, 'c');
+
+SELECT ctid, * FROM test;
+-- result
+ctid  | id | name
+-------+----+------
+ (0,1) |  1 | a
+ (0,2) |  2 | b
+ (0,3) |  3 | c
+(3 rows)
+-- ctid 代表 (page, slot) 的位置，如 (0,1) 代表 page 0 的第一個 slot
+
+DELETE FROM test WHERE id = 2;
+SELECT ctid, * FROM test;
+-- result
+ctid  | id | name
+-------+----+------
+ (0,1) |  1 | a
+ (0,3) |  3 | c
+(2 rows)
+-- 可以看到 id = 2 的 tuple 被刪除了，但 id = 3 的 ctid 仍然是 (0,3)
+
+INSERT INTO test VALUES (2, 'b');
+SELECT ctid, * FROM test;
+-- result
+ctid  | id | name
+-------+----+------
+ (0,1) |  1 | a
+ (0,3) |  3 | c
+ (0,4) |  2 | b
+(3 rows)
+-- 可以看到 id = 2 的 ctid 是 (0,4)
+
+VACUUM FULL test;
+SELECT ctid, * FROM test;
+-- result
+ctid  | id | name
+-------+----+------
+ (0,1) |  1 | a
+ (0,2) |  3 | c
+ (0,3) |  2 | b
+(3 rows)
+-- 執行 VACUUM FULL 之後，ctid 會重新排序
+```
+
+## Tuple Storage
+
+![tuple-storage](/img/cmu15-445/c03/image-14.png)
+
+DBMS 需要保證這些資料是對齊的，以免出現一些非預期的行為。
+
+如果讀到邊界的資料，會依據電腦的架構有不同的處理方式
+
+- Perform Extra Reads : 執行兩次讀取並且合併
+- Random Reads : 隨機返回不正確的結果
+- Reject : 拒絕讀取
+
+要處理這個問題，有兩種解決方式
+
+- Padding : 將資料填充到固定大小
+
+![padding](/img/cmu15-445/c03/image-15.png)
+
+- Reordering : 將資料重新排序 (可能需要再填充)
+
+![reordering](/img/cmu15-445/c03/image-16.png)
+
+## Data Representation
+
+![data-representation](/img/cmu15-445/c03/image-17.png)
+
+### Integer
+
+使用 C/C++ 原生的 type 來表示，是固定長度的。
+
+如 `INTEGER`、`BIGINT`、`SMALLINT`、`TINYINT`
+
+### Variable Precision Number
+
+同樣使用 C/C++ 原生的 type 來表示，也是固定長度，
+但是跟 C/C++ 一樣，會遇到精確度的問題。
+
+```c
+#include <stdio.h>
+
+int main(int argc, char* argv[]) {
+    float x = 0.1;
+    float y = 0.2;
+    printf("x+y = %.20f\n", x+y)
+    printf("0.3 = %.20f\n", 0.3)
+}
+
+// =>
+// x+y = 0.30000001192092895508
+// 0.3 = 0.29999999999999998890
+```
+
+如 `FLOAT`
+
+### Fixed Precision Number
+
+如果需要精確的數字，可以使用 fixed precision number，
+但是在計算上會比較慢，
+通常每個 DBMS 都會自己實作 (如加減法和儲存方式)，
+所需的空間會依照精確度而有所不同。
+
+```c
+// postgresql NUMERIC
+typedef unsigned char NumericDigit;
+typedef struct {
+    int ndigits;           // # of Digits
+    int weight;            // Weight of 1st Digit
+    int scale;             // Scale Factor
+    int sign;              // Positive/Negative/NaN
+    NumericDigit * digits; // Digit Storage
+} numeric;
+```
+
+如 `NUMERIC`、`DECIMAL`
+
+### NULL Data Type
+
+有三個常見的方式來表示 NULL
+
+- NULL column bitmap header : 在 header 中有一個 bitmap 來表示哪些 column 是 NULL (最常見)
+- special value : 用一個特殊的值來表示 NULL 如 INT32_MIN
+- Per attribute NULL flag : 在每一個屬性前加入一個 flag 來表示是否為 NULL，會破壞 alignment (非常少見)
+
+### Large Value
+
+![large-value](/img/cmu15-445/c03/image-18.png)
+
+大多數 DBMS 不支援大於 page size 的 tuple，
+所以我們必須將資料儲存在獨立的 overflow / toast page，並且在 tuple 中儲存一個 pointer 指向這個 page。
+
+### External Value Store
+
+![external-value-store](/img/cmu15-445/c03/image-19.png)
+
+有些資料庫可以存取外部的檔案，
+這些檔案會被放在本地的路徑並儲存 URL，
+資料庫不能做任何更改，
+也不保證 transaction。
+
+## References
+
+- [CMU 15-445/645: Introduction to Database Systems](https://15445.courses.cs.cmu.edu/fall2023/)
+- [CMU 15-445/645: Introduction to Database Systems Youtube 2023 Fall](https://www.youtube.com/watch?v=XGMoq-D_mao&list=PLSE8ODhjZXjbj8BMuIrRcacnQh20hmY9g&index=2)
+- [Notes 1](https://zhenghe.gitbook.io/open-courses/cmu-15-445-645-database-systems/database-storage)
+- [Notes 2](https://ychy.me/posts/cmu_15_445_03_note)
