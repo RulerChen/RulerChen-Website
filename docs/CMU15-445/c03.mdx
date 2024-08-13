@@ -43,7 +43,7 @@ DBMS 中通常都會自己實作 disk manager 來負責處理在 volatile (記�
 當 execution engine 需要存取某個資料時， buffer pool 會先從 disk 中讀取目錄，並且依據目錄中的資訊把 page 讀進記憶體中，
 最後再返還給 execution engine 這個 page 的 pointer。
 
-## DBMS v.s. OS
+## DBMS vs OS
 
 DBMS 的目標是希望可以支持超過記憶體大小的資料庫，
 且在讀取硬碟時不要有過多的停頓以及可以同時處理多個查詢。
