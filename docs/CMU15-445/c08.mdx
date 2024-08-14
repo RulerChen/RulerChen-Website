@@ -4,3 +4,157 @@ sidebar_position: '8'
 description: CMU15-445/645 Trees Indexes
 keywords: [CMU15-445/645, Trees Indexes, CMU15-445/645 筆記]
 ---
+
+上一節我們介紹了 Hash Tables，
+這種資料結構是無序的，且無法支持範圍查詢，
+因此我們需要一種有序的資料結構來支持範圍查詢。
+
+2020 以前的課似乎會介紹更多的資料結構 (skip list、Radix Tree ...)，但 2020 以後的課程就只有介紹 B+ Tree。
+
+## B-Tree
+
+### B-Tree Family
+
+B-Tree 中的 B 通常代表 Balanced，
+而 B-Tree 的變種有很多，例如
+
+- B-Tree
+- B+Tree
+- B\* Tree
+- $B^{link}$ Tree
+
+其中最常見的是 B+Tree，各個 DBMS 也會使用各種 B-Tree 的變種。
+
+### B+Tree
+
+B+Tree 是一種 self-balancing tree，
+並且在 search、insert、delete 跟 sequential access 時的時間複雜度都是 $O(\log n)$，
+是一種 BST 的變種。
+
+![B+ Tree](/img/cmu15-445/c08/image.png)
+
+M-way B+Tree 的特點有
+
+- 每個節點最多儲存 M 個 key，並且有 M+1 個 children
+- 每個 leaf node 的深度都相同 (perfectly balanced)
+- 除了 root node 以外，每個節點都至少要有 $M / 2 - 1 \leq keys \leq M - 1$ 個 key (半滿)
+- leaf node 會透過 doubly linked list 連接，提高 sequential access 的效率
+
+![B+ Tree](/img/cmu15-445/c08/image-1.png)
+
+在每個 node 中都包含了一個經過排序的 key / value pair 陣列，
+其中 key 就是 index 的值，而 value 則會根據是 inner node 或 leaf node 而有所不同。
+
+其中 inner node 的 value 就是指向下一個節點的 pointer，
+而 leaf node 的 value 則有兩種不同的實作方式
+
+- Record IDs : 直接儲存指向 tuple 的指標
+- Tuple Data : 直接儲存 tuple 的資料，但對於 secondary index 來說，這樣會造成重複儲存，因此要在 leaf node 儲存 Record IDs
+
+### B+Tree vs B-Tree
+
+B-Tree 不會只把資料儲存在 leaf node 中，而是會把資料儲存在每個節點中，
+這樣會導致每個 node 能存放的資料量較少，因此 B-Tree 的高度會比 B+Tree 高，
+導致 B-Tree 的查詢效率較低，並且 B-Tree 因為不會在 left node 中有 doubly linked list，因此 sequential access 的效率也較低。
+
+### B+Tree Operations
+
+有關 B+Tree 的操作，可以參考 [這個網站](https://www.cs.usfca.edu/~galles/visualization/BPlusTree.html)。
+
+### Selection Conditions
+
+B+tree 只需要 query 有任意一個 key 就可以使用 index，不需要像 hash index 需要全部的 key 才能使用。
+
+### Duplicate Keys
+
+![B+ Tree](/img/cmu15-445/c08/image-2.png)
+![B+ Tree](/img/cmu15-445/c08/image-3.png)
+
+有兩種常見的方式來處理 duplicate keys
+
+- Append Record ID : 把唯一的 Record ID 附加在 key 後面
+- Overflow Leaf Nodes : 允許節點溢出
+
+### Clustered Indexes
+
+有些 DBMS 會規定 table 的儲存方式，通常會按照 primary key 來排序，
+如果沒有就會自動幫你生成一個來排序。
+
+### Index Scan Page Sorting
+
+![B+ Tree](/img/cmu15-445/c08/image-4.png)
+
+由於直接從 unclustered index 中取得資料非常沒效率，因此 DBMS 會把需要的 page id 全部取出來做排序。
+
+## B+Tree Design Choices
+
+### Node Size
+
+通常來說， disk 的讀取速度越慢，node size 就會越大
+
+- HDD : 1MB
+- SSD : 10KB
+- In-Memory : 512B
+
+### Merge Threshold
+
+由於 B+Tree 的 merge 開銷很大，所以有些 DBMS 並不會在每次插入時都 merge，
+而是會由其他的 process 來定期處理 merge。也因此 postgres 會叫 B+Tree 為 nbtree (non-balanced tree)。
+
+### Variable Length Keys
+
+處理不定長度的 key 有以下幾種方式
+
+- Pointers : 儲存一個指標指向 tuple
+- Variable-Length Nodes : 允許可變長度，但需要精細的記憶體管理
+- Padding : 將 key 填滿到固定長度
+- Key Map / Indirection : 維護 key / value 的對應表
+
+### Intra-Node Search
+
+在節點內搜索有三種方式
+
+- Linear : 線性搜索，可以用 SIMD 來加速
+- Binary : 二分搜索
+- Interpolation : 用 key 的分布來估計位置
+
+## Optimizations
+
+### Prefix
+
+![B+ Tree](/img/cmu15-445/c08/image-5.png)
+
+同一個 node 常常有相同的 key，我們可以透過 prefix 來減少儲存空間。
+
+### Deduplication
+
+![B+ Tree](/img/cmu15-445/c08/image-6.png)
+
+可以將重複的 key 合併。
+
+### Suffix
+
+在 inner node 中， key 只是用來決定要往左還是往右走，因此只需要儲存可供辨識的部分。
+
+### Pointer Swizzing
+
+我們需要透過 page id 來找到其他的 page，這樣就必須先訪問 page table，
+但如果這個 page 已經固定在 buffer pool 中，我們就使用原始指標而不需要再訪問 page table。
+
+### Bulk Insert
+
+最快建立 B+Tree 的方法是將 key 先排好序，在大量操作的時候我們可以這樣做。
+
+### Write-Optimized B+ Tree
+
+![B-epsilon tree](/img/cmu15-445/c08/image-7.png)
+
+因為分裂和合併節點在 B+Tree 中非常耗時，因此有些 B-Tree 的變體會延遲這些行為，如 $B\epsilon$-Tree，
+這種樹會將變動儲存在 log 檔並慢慢往下傳遞。
+
+## References
+
+- [CMU 15-445/645: Introduction to Database Systems](https://15445.courses.cs.cmu.edu/fall2023/)
+- [CMU 15-445/645: Introduction to Database Systems Youtube 2023 Fall](https://www.youtube.com/watch?v=5gXn5fLkbM0&list=PLSE8ODhjZXjbj8BMuIrRcacnQh20hmY9g&index=9)
+- [Notes 1](https://zhenghe.gitbook.io/open-courses/cmu-15-445-645-database-systems/tree-indexes)
+- [B-tree 跟 B+tree 的優缺點](https://blog.csdn.net/sxcsch/article/details/131434222)
