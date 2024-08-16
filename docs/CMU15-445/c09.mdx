@@ -1,0 +1,112 @@
+---
+title: 'Index Concurrency Control'
+sidebar_position: '9'
+description: CMU15-445/645 Index Concurrency Control
+keywords: [CMU15-445/645, Index Concurrency Control, CMU15-445/645 筆記]
+---
+
+## Hash Table Latching
+
+對於 hash table 來說併發控制是相對簡單的，
+這是因為在 hash table 中所有的 thread 的訪問方向都相同，
+且一次只會訪問一個 page / slot，因此不會有 deadlocks 的問題。
+
+如果 hash table 需要 resize 的時候，我們只需要對整個 hash table 加鎖即可，
+動態的 hash table 也是透過類似的方式實現。
+
+主要有兩種方式來實現 hash table 的 latch (依據粒度)
+
+### Page Latches
+
+每個 page 都有自己的 latch 來保護整個頁面的資料，
+thread 在訪問 page 的時候需要先獲得 read / write 的 latch。
+
+- 優點
+  - 單個 thread 訪問同一 page 的多個 slot 時速度快
+- 缺點
+  - 併發度低，因為只有一個 thread 可以訪問 page
+
+### Slot Latches
+
+每個 slot 都有自己的 latch 來保護 slot 的資料。
+
+- 優點
+  - 併發度高，因為不同的 thread 可以訪問不同的 slot
+- 缺點
+  - 增加了 latch 的數量，可能會增加儲存和計算的 overhead
+
+除了上述的兩種方式，也可以使用 latch-free 的方式來實現 hash table，
+直接使用 CAS 來探測是否可以進行操作，這樣可以在某些情況下提高效率。
+
+## B+Tree Latching
+
+在 B+Tree 中，我們需要考慮以下兩個情況
+
+- 多個 thread 同時修改同一個 node
+- 一個 node 在遍歷的時候另一個 thread 在 merge / split
+
+### Latch Crabbing / Coupling
+
+Latch Crabbing 是一種可以允許多個 thread 同時訪問 (修改) 一個 node 的協定，
+它的基本思路如下
+
+1. 獲取 parent 的 latch
+2. 獲取 child 的 latch
+3. 如果 child 是 `safe` 的話，就釋放 parent 的 latch
+
+`safe` 的定義是發生操作時，該節點不會被 merge / split
+
+- insert : 該節點未滿
+- delete : 該節點超過半滿
+
+#### Search
+
+從 root 開始往下遍歷，
+不斷的獲取 child 的 read latch 並釋放 parent 的 latch 直到 leaf node。
+
+![Search Latch Crabbing](/img/cmu15-445/c09/image.png)
+![Search Latch Crabbing](/img/cmu15-445/c09/image-1.png)
+![Search Latch Crabbing](/img/cmu15-445/c09/image-2.png)
+![Search Latch Crabbing](/img/cmu15-445/c09/image-3.png)
+
+#### Insert / Delete
+
+從 root 開始往下遍歷，
+並獲取 child 的 write latch，
+如果獲取就檢查 child 是否 `safe`，
+如果是的話就釋放之前獲取的所有 latch。
+
+![Insert Latch Crabbing](/img/cmu15-445/c09/image-4.png)
+![Insert Latch Crabbing](/img/cmu15-445/c09/image-5.png)
+![Insert Latch Crabbing](/img/cmu15-445/c09/image-6.png)
+![Insert Latch Crabbing](/img/cmu15-445/c09/image-7.png)
+![Insert Latch Crabbing](/img/cmu15-445/c09/image-8.png)
+
+### Better Latching Algorithm
+
+在實際的應用中，
+每次都要在路徑中獲取 write latch 很容易成為瓶頸 (特別是 root node)，
+並且大部分的操作並不會造成 merge / split，
+因此我們可以採用一種較為樂觀的方式，
+在遍歷的時候使用 read latch，
+到達 leaf node 的時候再獲取 write latch 來更新或刪除值，
+如果在過程中發現有 merge / split 的情況，
+就重新從 root 開始直接原始的 latch crabbing。
+
+### Leaf Node Scans
+
+前面只有討論 top-down 的 latch crabbing，
+但在 range query 中，
+我們會需要進行橫向的訪問。
+
+![Leaf Node Scans](/img/cmu15-445/c09/image-9.png)
+
+在 top-down 的訪問中， thread 只能從下層節點來獲取 latch，
+如果 latch 無法被獲取， thread 就需要等待，
+因此避免了 deadlock 的問題。
+但在 leaf node scans 中，如果 thread 1 嘗試進行 scan，
+而 thread 2 則在刪除節點，
+就會導致 deadlock 的問題。
+
+當獲取 latch 失敗時，thread 應該快速停止所有動作並且釋放所有 latch，
+最後再重新開始，這是因為我們需要盡量避免長時間的等待以及不需要的計算。
