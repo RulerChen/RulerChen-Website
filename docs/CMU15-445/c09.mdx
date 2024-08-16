@@ -5,6 +5,91 @@ description: CMU15-445/645 Index Concurrency Control
 keywords: [CMU15-445/645, Index Concurrency Control, CMU15-445/645 筆記]
 ---
 
+在之前討論的資料結構中，為了討論方便，我們只考慮了 single-threaded 的情況，
+但在實際情況中，
+除了一些特別的資料庫 (如 VoltDB、Redis) 之外，
+大部分的 DBMS 都需要透過 multi-threaded 來利用多核心的優勢。
+
+而 concurrency control 就是討論在 multi-threaded 的情況下，
+要如何確保結果是正確的。
+
+我們通常會從兩個層面來討論 concurrency control 的正確性
+
+- Logical Correctness : 我們是否能看到應該看到的資料 (後面會討論)
+- Physical Correctness : 內部的資料是否正確 (本篇重點)
+
+## Locks and Latches
+
+![Locks and Latches](/img/cmu15-445/c09/image-10.png)
+
+而這裡我們會重點討論 latch，在 latch 中有兩種 mode
+
+- read mode
+  - 多個 thread 同時讀取
+  - 當別的 thread 已經有 latch 時，可以再取得 read latch
+- write mode
+  - 只能有一個 thread 取得 write latch
+  - 當別的 thread 已經有任一種模式的 latch 時，就無法獲得 write latch
+
+## Latch Implementations
+
+在實現上，latch 不應該佔據太多的記憶體，且在沒有競爭的情況下，要有快速獲取的方法。
+
+在 DBMS 中，主要有以下幾種實現方式
+
+### Test-and-Set Spin Latch (TAS)
+
+![Test-and-Set Spin Latch](/img/cmu15-445/c09/image-11.png)
+
+這種方式的原理是 thread 不斷的執行 CAS (Compare-And-Swap) 來更新一個記憶體中的位置，
+並由 DBMS 來控制成功或失敗後的行為，可以給予比 mutex 更多的彈性及效能。
+
+- 優點
+  - 效能佳
+- 缺點
+  - 無法擴展以及 cache coherence 的問題
+- 範例
+  - `std::atomic<T>`
+
+![CAS](/img/cmu15-445/c09/image-14.png)
+
+CAS 是一種原子操作，它比較一個內存位置的值與給定的預期值，如果它們相同，則將該內存位置的值更新為新值，
+由於是原子操作，所以不會被其他 thread 中斷。
+
+### Blocking OS Mutex
+
+![Blocking OS Mutex](/img/cmu15-445/c09/image-12.png)
+
+這種方式是直接使用由 OS 所提供的互斥鎖，
+在 Linux 的 futex 中 DBMS 會先嘗試獲得 user-space mutex，
+如果獲取成功則代表 latch 被成功設定，如果失敗的話就會去嘗試獲取 kernel-space mutex，
+如果依然無法獲得就會被放進 block scheduler，而 block scheduler 會決定下一個要被執行的 thread。
+
+- 優點
+  - 使用簡單
+- 缺點
+  - 效能較差 (每次鎖定和解鎖需要 25ns)
+- 範例
+  - `std::mutex`
+
+### Reader-Writer Latches
+
+![Reader-Writer Latches](/img/cmu15-445/c09/image-13.png)
+
+這種方式是建立在 spinlock 之上，但與前面兩種方式不同，這種方式可以允許 latch 以 read mode 或 write mode 來被取得。
+我們會追蹤有多少 thread 取得了 latch 以及有多少 thread 在等待 latch，
+並依據不同的 policy (如 reader-preferred、writer-preferred、fair reader-writer locks)
+來維護 priority queue 來決定下一個要被執行的 thread。
+
+- 優點
+  - 允許併發的讀取，在讀多寫少的情況下效能較佳
+- 缺點
+  - 實作較為複雜
+  - 有可能會有 starvation 的問題
+  - 需要額外的儲存空間來儲存需要用來排序的 metadata
+- 範例
+  - `std::shared_mutex`
+
 ## Hash Table Latching
 
 對於 hash table 來說併發控制是相對簡單的，
@@ -110,3 +195,10 @@ Latch Crabbing 是一種可以允許多個 thread 同時訪問 (修改) 一個 n
 
 當獲取 latch 失敗時，thread 應該快速停止所有動作並且釋放所有 latch，
 最後再重新開始，這是因為我們需要盡量避免長時間的等待以及不需要的計算。
+
+## References
+
+- [CMU 15-445/645: Introduction to Database Systems](https://15445.courses.cs.cmu.edu/fall2023/)
+- [CMU 15-445/645: Introduction to Database Systems Youtube 2023 Fall](https://www.youtube.com/watch?v=POuQogLy3E8&list=PLSE8ODhjZXjbj8BMuIrRcacnQh20hmY9g&index=10)
+- [Notes 1](https://zhenghe.gitbook.io/open-courses/cmu-15-445-645-database-systems/index-concurrency-control)
+- [Spinlock](https://ithelp.ithome.com.tw/articles/10281491)
