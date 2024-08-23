@@ -9,6 +9,102 @@ keywords: [CMU15-445/645, Concurrency Control Theory, CMU15-445/645 筆記]
   <title>CMU 15-445/645 筆記 Concurrency Control Theory</title>
 </head>
 
+對於 DBMS 來說，除了基本的功能外，我們還有兩個問題需要解決
+
+- 如何在同時更新時避免 race condition (concurrency control)
+- 當資料庫發生故障時，我們如何保證資料的完整性 (recovery)
+
+在這節中，我們會探討如何解決第一個問題，也就是 concurrency control。
+
+## Transaction
+
+transaction 是 DBMS 中最基本的操作單位，指的是一系列操作的執行，且這些操作要麼全部執行成功，要麼全部不執行。
+
+如以下的範例，假設你要從 Andy 的銀行帳戶中轉出 $100 給他的經紀人，這個交易涉及以下步驟
+
+- 確認 Andy 帳戶中是否有 $100
+- 從 Andy 的帳戶中扣除 $100
+- 將 $100 加到他的經紀人的帳戶
+
+這個交易要麼全部完成（即上述三個步驟都成功執行），要麼不會改變任何帳戶的狀態。
+
+### The Strawman System
+
+strawman system 是一個簡單的 transaction system，它只有一個 thread 來執行所有的 transaction，
+因此不管在任何時刻都只能有一個 transaction 在執行。
+
+這個系統的處理方式是將所有檔案都複製一份，然後對這個新的檔案進行修改，如果成功就全部覆蓋，
+這種方式雖然簡單但是缺點是顯而易見的，就是無法利用多核來處理獨立的 transaction。
+
+為了提高效率，我們必須允許多個 transaction 同時執行，但這樣就會產生正確性的問題，如
+
+- Temporary Inconsistency: 不可避免
+- Permanent Inconsistency: 不可接收，會影響正確性
+
+在 SQL 中，我們會使用 `BEGIN`、`COMMIT`、`ROLLBACK` 來控制 transaction 的執行。
+
+為了保證資料的正確性，資料必須滿足 ACID 原則。
+
+## ACID: Atomicity
+
+DBMS 需要保證 transaction 的原子性，即所有操作只有全部完成跟全部未完成兩種結果，
+如果在過程中出現錯誤，DBMS 需要回滾到原本的狀態。
+
+主要有兩種策略
+
+### Logging
+
+目前主流的實作方式，會記錄交易過程中的每一項變更，並同時保存在記憶體跟硬碟上。
+
+### Shadow Paging
+
+將交易需要修改的頁面複製，並只在新的頁面中修改，當交易提交時才會覆蓋原本的檔案，
+通常在 single thread 的環境中使用。
+
+## ACID: Consistency
+
+表示在資料庫中的邏輯是正確的，主要分為兩種
+
+- Database Consistency : 遵循 integrity constraints，例如人的年齡不可能是負數，
+  可以使用 SQL 中的 `CHECK` 或 `CONSTRAINT`
+- Transaction Consistency : 如果交易前是一致，交易後也應該是一致的
+
+## ACID: Isolation
+
+不同的 transaction 在執行過程中應該互相隔離且互不影響，就像在單獨運行一樣。
+但在實際情況中，由於效能問題，DBMS 需要將多個同時執行的交易交錯執行，並同時保持隔離性。
+
+舉例如下，
+有兩個 transaction t1 和 t2
+
+- t1 : A 轉給 B 100 元
+- t2 : A 和 B 獲得 6% 利息
+
+```
+// t1
+BEGIN
+A = A - 100
+B = B + 100
+COMMIT
+
+// t2
+BEGIN
+A = A * 1.06
+B = B * 1.06
+COMMIT
+```
+
+### Concurrency Control
+
+concurrency control 指的是 DBMS 如何決定多個交易操作的正確順序，大致有兩種方式
+
+- Pessimistic (悲觀) : DBMS 假設會發生衝突，可以透過鎖定資源來實現
+- Optimistic (樂觀) : DBMS 假設不會發生衝突，直到 commit 時才會檢查衝突並回滾
+
+## ACID: Durability
+
+所有已提交的資料都將永久保存，而不會因為系統崩潰而遺失
+
 ## References
 
 - [CMU 15-445/645: Introduction to Database Systems](https://15445.courses.cs.cmu.edu/fall2023/)
