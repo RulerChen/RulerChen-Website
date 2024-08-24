@@ -66,7 +66,7 @@ DBMS 需要保證 transaction 的原子性，即所有操作只有全部完成�
 表示在資料庫中的邏輯是正確的，主要分為兩種
 
 - Database Consistency : 遵循 integrity constraints，例如人的年齡不可能是負數，
-  可以使用 SQL 中的 `CHECK` 或 `CONSTRAINT`
+  可以使用 SQL 中的 `CHECK` 或 `CONSTRAINT` 來實現
 - Transaction Consistency : 如果交易前是一致，交易後也應該是一致的
 
 ## ACID: Isolation
@@ -93,6 +93,31 @@ A = A * 1.06
 B = B * 1.06
 COMMIT
 ```
+
+當這兩個 transaction 發生之後，
+不管順序如何，DBMS 需要確保最後兩者加起來的結果是 $2000 \times 1.06$ = 2120 元。
+
+### Schedule
+
+為了提高 concurrency，DBMS 會將多個 transaction 交錯執行 (interleave)，
+這樣當某個交易在等待資源 (disk IO、page fault) 或 CPU 有空閒時，就可以繼續執行其他交易。
+
+我們需要保證 scheduler 是 serial schedule 或是等價於 serial schedule (serializable schedule)，
+也就是說，這些交易的結果應該與某個 serial schedule 的結果相同。
+
+### Conflict
+
+#### Read-Write Conflict
+
+#### Write-Read Conflict
+
+#### Write-Write Conflict
+
+### Serializability
+
+#### Conflict Serializability
+
+#### View Serializability
 
 ### Concurrency Control
 
