@@ -38,30 +38,24 @@ strawman system 是一個簡單的 transaction system，它只有一個 thread �
 
 為了提高效率，我們必須允許多個 transaction 同時執行，但這樣就會產生正確性的問題，如
 
-- Temporary Inconsistency: 不可避免
+- Temporary Inconsistency: 不可避免，不會影響正確性
 - Permanent Inconsistency: 不可接收，會影響正確性
 
 在 SQL 中，我們會使用 `BEGIN`、`COMMIT`、`ROLLBACK` 來控制 transaction 的執行。
 
-為了保證資料的正確性，資料必須滿足 ACID 原則。
+為了保證資料的正確性，資料庫必須滿足 ACID 原則。
 
-## ACID: Atomicity
+## ACID - Atomicity
 
 DBMS 需要保證 transaction 的原子性，即所有操作只有全部完成跟全部未完成兩種結果，
 如果在過程中出現錯誤，DBMS 需要回滾到原本的狀態。
 
 主要有兩種策略
 
-### Logging
+- Logging : 目前主流的實作方式，會記錄交易過程中的每一項變更，並同時保存在記憶體跟硬碟上
+- Shadow Paging : 將交易需要修改的頁面複製，並只在新的頁面中修改，當交易提交時才會覆蓋原本的檔案，通常在 single thread 的環境中使用
 
-目前主流的實作方式，會記錄交易過程中的每一項變更，並同時保存在記憶體跟硬碟上。
-
-### Shadow Paging
-
-將交易需要修改的頁面複製，並只在新的頁面中修改，當交易提交時才會覆蓋原本的檔案，
-通常在 single thread 的環境中使用。
-
-## ACID: Consistency
+## ACID - Consistency
 
 表示在資料庫中的邏輯是正確的，主要分為兩種
 
@@ -69,7 +63,7 @@ DBMS 需要保證 transaction 的原子性，即所有操作只有全部完成�
   可以使用 SQL 中的 `CHECK` 或 `CONSTRAINT` 來實現
 - Transaction Consistency : 如果交易前是一致，交易後也應該是一致的
 
-## ACID: Isolation
+## ACID - Isolation
 
 不同的 transaction 在執行過程中應該互相隔離且互不影響，就像在單獨運行一樣。
 但在實際情況中，由於效能問題，DBMS 需要將多個同時執行的交易交錯執行，並同時保持隔離性。
@@ -80,44 +74,10 @@ DBMS 需要保證 transaction 的原子性，即所有操作只有全部完成�
 - t1 : A 轉給 B 100 元
 - t2 : A 和 B 獲得 6% 利息
 
-```
-// t1
-BEGIN
-A = A - 100
-B = B + 100
-COMMIT
-
-// t2
-BEGIN
-A = A * 1.06
-B = B * 1.06
-COMMIT
-```
+![Isolation](/img/cmu15-445/c15/image.png)
 
 當這兩個 transaction 發生之後，
-不管順序如何，DBMS 需要確保最後兩者加起來的結果是 $2000 \times 1.06$ = 2120 元。
-
-### Schedule
-
-為了提高 concurrency，DBMS 會將多個 transaction 交錯執行 (interleave)，
-這樣當某個交易在等待資源 (disk IO、page fault) 或 CPU 有空閒時，就可以繼續執行其他交易。
-
-我們需要保證 scheduler 是 serial schedule 或是等價於 serial schedule (serializable schedule)，
-也就是說，這些交易的結果應該與某個 serial schedule 的結果相同。
-
-### Conflict
-
-#### Read-Write Conflict
-
-#### Write-Read Conflict
-
-#### Write-Write Conflict
-
-### Serializability
-
-#### Conflict Serializability
-
-#### View Serializability
+不管順序如何，DBMS 需要確保最後兩者加起來的結果是 $2000 \times 1.06 = 2120$ 元。
 
 ### Concurrency Control
 
@@ -126,9 +86,83 @@ concurrency control 指的是 DBMS 如何決定多個交易操作的正確順序
 - Pessimistic (悲觀) : DBMS 假設會發生衝突，可以透過鎖定資源來實現
 - Optimistic (樂觀) : DBMS 假設不會發生衝突，直到 commit 時才會檢查衝突並回滾
 
-## ACID: Durability
+### Schedule
 
-所有已提交的資料都將永久保存，而不會因為系統崩潰而遺失
+DBMS 的執行順序被稱為 execution schedule，我們希望可以盡量交錯 transaction 來最大程度的提高倂發性，
+這樣當某個 transaction 在等待資源 (disk IO、page fault) 或 CPU 有空閒時，就可以繼續執行其他交易。
+
+![Schedule](/img/cmu15-445/c15/image-1.png)
+![Schedule](/img/cmu15-445/c15/image-2.png)
+
+我們需要保證 schedule 是 serial schedule 或是等價於 serial schedule (serializable schedule)，
+也就是說，這些交易的結果應該與某個 serial schedule 的結果相同，這樣才能保證 transaction 的正確性。
+
+### Conflict
+
+當兩個 operation 滿足以下條件時，我們稱之為 conflict
+
+- 這兩個 operation 是不同的 transaction
+- 這兩個 operation 操作的資源是相同的
+- 至少有一個 operation 是 write
+
+#### Read-Write Conflict
+
+![Conflict](/img/cmu15-445/c15/image-3.png)
+
+會導致 unrepeatable read，也就是當一個 transaction 多次讀取同一個資源時，資源的值不同。
+
+#### Write-Read Conflict
+
+![Conflict](/img/cmu15-445/c15/image-4.png)
+
+會導致 dirty read，也就是當一個 transaction 讀取到另一個 transaction 還未 commit 的資源。
+
+#### Write-Write Conflict
+
+![Conflict](/img/cmu15-445/c15/image-5.png)
+
+會導致 lost update，也就是當兩個 transaction 同時寫入同一個資源時，後者會覆蓋前者的值。
+
+### Serializability
+
+可序列化性主要有兩種
+
+- Conflict Serializability : 大多數 DBMS 支持
+- View Serializability : 沒有 DBMS 支持，因為很難判斷是否是 view serializable
+
+![Serializability](/img/cmu15-445/c15/image-7.png)
+
+#### Conflict Serializability
+
+- conflict equivalent : 兩個 scheduler 在 transaction 中有相同的 action，且每一對 conflicting operations 的順序在這兩個排程中都是相同的
+- conflict serializable : 如果一個 scheduler 是 conflict equivalent 於某個 serial scheduler，則這個 scheduler 是 conflict serializable
+
+如果我們可以通過交換不同 transaction 中連續的 non-conflicting operations 來將一個 scheduler 轉換為 serial scheduler，
+則這個 scheduler 是 conflict serializable，但這種方式在多個 transaction 的情況下不好用。
+
+![Dependency Graph](/img/cmu15-445/c15/image-6.png)
+
+我們可以構建 dependency graph 來判斷是否是 conflict serializable。
+在這個圖中，每個事務都是一個節點，
+如果事務 $T_i$ 中的操作 $O_i$ 與事務 $T_j$ 中的操作 $O_j$ 衝突且 $O_i$ 在排程中先於 $O_j$，則從節點 $T_i$ 到 $T_j$ 有一條有向邊，
+只有當這個圖是無環時，這個 scheduler 才是 conflict serializable。
+
+#### View Serializability
+
+![View Serializability](/img/cmu15-445/c15/image-8.png)
+![View Serializability](/img/cmu15-445/c15/image-9.png)
+
+與 conflict serializability 相比，view serializability 是一種更寬鬆的標準，並允許盲寫 (blind write)。
+
+它需要滿足三個條件
+
+- Initial Read Equivalence : 每個事務讀取的值與在串行排程中讀取的值相同
+- Final Write Equivalence : 每個資料項的最終寫入操作（即最終結果）與串行排程中的相同
+- Read-Write Equivalence : 對於每個讀操作，其讀取的值必須來自與在串行排程中相同的最後一次寫操作
+
+## ACID - Durability
+
+所有已提交的資料都將永久保存，而不會因為系統崩潰而遺失。
 
 ## References
 
