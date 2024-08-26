@@ -9,7 +9,200 @@ keywords: [CMU15-445/645, Multi-Version Concurrency Control, CMU15-445/645 筆�
   <title>CMU 15-445/645 筆記 Multi-Version Concurrency Control</title>
 </head>
 
+## Multi-Version Concurrency Control
+
+多版本併發控制 (MVCC) 是一種廣泛應用於現代 DBMS 的技術，
+這種技術會透過維護資料庫中每個邏輯對象的多個物理版本來實現併發控制，允許同時讀寫操作而不互相阻塞，
+當事務需要讀取資料時，只會讀到該事務開始之前的最新版本，
+如果保留所有的版本，DBMS 甚至可以讀取任一時間點的資料 (time-travel)。
+
+MVCC 涉及多個設計決策，這些決策影響資料庫的性能、存儲需求以及如何處理不同的併發場景
+
+- Concurrency Control Protocol : 可以選擇使用之前討論過的併發控制方法，如 2PL、Timestamp Ordering、Optimistic Concurrency Control 等
+- Version Storage : 決定如何存儲和管理多個版本的資料
+- Garbage Collection : 隨著時間的推移，某些舊版本的資料變得無用，因此需要有一個機制來清理這些版本
+- Index Management : 多版本的存在會對索引結構的設計造成挑戰，特別是如何快速找到正確版本的資料
+- Deletes : 當刪除某個數據時，如何處理該資料的不同版本是一個需要考慮的問題
+
+### Snapshot Isolation
+
+在 MVCC 中，快照隔離是一種提供交易一致性快照的隔離級別。
+交易在開始時會得到一個資料庫的快照，該快照僅包含已提交交易的數據，並且該交易在完成前與其他交易完全隔離。
+
+- Read : 交易從快照中讀取數據，因此讀操作不會被其他交易的寫操作阻塞，這使得快照隔離特別適合只讀交易
+- Write : 寫操作在交易的私有工作空間中進行，只有當交易成功提交後，這些更改才會對其他交易可見
+- Write Conflicts : 如果兩個交易更新同一個對象，會以先提出的交易為主
+- Write Skew Anomaly : 兩個交易分別修改不同的對象，最終可能導致非可序列化的調度，如下方的圖片範例。
+
+![Write Skew Anomaly](/img/cmu15-445/c18/image-4.png)
+
+### Example
+
+$T_1$ 先修改 $A$，創造一個新的版本 $A_1$，並將 $A_0$ 的結束時間改成 1
+
+![MVCC Example](/img/cmu15-445/c18/image.png)
+
+此時 $T_2$ 想讀取 $A$，因為 $T_1$ 還沒提交，所以 $T_2$ 只能讀取 $A_0$
+
+![MVCC Example](/img/cmu15-445/c18/image-1.png)
+
+接著 $T_2$ 想要修改 $A$，但是有另一個 active 的事務正在修改 $A$，所以 $T_2$ 會被 block
+
+![MVCC Example](/img/cmu15-445/c18/image-2.png)
+
+直到 $T_1$ commit 之後，$T_2$ 才能創建新的版本 $A_2$，並將 $A_1$ 的結束時間改成 2
+
+![MVCC Example](/img/cmu15-445/c18/image-3.png)
+
+## Concurrency Control Protocol
+
+可以使用前面所介紹過的併發控制方法
+
+- Two-Phase Locking
+- Timestamp Ordering
+- Optimistic Concurrency Control
+
+## Version Storage
+
+在 MVCC 中，版本存儲決定了如何在資料庫中存儲同一邏輯對象的不同物理版本，以及交易在運行時如何找到對應的可見版本。
+
+每個 tuple 資料庫中都會維護一個 version chain，這是一個根據時間戳排序的 linked list，
+每當一個對象被更新時，DBMS 會在鏈中添加一個新版本，相關的索引通常指向 head (最新或最舊的版本)。
+在查詢時，DBMS 會遍歷版本鏈，直到找到對應交易可見的正確版本。
+
+主要有以下三種方法來存儲版本
+
+- Append-Only Storage
+- Time-Travel Storage
+- Delta Storage
+
+### Append-Only Storage
+
+![Append-Only Storage](/img/cmu15-445/c18/image-5.png)
+
+所有 tuple 的物理版本都存儲在同一個表中。每次更新時，DBMS 會將新的元組版本附加到表中，並更新版本鏈。
+
+有兩種方向可以選擇
+
+- Oldest-to-Newest (O2N) : 最舊的版本在前面，最新的版本在後面，查詢時需要遍歷整個鏈條
+- Newest-to-Oldest (N2O) : 最新的版本在前面，最舊的版本在後面，每次插入新版本時，需要更新索引指針
+
+### Time-Travel Storage
+
+![Time-Travel Storage](/img/cmu15-445/c18/image-6.png)
+
+DBMS 維護一個獨立的 time travel table，用來存儲元組的舊版本。
+每次更新時，DBMS 會將舊版本複製到 time travel table 中，並在主表中覆蓋元組為新版本，
+主表中的元組指向時間旅行表中的舊版本。
+
+### Delta Storage
+
+![Delta Storage](/img/cmu15-445/c18/image-7.png)
+
+類似於時間旅行存儲，但僅存儲元組之間的 Delta，而不是完整的舊版本，
+DBMS 可以通過逆向應用增量數據來重建舊版本。
+這種方式通常比時間旅行存儲寫入更快，但查詢舊版本時會更慢。
+
+## Garbage Collection
+
+在 MVCC 中，隨著時間的推移，某些舊版本的資料變得無用，
+如沒有 active 的事務可以看到的版本，
+或是該事務是被一個 abort 的事務創建的，
+這時候就需要有一個機制來清理這些版本，
+這個機制稱為 garbage collection (GC)。
+
+在 GC 中，我們需要討論兩個方向
+
+- 如何找到無用的版本
+- 如何確定何時可以安全的回收
+
+### Tuple-level GC
+
+Tuple-level GC 通過直接檢查元組來檢查舊版本的資料，有兩種常見的方式
+
+#### Background Vacuuming
+
+假設有兩個 active 的事務，timestamp 分別是 12 跟 25
+
+![Background Vacuuming](/img/cmu15-445/c18/image-9.png)
+
+會有一個在背景執行的 vacuum thread，這個 process 會定期檢查所有的 tuple，並將那些沒有 active 事務可以看到的版本刪除
+
+![Background Vacuuming](/img/cmu15-445/c18/image-10.png)
+
+系統會維護一個 dirty page bitmap 追蹤上次 vacuum 之後有哪些頁面被修改過，這樣就可以只檢查這些頁面，用空間換取時間
+
+#### Cooperative Cleaning
+
+![Cooperative Cleaning](/img/cmu15-445/c18/image-11.png)
+
+worker thread 在遍歷 version chain 時順便回收。這種方法僅適用於 O2N chains 。
+
+### Transaction-level GC
+
+![Transaction-level GC](/img/cmu15-445/c18/image-12.png)
+
+在 Transaction-level GC 中，每個交易都會維護其自己的 read / write set。
+當交易完成時，GC 可以根據這些集合來識別哪些元組版本可以被回收。
+
+## Index Management
+
+在 MVCC 中，索引管理是關鍵的一環，因為它涉及如何有效地追蹤和查找不同版本的數據，
+主要可以分為 primary index 和 secondary index。
+
+### Primary Key Indexes
+
+MVCC 中，Primary Key Indexes 通常指向 version chain 的頭部，
+需要更新時會被視為刪除舊版本並插入新版本。
+
+### Secondary Indexes
+
+輔助索引的管理比主鍵索引更加複雜，因為這些索引需要考慮不同版本的元組如何影響索引條目。
+
+#### Physical Pointers
+
+![Physical Pointers](/img/cmu15-445/c18/image-13.png)
+
+所有的 secondary index 都指向 version chain 的頭部，這樣在更新時會出現效能問題。
+
+#### Logical Pointers
+
+![Logical Pointers](/img/cmu15-445/c18/image-14.png)
+![Logical Pointers](/img/cmu15-445/c18/image-15.png)
+
+可以改為指向一個 indirection layer (如 primary key)，這樣就可以避免更新 secondary index 的問題。
+
+### MVCC Duplicate Key Problem
+
+在 MVCC 索引中，通常部會儲存 tuple 和 key 的版本資訊 (MySQL 除外)，
+因此 MVCC 系統需要支持多個版本的相同邏輯元組。
+
+![MVCC Duplicate Key Problem](/img/cmu15-445/c18/image-16.png)
+
+為了解決這個問題，索引的資料結構需要能支持 non-unique key，並且能夠存儲多個版本的 tuple，
+worker 有可能會得到不只一個 tuple，需要選擇適當的 tuple 返回。
+
+## Deletes
+
+在 MVCC 中，刪除操作涉及到不同版本的資料行可能在不同交易中同時可見，
+因此，DBMS 通常不會立即物理地刪除資料行，而是使用一些標記或策略來表示資料行已被邏輯上刪除。
+當所有交易都無法再看到該資料行時，才會物理刪除該資料行。
+
+### Deleted Flag
+
+當一個資料行被邏輯上刪除時，DBMS 會在該資料行的 header 中設置一個標記來表示此資料行已被刪除。
+
+### Tombstone Tuple
+
+當一個資料行被邏輯上刪除時，DBMS 會創建一個特殊的墓碑資料行來表示該資料行已被刪除，
+這個墓碑資料行通常會被放入一個專門的池中，並且使用特殊的 bit pattern 來標記。
+
+## Summary
+
+![Summary](/img/cmu15-445/c18/image-17.png)
+
 ## References
 
 - [CMU 15-445/645: Introduction to Database Systems](https://15445.courses.cs.cmu.edu/fall2023/)
 - [CMU 15-445/645: Introduction to Database Systems Youtube 2023 Fall](https://www.youtube.com/watch?v=wO0PfAFiK3U&list=PLSE8ODhjZXjbj8BMuIrRcacnQh20hmY9g&index=19)
+- [MVCC Paper](https://web.archive.org/web/20051025124412/http://www.lcs.mit.edu/publications/specpub.php?id=773)
