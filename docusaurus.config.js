@@ -10,7 +10,7 @@ module.exports = async function createConfigAsync() {
   return {
     title: 'RulerChen',
     tagline: 'RulerChen Site',
-    favicon: 'img/profile.png',
+    favicon: '/img/profile.png',
 
     // Set the production url of your site here
     url: 'https://RulerChen.github.io',
