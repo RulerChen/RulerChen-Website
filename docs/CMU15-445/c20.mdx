@@ -9,6 +9,181 @@ keywords: [CMU15-445/645, Database Recovery, CMU15-445/645 筆記]
   <title>CMU 15-445/645 筆記 Database Recovery</title>
 </head>
 
+本節主要延續上一節的 Database Logging，討論故障發生後，用來恢復資料庫狀態的操作。
+
+## ARIES
+
+ARIES (Algorithms for Recovery and Isolation Exploiting Semantics) 是 IBM 在 1990 年代初期為 DB2 系統開發的一種恢復演算法，
+儘管不是每個 DBMS 都嚴格依照 ARIES 的規範實現，但 ARIES 的基本思想和許多技術細節仍然被廣泛使用。
+
+ARIES 有三個關鍵的概念
+
+- WAL
+  - 在資料庫實際寫入變更之前，先將所有變更記錄到穩定的存儲中
+  - 必須使用 steal / no-force 策略
+- Repeating History During Redo
+  - 在系統重新啟動時，重演崩潰前的所有操作，將資料庫恢復到崩潰前的確切狀態
+- Logging Changes During Undo
+  - 在進行 Undo 操作時，將這些撤銷操作記錄到日誌中。如果在 Undo 期間發生再次崩潰，系統可以確保這些撤銷操作不會被重複執行
+
+## Log Sequence Numbers
+
+WAL 中的每條紀錄都需要包含一個唯一的序列號，稱為 LSN (Log Sequence Number)，
+各個元件都需要紀錄屬於他們的 LSN。
+
+![Log Sequence Numbers](/img/cmu15-445/c20/image.png)
+
+1. LSN : 全局唯一的序列號，用來標識每個日誌記錄，每次日誌寫入時，LSN 會遞增
+2. flushedLSN : 表示已經寫入到磁盤的最後一條日誌的 LSN
+3. pageLSN : 表示頁面上最後一次修改的日誌的 LSN
+4. recLSN : 自頁面上次被寫入磁碟後，最早的一次更新操作的 LSN
+5. lastLSN : 某個交易最後一次寫入日誌的 LSN
+6. MasterRecord : 最近一次 Checkpoint 的 LSN
+
+![Log Sequence Numbers](/img/cmu15-445/c20/image-1.png)
+
+在頁面寫入硬碟前，DBMS 會確保相應的 pageLSN 小於等於 flushedLSN，這樣可以保證日誌記錄已經安全地記錄在硬碟上。
+
+## Normal Execution
+
+大部分的交易都會包括一系列的讀寫操作，然後 commit 或是 abort。
+
+這裡我們先來討論假如沒有發生故障，交易是如何執行的，
+我們會有四個假設來簡化討論
+
+- 所有的 log file 都能放進一個 page 中
+- 寫入硬碟是原子性的
+- 使用嚴格的 2PL 而不是 MVCC
+- 使用 WAL，且是 steal / no-force 策略
+
+### Transaction Commit
+
+![Transaction Commit](/img/cmu15-445/c20/image-2.png)
+
+1. 將 COMMIT 寫入 WAL buffer
+2. 將 WAL buffer 寫入硬碟
+3. 修改 flushedLSN 為 COMMIT 的 LSN
+4. 將 WAL buffer 的內容清除，並寫入一個 TXN-END 紀錄
+
+### Transaction Abort
+
+要處理 abort 的情況，我們就必須找到與該交易有關的所有日誌記錄以及執行順序，
+為了提高效率，同一個交易中的每個 log 都會紀錄上一個 log 的 LSN，即 prevLSN。
+
+![Transaction Abort](/img/cmu15-445/c20/image-3.png)
+
+1. 將 ABORT 寫入 WAL buffer
+2. 按照由 LSN|prevLSN 的 linked list，倒序回滾所有的 log
+3. 為了防止回滾再次故障，需要將回滾的 log 寫入 WAL
+4. 回滾完之後，寫入 TXN-END 紀錄
+
+### Compensation Log Record
+
+![Compensation Log Record](/img/cmu15-445/c20/image-4.png)
+
+CLR 是一種描述撤銷前一次更新操作的日誌記錄。
+它包含更新日誌記錄的所有字段，並額外包含一個 undoNext 指針，指向下一個需要撤銷的 LSN。
+
+有一點需要注意的是，CLR 不會被撤銷，因為它們是用來撤銷其他日誌記錄的。
+
+## Checkpoint
+
+在 DBMS 中，checkpoint 可以用於減少系統崩潰後需要回放的日誌量，以加速恢復過程。
+
+### Non-Fuzzy Checkpoint
+
+在 non-fuzzy checkpoint 中，DBMS 會暫停所有交易的執行，以確保能夠將一致性快照寫入硬碟中，
+具體步驟如下
+
+1. 暫停新的交易啟動
+2. 等待所有活躍交易執行完畢
+3. 將所有 dirty page 寫入硬碟
+
+這種方式可以保證資料的一致性，但是會導致系統暫停，因此顯然不是個好方法。
+
+### Slightly Better Checkpoints
+
+![Slightly Better Checkpoints](/img/cmu15-445/c20/image-5.png)
+
+non-fuzzy checkpoint 的問題在於暫停所有交易並且等待所有活躍交易執行完畢，
+而在 slightly better checkpoint 中，我們只暫停需要 write latch 的交易，
+並且不需要等待所有活躍交易執行完畢。
+
+![Slightly Better Checkpoints](/img/cmu15-445/c20/image-5.png)
+
+在 checkpoint 開始的時候，txn 已經獲取了 page3 的 write latch，
+因此它可以繼續執行，但是不能再獲取新的 write latch。
+
+此時 DBMS 會掃描一遍 buffer pool，將所有 dirty page 寫入硬碟，
+這時有可能 page3 的資料也被寫入硬碟，造成硬碟中的 snapshot 處於不一致的狀態。
+
+我們可以記錄在 checkpoint 時那些交易是活躍的，那些資料是 dirty 的，
+並透過 WAL 來回復這些資料，在這個過程中，我們需要以下兩個資訊
+
+- Active Transaction Table (ATT) : 追蹤當前正在運行的交易，
+  每個交易的條目包括 txnId、status (Running、Committing、Candidate for Undo)、lastLSN
+- Dirty Page Table (DPT) : 記錄緩衝池中已被修改但尚未寫入硬碟的頁面，包括 page info 和 recLSN
+
+這種方法比第一個方法更好，但是需要暫停寫的交易。
+
+### Fuzzy Checkpoint
+
+![Fuzzy Checkpoint](/img/cmu15-445/c20/image-6.png)
+
+fuzzy checkpoint 允許在檢查期間繼續執行其他交易，不會中斷系統運行。
+
+在這個模式下，我們需要兩種紀錄來標記區間
+
+- CHECKPOINT-BEGIN : 標記 checkpoint 開始
+- CHECKPOINT-END : 標記 checkpoint 結束，同時包含 ATT 和 DPT 的內容
+
+檢查點完成後，CHECKPOINT-BEGIN 記錄的 LSN 才會被記錄在 MasterRecord 中。
+
+## ARIES Recovery Phase
+
+![ARIES Recovery Phase](/img/cmu15-445/c20/image-7.png)
+
+ARIES 恢復協議 是一種 DBMS 在崩潰後恢復數據的一個廣泛使用的方法，總共分為三個階段
+
+1. Analysis
+2. Redo
+3. Undo
+
+從 WAL 中找到 MasterRecord，並且找到最後一個 BEGIN-CHECKPOINT 紀錄。
+
+### Analysis Phase
+
+從最後一個檢查點開始往前掃描 WAL
+
+- 如果發現 TXN-END，則在 ATT 中移除該交易
+- 遇到其他交易時，將其加入 ATT 並設為 UNDO
+- 如果發現提交紀錄，則設為 COMMIT
+- 如果發現是更新紀錄，則將其加入 DPT，並修改 recLSN
+
+### Redo Phase
+
+redo phase 的目標是重建資料庫崩潰時的狀態，從 DPT 中最小的 recLSN 對應的日誌記錄開始掃描。
+
+對於每個 CLR，DBMS 會重新應用更新，除非以下情況之一成立
+
+- 受影響的頁面不在 DPT 中
+- 受影響的頁面在 DPT 中，但該記錄的 LSN 小於該頁面在 DPT 中的 recLSN
+- 受影響頁面的 pageLSN（在硬碟上）大於或等於 LSN
+
+redo 時，需要重新執行 log 中的操作，將 pageLSN 更新為 LSN，並且不再新增 CLR，
+在結束時，DBMS 會將所有狀態為 COMMIT 的交易寫入 TXN-END 日誌記錄，並把它們從 ATT 中移除。
+
+### Undo Phase
+
+在回滾階段，DBMS 會逆轉所有在崩潰時仍未提交的交易，將所有在 ATT 上被標記為 U 的交易進行回滾。
+
+DBMS 會使用每個交易的 lastLSN，以逆向 LSN 的順序處理交易，選擇 ATT 中所有交易中最大的 lastLSN 來加速遍歷，
+在回滾每個交易的更新時，DBMS 會為每個修改寫入一個 CLR。
+
+## Additional Topics
+
+... 略
+
 ## References
 
 - [CMU 15-445/645: Introduction to Database Systems](https://15445.courses.cs.cmu.edu/fall2023/)
