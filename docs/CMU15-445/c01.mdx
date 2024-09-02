@@ -11,10 +11,9 @@ keywords: [CMU15-445/645, Relational Model & Algebra, CMU15-445/645 筆記]
 
 ## Database System
 
-資料庫是一個有組織的、相互關聯的資料集合，用於模擬現實世界的某些方面，
-而資料庫管理系統（DBMS）是管理資料庫的軟體系統。
+資料庫是一個有組織的、相互關聯的資料集合，用於對現實世界的某些部分進行建模，而資料庫管理系統 (DBMS) 則是管理資料庫的軟體系統。
 
-假設我們今天是 Spotify 的工程師，我們需要儲存作家和專輯的訊息，我們可能會將資料儲存下面這兩個檔案
+假設我們今天是 Spotify 的工程師，我們需要儲存作家和專輯的訊息，我們可能會將資料儲存下面這兩個檔案 :
 
 ```csv title="artists.csv"
 "Wu-Tang Clan",1992,"USA"
@@ -37,94 +36,120 @@ for line in file.readlines():
         print(int(record[1]))
 ```
 
-但是這樣做會遇到一些問題，例如
+但是這樣做會遇到一些問題，例如 :
 
-- `Efficiency`：需要掃描整張表來尋找特定的資料
-- `Flexibility`： 如果需要新增一個欄位，需要修改所有檔案
-- `Data Integrity`： 很難限制輸入的資料格式
-- `Durability`： 無法處理當寫入時遇到當機的問題
-- `Concurrency`： 無法處理兩個 thread 同時寫入資料的問題
-- `Abstraction`: 程式與物理存儲緊密結合
+- Efficiency：需要掃描整張表來尋找特定的資料
+- Flexibility： 如果需要新增一個欄位，需要修改所有檔案
+- Data Integrity： 很難限制輸入的資料格式
+- Durability： 無法處理當寫入時遇到當機的問題
+- Concurrency： 無法處理兩個 thread 同時寫入資料的問題
+- Abstraction: 程式與物理存儲緊密結合
 
 以上的問題迫使我們放棄使用 CSV 檔案來儲存資料，轉而使用資料庫系統。
 
 ## DBMS
 
-DBMS 是一種可以讓應用程式與資料庫之間進行互動的軟體系統，
+DBMS 是一種可以讓應用程式與資料庫進行互動的軟體系統，
 可以讓使用者按照某些模型來對資料庫進行創建、修改、查詢、刪除等操作。
 
 而資料模型 (Data Model) 是 DBMS 中用來描述資料的結構，
-主要包含以下幾種
+主要包含以下幾種 :
 
 - relational (本課程的主要資料模型)
 - NoSQL (key/value、graph、document、column)
 - array/matrix/vector (for machine learning)
+- hierarchical/network/multi-value (old)
 
 在早期的 DBMS 中，資料庫的物理層和邏輯層是緊密結合的，
-物理層描述資料在硬碟上的實際儲存方式，而邏輯層描述資料的結構和行為，
-而在以往的應用程式中，物理層會在應用中被實現，這樣就導致了我們一但需要修改物理層，我們就需要修改所有應用程式中的程式碼。
+物理層描述資料在硬碟上的實際儲存方式，而邏輯層描述資料的結構和行為。
 
-## Relational Model
+在以往的應用程式中，物理層通常會在應用程式中實現，這就導致了一但需要修改物理層，就需要修改所有應用程式中的程式碼。
 
-Ted Codd 在 1969 年發現了這個問題後，
-提出了關係模型 (Relational Model)，
-主要包含三個關鍵要素
+### Relational Model
+
+Ted Codd 在 1969 年發現了以上這個問題後，
+提出了關係模型 (Relational Model)，主要包含三個關鍵概念 :
 
 - 用簡單且統一的儲存方式來儲存資料
 - 用高級語言 (SQL) 來操作資料，而 DBMS 負責將其轉換成最佳的執行計劃
-- 將物理層和邏輯層分離，而開發者只需要關注邏輯層，而物理層的實現則交由 DBMS 來完成
+- 將物理層和邏輯層分離，使開發者只需要關注邏輯層，而物理層的實現則交由 DBMS 來完成
 
-relation 是一個無序集合，包含表示實體的屬性之間的關係。由於關係是無序的，因此 DBMS 可以任意的方式進行儲存並優化。
+其中的關係模型是由以下幾個要素組成的 :
 
-tuple 是關係中的一組屬性值。
+- relation 是一個無序集合，包含表示實體的屬性之間的關係。由於關係是無序的，因此 DBMS 可以任意的方式進行儲存並優化
+- tuple 是關係中的一組屬性值，用來表示一個實體
+- 具有 n 個屬性的 relation 稱為 n-ary relation
+- primary key 是關係中的一組屬性，用來唯一標識一個 tuple
+- foreign key 是關係中的一組屬性，用來標識關聯到其他 relation 的 tuple
 
-primary key 是關係中的一組屬性，用來唯一標識一個 tuple。
+### Document Model
+
+Document Model 的資料庫會將資料儲存為文件形式，並以 hierarchical 的 key-value pair 來表示資料。
+文件的欄位值可以是數字、字串、陣列，或者是嵌套的文件。
+這種類型的資料庫最常使用的方式是 JSON 格式，而舊系統則可能使用 XML 或自訂的物件表示。
+
+範例如下圖所示 :
+
+![Document Model](/img/cmu15-445/c01/image-1.png)
+
+常見的 Document Model 資料庫有 MongoDB、DynamoDB、CouchDB、Firebase 等等。
+
+### Vector Model
+
+Vector Model 的資料庫是一種專門處理高維度向量 (如由機器學習模型生成的嵌入向量) 而設計的資料庫系統。
+可以有效執行 Nearest Neighbor 搜尋，適合用於如近似語義搜尋、推薦系統等應用。
+
+處理的流程如下圖所示 :
+
+![Vector Model](/img/cmu15-445/c01/image-2.png)
+
+常見的 Vector Model 資料庫有 Meta Faiss、Milvus、Spotify Annoy 等等。
 
 ## DML (Data Manipulation Language)
 
 主要分為兩種
 
-- Procedural : 指定 DBMS 如何找到資料
-- Non-Procedural : 指定資料的結果，而 DBMS 負責找到資料
+- Procedural: 指定 DBMS 如何找到資料，例如 Relational Algebra
+- Non-Procedural: 指定資料的結果，而 DBMS 負責找到資料，例如 SQL
 
 ## Relational Algebra
 
-Relational Algebra 是一種用來描述關係模型的操作的數學表達式。
+Relational Algebra 是一種用來描述關係模型的操作的數學表達式，常見的操作包括以下幾種
 
-#### select
+- select
 
-Example: $\sigma_{a_id=a2}(R)$  
-SQL: `SELECT * FROM R WHERE a_id = 'a2'`
+  - Example: $\sigma_{a_{id}=a2}(R)$
+  - SQL: `SELECT * FROM R WHERE a_id = 'a2'`
 
-#### projection
+- projection
 
-Example: $\pi_{b_id-100, a_id}(R)$  
-SQL: `SELECT b_id-100, a_id FROM R WHERE a_id = 'a2'`
+  - Example: $\pi_{b_id-100, a_id}(R)$
+  - SQL: `SELECT b_id-100, a_id FROM R WHERE a_id = 'a2'`
 
-#### union
+- union
 
-Example: $R \cup S$  
-SQL: `(SELECT * FROM R) UNION ALL (SELECT * FROM S)`
+  - Example: $R \cup S$
+  - SQL: `(SELECT * FROM R) UNION ALL (SELECT * FROM S)`
 
-#### intersection
+- intersection
 
-Example: $R \cap S$  
-SQL: `(SELECT * FROM R) INTERSECT (SELECT * FROM S)`
+  - Example: $R \cap S$
+  - SQL: `(SELECT * FROM R) INTERSECT (SELECT * FROM S)`
 
-#### difference
+- difference
 
-Example: $R - S$  
-SQL: `(SELECT * FROM R) EXCEPT (SELECT * FROM S)`
+  - Example: $R - S$
+  - SQL: `(SELECT * FROM R) EXCEPT (SELECT * FROM S)`
 
-#### product
+- product
 
-Example: $R \times S$  
-SQL: `(SELECT * FROM R) CROSS JOIN (SELECT * FROM S)`
+  - Example: $R \times S$
+  - SQL: `(SELECT * FROM R) CROSS JOIN (SELECT * FROM S)`
 
-#### join
+- join
 
-Example: $R \bowtie S$  
-SQL: `SELECT * FROM R JOIN S USING (ATTRIBUTE1, ATTRIBUTE2...)`
+  - Example: $R \bowtie S$
+  - SQL: `SELECT * FROM R JOIN S USING (ATTRIBUTE1, ATTRIBUTE2...)`
 
 其他還有一些像 `rename`、`division` 等操作，請參考講義。
 

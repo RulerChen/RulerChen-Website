@@ -9,30 +9,27 @@ keywords: [CMU15-445/645, Hash Tables, CMU15-445/645 筆記]
   <title>CMU 15-445/645 筆記 Hash Tables</title>
 </head>
 
-## Data Structures
+為了能讓 DBMS 快速查找資料，我們需要應用一些資料結構來幫助我們，其中最常見的是 Hash Table 跟 Tree。
 
-為了能讓 DBMS 快速查找資料，我們需要應用一些資料結構來幫助我們，其中最常見的是
-
-- Hash Tables
-- Trees
-
-這些資料結構會被用在不同的地方，例如
+這些資料結構會被用在不同的地方，例如 :
 
 - Internal Metadata
 - Core Data Storage
 - Temporary Data Structures
 - Table Indexes
 
-在使用這些資料結構時，我們需要考慮以下幾點
+在使用這些資料結構時，我們需要考慮以下幾點 :
 
 - Data Organization : 要如何把資料放到 page / memory 中，以及需要哪些資訊來支持更高效的查詢
 - Concurrency : 如何讓多個 worker 同時存取資料而不會出現問題
+
+而本節我們會先討論 Hash Table，並在下一節討論 Tree。
 
 ## Hash Tables
 
 hash table 是一個無序的資料結構，可以用來儲存 key-value pair，並且可以快速查找資料。
 
-主要可以分為兩個部分
+主要可以分為兩個部分 :
 
 - Hash Function
   - 如何將有較多可能性的 key 映射到較少可能性的 index
@@ -43,16 +40,15 @@ hash table 是一個無序的資料結構，可以用來儲存 key-value pair，
 
 ## Hash Function
 
-在 DBMS 中，由於我們的資料不會暴露在外面，因此我們不需要使用加密的 hash function (如 SHA-256)，
-我們只需要使用速度快且碰撞率低的即可。
+在 DBMS 中，由於我們的資料不會暴露在外面，因此我們不需要使用加密的 hash function (如 SHA-256)，我們只需要使用速度快且碰撞率低的即可。
 
-目前常見的 hash function 有 Facebook XXHash (最常見)、 Google FarmHash 等等。
+目前常見的 hash function 有 Facebook XXHash、Google FarmHash 等等。
 
 ## Static Hashing Schemes
 
 在 static hashing schemes 中，我們會將所有的 key-value pair 放在一個固定大小的 table 中。
 
-一些常見的 static hashing schemes 有
+一些常見的 static hashing schemes 有 :
 
 - Linear Probe Hashing
 - Cuckoo Hashing
@@ -60,72 +56,63 @@ hash table 是一個無序的資料結構，可以用來儲存 key-value pair，
 - Hopscotch Hashing
 - Swiss Tables
 
-這裡我們只會介紹前兩個
+這裡我們只會介紹前兩個 static hashing schemes。
 
 ### Linear Probe Hashing
 
+插入時，我們會在 slot 中儲存 key-value pair，發生 collision 時，我們會往下一個 slot 移動，直到找到空的 slot 為止。
+
 ![Linear Probe Hashing](/img/cmu15-445/c07/image.png)
 
-插入時，我們會在 slot 中儲存 key-value pair，
-發生 collision 時，我們會往下一個 slot 移動，直到找到空的 slot 為止。
-
-![Linear Probe Hashing Insert](/img/cmu15-445/c07/image-1.png)
-
-如果 key 不是 unique 的話，我們有兩種方式可以解決
+如果 key 不是 unique 的話，我們有兩種方式可以解決 :
 
 - Separate Linked List : 將相同 key 的 value 串在一起
 - Redundant Keys : 在 slot 中儲存所有相同 key 的 value (大部分 DBMS 採用)
 
-刪除有兩種方法
+![Linear Probe Hashing Insert](/img/cmu15-445/c07/image-1.png)
+
+刪除有兩種方法 :
 
 - Movement : 直接將後來的所有 slot 都做一次 rehash，直到遇到空的 slot (沒有 DBMS 會這樣做)
 - Tombstone : 將 slot 中的 key-value pair 刪除，並在 slot 中放上一個特殊的值，表示這個 slot 已經被刪除，可能會需要定期清理 tombstone
 
-以及一些常見的 optimization
+以及一些常見的 optimization :
 
 - 根據類型或鍵的大小來產生哈希表，例如，如果 key 是 string，可以依據 string 的長度來產生多個 hash table
 - 將 metadata 獨立儲存，例如將 empty slot 和 tombstone 的位置儲存在 bitmap 中
-- 維護 hash table 和 slot 的版本，因為為 hash table 重新分配記憶體的開銷很大，因此可以使用版本來避免重新分配記憶體，
-  如果 slot 跟 table 的版本不一樣，就表示 slot 為空。
+- 維護 hash table 和 slot 的版本，因為為 hash table 重新分配記憶體的開銷很大，因此可以使用版本來避免重新分配記憶體，如果 slot 跟 table 的版本不一樣，就表示 slot 為空。
 
 Google 的 `absl::flat_hash_map` 是目前最先進的 Linear Probe Hashing。
 
 ### Cuckoo Hashing
 
+Cuckoo Hashing 使用多個 hash function 的 seed 來尋找空的 slot，這樣就能在 O(1) 的時間進行插入和刪除。
+
 ![Cuckoo Hashing](/img/cmu15-445/c07/image-2.png)
 
-也可以使用多個 hash function 的 seed 來尋找空的 slot，這樣就能在 O(1) 的時間進行插入和刪除。
+以圖片為例，我們會使用兩個不同的 hash function 的 seed 來找空的 slot ，如果兩個都空的話就隨機選擇一個 slot 來放入 key-value pair，如果兩個都滿的話就隨機覆蓋一個，並將被覆蓋掉的重新執行一次 hash function 直到找到空的 slot。
 
-以圖片為例，我們會使用兩個不同的 hash function 的 seed 來找空的 slot ，
-如果兩個都空的話就隨機選擇一個 slot 來放入 key-value pair，
-如果兩個都滿的話就隨機覆蓋一個，並將被覆蓋掉的重新執行一次 hash function 直到找到空的 slot。
-
-在極少數的情況下，可能會出現 cycle，這時候我們可以重新使用新的 seed 全部 rehash (少見)，
-或者直接搬到更大的 table 中 (常見)。
+在極少數的情況下，可能會出現 cycle，這時候我們可以重新使用新的 seed 全部 rehash (少見)，或者直接搬到更大的 table 中 (常見)。
 
 ## Dynamic Hashing Schemes
 
-在 static hashing schemes 中，我們需要事先知道 table 的大小才能知道需要分配多少的空間，
-但在很多情況下，我們無法知道我們最終需要多少的空間，因此我們需要使用 dynamic hashing schemes。
+在很多情況下，我們無法知道我們最終需要多少的空間，因此我們需要使用 dynamic hashing schemes。
 
 ### Chained Hashing
 
+chained hashing 的每個 key 會對應一個 linked list，而 linked list 的每個 node 都是一個 bucket，如果這個 bucket 滿了就會再往後面加一個 bucket。
+
 ![Chained Hashing](/img/cmu15-445/c07/image-3.png)
 
-chained hashing 的每個 key 會對應一個 linked list，
-而 linked list 的每個 node 都是一個 bucket，如果這個 bucket 滿了就會再往後面加一個 bucket。
+在 bucket pointer 中，我們可以使用 bloom filter 來加速查找，在這個資料結構中只有兩個接口，一個是 insert，一個是 lookup，都是 O(1) 的時間複雜度，且沒有刪除的功能。
+但是要注意的是，使用 bloom filter 有可能產生 false positive，也就是說，如果 bloom filter 回傳 false，表示這個 key 一定不存在，但如果 bloom filter 回傳 true，表示這個 key 可能存在。
 
 ![Chained Hashing](/img/cmu15-445/c07/image-4.png)
 
-在 bucket pointer 中，我們可以使用 bloom filter 來加速查找，
-在這個資料結構中只有兩個接口，一個是 insert，一個是 lookup，都是 O(1) 的時間複雜度，且沒有刪除的功能。
-但是要注意的是，使用 bloom filter 有可能產生 false positive，
-也就是說，如果 bloom filter 回傳 false，表示這個 key 一定不存在，但如果 bloom filter 回傳 true，表示這個 key 可能存在。
-
 ### Extendible Hashing
 
-extendible hashing 與 chained hashing 有點類似，但是在 extendible hashing 中，我們不會把 bucket 串在一起，
-而是進行分裂，當 bucket 滿了時，我們會將 bucket 分裂成兩個 bucket，並且使用 prefix 來決定要放在哪個 bucket 中。
+extendible hashing 與 chained hashing 有點類似，但是在 extendible hashing 中，我們不會把 bucket 串在一起，而是進行分裂。
+當 bucket 滿了時，我們會將 bucket 分裂成兩個 bucket，並且使用 prefix 來決定要放在哪個 bucket 中。
 
 ![Extendible Hashing](/img/cmu15-445/c07/image-5.png)
 ![Extendible Hashing](/img/cmu15-445/c07/image-6.png)
@@ -134,16 +121,14 @@ extendible hashing 與 chained hashing 有點類似，但是在 extendible hashi
 
 ### Linear Hashing
 
-維護一個 pointer 指向下一個要被分裂的 bucket，
-當任意一個 bucket 滿了時，就將指針指向的 bucket 分裂。
+維護一個 pointer 指向下一個要被分裂的 bucket，當任意一個 bucket 滿了時，就將指針指向的 bucket 分裂。
 
 ![Linear Hashing](/img/cmu15-445/c07/image-9.png)
 ![Linear Hashing](/img/cmu15-445/c07/image-10.png)
 ![Linear Hashing](/img/cmu15-445/c07/image-11.png)
 ![Linear Hashing](/img/cmu15-445/c07/image-12.png)
 
-隨著分裂指針的移動，最終所有溢出的桶都會被處理到，
-當分裂指針到達最後一個 bucket 時，我們可以將第一個 hash 移除只使用第二個 hash ，並且將分裂指針歸零。
+隨著分裂指針的移動，最終所有溢出的桶都會被處理到，當分裂指針到達最後一個 bucket 時，我們可以將第一個 hash 移除只使用第二個 hash ，並且將分裂指針歸零。
 如果在指針下面的第一個 bucket 是空的，我們可以移除這個 bucket 並反向移動指針。
 
 ![Linear Hashing](/img/cmu15-445/c07/image-13.png)

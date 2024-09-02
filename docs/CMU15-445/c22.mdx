@@ -9,7 +9,7 @@ keywords: [CMU15-445/645, Distributed OLTP Database Systems, CMU15-445/645 筆�
   <title>CMU 15-445/645 筆記 Distributed OLTP Database Systems</title>
 </head>
 
-在上節中，我們討論了去中心化的分散式資料庫系統，但仍然有很多細節沒有討論到，這節我們會討論一些分散式 OLTP 系統的細節，像是
+在上節中，我們討論了基本的分散式資料庫系統，但仍然有很多細節沒有討論到，這節會討論一些分散式 OLTP 系統的細節，像是 :
 
 - 如果其中有節點發生故障怎麼處理
 - 如果訊息在網路上延遲怎麼處理
@@ -19,65 +19,87 @@ keywords: [CMU15-445/645, Distributed OLTP Database Systems, CMU15-445/645 筆�
 
 ## Replication
 
-DBMS 可以在多個節點上複製資料，這樣可以提高可用性，主要有兩種方式
+DBMS 可以將資料複製到多個節點上以及高可用性，在實現上，有幾個重要的考慮因素 :
 
-![Replication](/img/cmu15-445/c22/image.png)
+- Replication Configuration
+- Propagation Scheme
+- Propagation Timing
+- Update Method
 
 ### Replication Configuration
 
+主要可以分為兩種方式，Primary-Replica 和 Multi-Master。
+
+![Replication](/img/cmu15-445/c22/image.png)
+
 #### Primary-Replica
 
-所有關於寫的操作都會先寫到 primary node， primary node 更新完後再通知其他 replica node 更新，
-而只讀的資料可以直接從 replica node 讀取，這樣可以提高效能。
+所有關於寫的操作都會先寫到 primary node， primary node 更新完後再通知其他 replica node 更新，而只讀的資料可以直接從 replica node 讀取。
 如果 master 節點崩潰，則由共識算法選擇新的 master 節點。
 
 #### Multi-Master
 
 每個節點都可以更新資料，但節點之間需要透過 atomic commit protocol 來確保一致性。
 
-### K-safety
+#### K-safety
 
-K-safety 是用來衡量複製資料庫的容錯能力的閾值。
-K 值表示每個數據物件必須始終可用的副本數量。
-如果副本數量低於這個閾值，DBMS 會停止執行並將系統下線。K 值越高，數據丟失的風險就越低。
+K-safety 是用來衡量資料庫的容錯能力的閾值，K 值表示每個物件必須始終可用的副本數量，如果副本數量低於這個閾值，DBMS 會停止系統。
 
 ### Propagation Scheme
 
-當交易在複製資料庫上提交時，DBMS 會決定是否需要等待該交易的更改傳播到其他節點後再向應用程式客戶端發送確認。
-主要有兩種方式
+當交易在資料庫上提交時，DBMS 會決定是否需要等待該交易傳播到其他節點後再向應用程式客戶端發送確認，主要有兩種方式 :
+
+- Synchronous Propagation : Strong Consistency
+- Asynchronous Propagation : Eventual Consistency
+
+![Propagation Scheme](/img/cmu15-445/c22/image-2.png)
 
 #### Synchronous Propagation
 
 主節點將更新發送到從節點，並等待它們確認已完全應用更改後，再通知客戶端更新成功。
-這確保了強一致性，不會丟失任何數據，通常在傳統的 DBMS 中使用。
+確保了強一致性，不會丟失任何數據，通常在傳統的 DBMS 中使用。
 
 #### Asynchronous Propagation
 
-主節點立即向客戶端返回確認，而不等待從節點應用更改。
-這可能會導致讀取過期數據，但如果可以容忍某些數據丟失，這種方式是一種有效的優化，通常在 NoSQL 系統中使用。
+主節點在本地更新完後立即向應用程式返回確認，而不等待從節點更改完成。
+可能會導致讀取過期數據，但如果可以容忍某些數據丟失，這種方式是一種有效的優化，通常在 NoSQL 系統中使用。
 
 ### Propagation Timing
 
-主節點甚麼時候將更新發送到從節點的策略。
-主要有兩種方式
+主節點甚麼時候將更新發送到從節點的策略，主要有兩種方式 :
 
-- Continuous Propagation : DBMS 生成日誌消息後立即發送。這包括提交和中止消息，這是大多數系統使用的方式。
-- On Commit Propagation : DBMS 只有在交易提交後才將該交易的日誌消息發送到從節點。
-  這避免了為已中止的交易傳送日誌記錄的浪費，並假設交易的日誌記錄能完全保存在內存中。
+- Continuous Propagation
+- On Commit Propagation
+
+#### Continuous Propagation
+
+DBMS 在生成 log 後立即發送 log 給從節點，其中包括提交和中止消息。
+
+#### On Commit Propagation
+
+DBMS 只有在交易提交後才將該交易的 log 發送到從節點，避免了為 abort 的交易傳送 log，但會導致同步效率較低。
 
 ### Active vs Passive
 
-根據如何將更改應用到從節點上，複製可以分為
+根據如何將更改應用到從節點上，複製可以分為 :
 
-- Active-Active : 交易在每個從節點上獨立執行，最後 DBMS 需要檢查每個節點上的結果是否一致，以確保交易正確提交，
-  因為需要同步所有節點之間的交易順序，故較少使用。
-- Active-Passive : 交易在一個單一節點上執行，然後將總體更改傳播到從節點。
+- Active-Active
+- Active-Passive
+
+#### Active-Active
+
+交易在每個從節點上獨立執行，最後 DBMS 檢查每個節點上的結果是否一致，以確保交易正確提交。
+
+#### Active-Passive
+
+交易在一個節點上執行，然後將總體更改傳播到從節點。
 
 ## Atomic Commit Protocols
 
-當一個跨多個節點的交易完成時，DBMS 需要詢問所有參與的節點是否可以安全地提交交易。
-根據所使用的協議，不同數量的節點回應可能影響最終的提交結果。
-常見的協議包括
+當一個橫跨多個節點的交易完成時，DBMS 需要詢問所有參與的節點是否可以安全地提交交易。
+根據所使用的協議，可能需要不同數量的節點同意才能提交交易，
+
+常見的協議包括 :
 
 - Two-Phase Commit (2PC)
 - Three-Phase Commit (3PC)
@@ -86,54 +108,102 @@ K 值表示每個數據物件必須始終可用的副本數量。
 - Zookeeper Atomic Broadcast (ZAB)
 - Viewstamped Replication
 
+本節主要討論 2PC 和 Paxos。
+
 ### Two-Phase Commit (2PC)
 
-2PC 是一個經典的分散式交易提交協議，分為兩個階段
+2PC 是一個經典的分散式交易提交協議，分為兩個階段 :
 
-#### Prepare Phase
+- Prepare Phase
+- Commit Phase
 
-- 客戶端向協調者發送提交請求
-- 協調者向參與節點發送 Prepare Message，詢問它們是否可以提交當前交易
-- 如果某個參與者確認交易有效，它會回覆 OK 給協調者，如果任何參與者回覆中止，協調者則會向客戶端回覆中止
+#### 2PC Success
 
-#### Commit Phase
+首先應用程式會向協調者發送提交請求之後進入準備階段 (Prepare Phase)。
 
-- 如果協調者收到所有參與者的 OK，則進入提交階段。協調者向所有參與者發送提交消息，通知它們提交交易
-- 當所有參與者回覆 OK 後，協調者會通知客戶端交易已成功提交。
-- 如果交易在準備階段中止，協調者會向參與者發送中止消息，參與者應回覆 OK。
-- 在故障情況下，所有節點會記錄每個階段的結果在非易失性日誌中，並在需要時阻塞，直到找到下一步的行動方案。
-  如果協調者故障，參與者可以選擇安全地中止或嘗試在沒有協調者明確許可的情況下提交。
+協調者向參與節點發送 prepare 請求，詢問它們是否可以提交當前交易
 
-#### Optimization
+![2PC](/img/cmu15-445/c22/image-3.png)
 
-- Early Prepare Voting : 如果 DBMS 發送的查詢已經是某個節點的最後執行查詢，該節點可以與查詢結果一起返回它對準備階段的投票
-- Early Acknowledgement after Prepare : 如果所有節點都投票同意提交交易，協調者可以在提交階段完成前向客戶端發送成功確認
+等待所有節點回覆 OK 後，則進入提交階段 (Commit Phase)。
+
+協調者會向所有參與者發送提交消息，通知它們提交交易。
+
+![2PC](/img/cmu15-445/c22/image-4.png)
+
+等待所有交易提交後，協調者向應用程式回覆提交成功。
+
+![2PC](/img/cmu15-445/c22/image-5.png)
+
+#### 2PC Abort
+
+在準備階段時，如果有任何一個節點無法執行，則應該回覆 ABORT 給協調者。
+
+![2PC](/img/cmu15-445/c22/image-6.png)
+
+而此時協調者應該向應用程式回覆提交失敗，同時向所有參與者發送中止消息，並且確保所有交易都有回滾。
+
+![2PC](/img/cmu15-445/c22/image-7.png)
+
+#### 2PC Optimization
+
+- Early Prepare Voting (Rare): 如果 DBMS 發送的查詢已經是某個節點最後的查詢，該節點可以將查詢結果和準備階段的投票一起返回
+- Early Acknowledgement after Prepare (Common): 如果所有節點都在準備階段同意提交交易，協調者可以在提交階段完成前向客戶端發送成功確認
+
+#### 2PC Fault Tolerance
+
+在 2PC 中，每個節點都需要保存每個階段輸入和輸出的 log 來幫助恢復。
+
+在 recovery 時可能會有以下情況 :
+
+- 如果交易在準備階段，則連絡協調者確認最後的交易結果
+- 如果交易不在準備狀態，則該交易立即中止，因為節點在崩潰之前並未達到準備狀態
+- 如果交易正在提交且該節點是協調者，會在重啟後向所有參與節點發送 COMMIT 消息，以完成交易提交
+
+如果是協調者在 commit 之前發生故障，則只需要等待協調者重啟後再次發送 COMMIT 消息即可，如果是在 commit 開始之後發生故障，則其他節點需要等待該節點重啟或者直接決定新的協調者。
+
+如果是參與者在 commit 開始之前發生故障，則協調者只要依據超時機制將交易中止即可，如果是在 commit 開始之後發生故障，則協調者需要不斷重試來保證一致性。
+
+由於 2PC 需要等待所有節點的回覆，可能會導致 live lock，因此有了共識算法。
 
 ### Paxos
 
-Paxos 是現代系統中比 2PC 更常用的共識協議。
+Paxos 是一種共識算法，在這個算法中，提議者會負責提交 commit 或 abort 的指令，而接受者則投票決定是否接受提議，由於不需要每個節點都同意，因此效能上會比 2PC 好。
+
 Paxos 的協調者被稱為提議者 (Proposer)，參與者被稱為接受者 (Acceptor)。
 
-- 客戶端向提議者發送提交請求 (Commit Request)
-- 提議者向接受者發送提議消息 (Propose)
-- 接受者如果尚未對較高邏輯時間戳的提議作出回應，則會發送同意 (Agree)，否則，發送拒絕 (Reject)
-- 一旦大多數接受者發送同意，提議者會發送提交消息 (Commit)
-- 提議者收到大多數接受者的確認後，向客戶端回覆提交成功
+首先，應用程式會向 proposer 發送提交請求，然後 proposer 會向 acceptor 發送提議
+
+![Paxos](/img/cmu15-445/c22/image-8.png)
+
+與 2PC 不同的是，Paxos 不需要等待所有節點的回覆，只需要等待過半數的節點同意即可，因此會繼續向 acceptor 發送 commit 請求。
+
+![Paxos](/img/cmu15-445/c22/image-9.png)
+
+但不同的是，即使在 commit 階段，acceptor 也可以拒絕提議，舉例如下 :
+
+假設有兩個 proposer，proposer 1 在 n 的時間提出協議並被所有人 agree
+
+![Paxos](/img/cmu15-445/c22/image-10.png)
+
+這時候 proposer 2 在 n+1 的時間提出協議，接著 proposer 1 發出 commit 請求，由於時間先後順序，acceptor 會拒絕 proposer 1 的提議，之後 proposer 2 會繼續直到提交完成。
+
+![Paxos](/img/cmu15-445/c22/image-11.png)
+
+這樣會導致的問題是有可能同時兩個 proposer 互相組塞，因此我們可以透過 Multi-Paxos 來解決這個問題。
 
 #### Multi-Paxos
 
-如果系統內常有任意數量的 proposer，達成共識就會有點困難，
-因此我們可以先透過 Paxos 選出一個主要的提議者，然後由主要提議者來進行提議，
-並在一段時間內提交交易不需要 propose 直接進行 commit。
-達到一定時間之後再重新選舉主要提議者。
+如果系統內常有任意數量的 proposer，達成共識就會有點困難，因此我們可以先透過 Paxos 選出一個主要的提議者，然後由主要提議者來進行提議，並在達到一定時間之後再重新選舉主要提議者。
+這樣在一段時間內提交交易就不需要 propose 而是直接進行 commit，這樣就能提高效率。
 
 ## Consistency Issues (CAP / PACELC)
 
 ### CAP
 
-CAP 定理指出一個分散式系統無法同時滿足以下三個條件
+CAP 定理指出一個分散式系統無法同時滿足以下三個條件 :
 
-- 一致性 (Consistency) : 一致性在此與線性一致性 (Linearizability) 同義。對所有節點上的操作來說，一旦寫入完成，所有後續的讀取應該返回該寫入的值或更晚的寫入值
+- 一致性 (Consistency) : 對所有節點上的操作來說，一旦寫入完成，所有後續的讀取應該返回該寫入的值或更晚的寫入值
 - 可用性 (Availability) : 可用性指的是所有仍在運行的節點都能滿足所有請求的能力。即使部分節點故障，仍然能夠提供服務
 - 分區容錯性 (Partition Tolerance) : 分區容錯性意味著即使系統中部分節點間的消息丟失，系統仍能正確運行
 
@@ -141,10 +211,20 @@ CAP 定理指出一個分散式系統無法同時滿足以下三個條件
 
 CAP 定理的現代版本是 PACELC 定理，這個定理進一步考慮了一致性和延遲之間的取捨。
 
-- P (Partition)：在發生網絡分區時，系統必須在可用性 (A) 和一致性 (C) 之間做出選擇。
-- EL (Else)：即使在系統運行正常且無網絡分區的情況下，也必須在延遲 (Latency, L) 和一致性 (Consistency, C) 之間做出選擇。
+- P (Partition)：當在網絡分區時，系統必須在可用性 (A) 和一致性 (C) 之間做出選擇。
+- EL (Else)：即使在系統運行正常且無網絡分區的情況下，也必須在延遲 (L) 和一致性 (C) 之間做出選擇。
+
+### CAP vs PACELC
+
+在 RDBMS 中，通常會在重要節點故障時拒絕寫入，以確保一致性，而在 NoSQL 中，通常會接受寫入，常採用的策略是最後一次寫入勝出。
 
 ## Google Spanner
+
+Google Spanner 是一個由 google 發明的資料庫系統，具有以下特點 :
+
+- semi-relational data model、Decentralized shared-disk architecture 以及 Log-structured on-disk storage
+- Strict 2PL + MVCC + Multi-Paxos + 2PC
+- Externally consistent : Spanner 保證事務具有外部一致性，這意味著如果事務 T1 完成後事務 T2 開始，則 T2 必須看到 T1 的結果。為了實現這一點，Spanner 使用原子鐘和 GPS 產生的全球唯一時間戳來確保事務順序。
 
 ![Google Spanner](/img/cmu15-445/c22/image-1.png)
 
@@ -152,3 +232,4 @@ CAP 定理的現代版本是 PACELC 定理，這個定理進一步考慮了一�
 
 - [CMU 15-445/645: Introduction to Database Systems](https://15445.courses.cs.cmu.edu/fall2023/)
 - [CMU 15-445/645: Introduction to Database Systems Youtube 2023 Fall](https://www.youtube.com/watch?v=QRJs_57Pung&list=PLSE8ODhjZXjbj8BMuIrRcacnQh20hmY9g&index=23)
+- [Paxos](https://poweichen.gitbook.io/blockchain-guide-zh/distribute_system/paxos)

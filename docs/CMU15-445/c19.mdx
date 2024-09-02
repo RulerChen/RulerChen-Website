@@ -11,9 +11,7 @@ keywords: [CMU15-445/645, Database Logging, CMU15-445/645 筆記]
 
 ![Database Logging](/img/cmu15-445/c19/image.png)
 
-資料庫在運行時可能會發生各種故障，如果中斷了事務的運作，就可能產生資料不一致的問題，
-這時候就需要故障恢復機制來保證資料的完整，
-主要會分成兩個部分來討論
+資料庫在運行時可能會發生各種故障，如果中斷了事務的運作，就可能產生資料不一致的問題，這時候就需要故障恢復機制來保證資料的完整，主要會分成兩個部分來討論 :
 
 - 在正常操作時進行一些準備工作，以確保系統能夠從故障中恢復 (本節)
 - 故障發生後，用來恢復資料庫狀態的操作，以確保交易的原子性、一致性與持久性 (下一節)
@@ -38,40 +36,34 @@ keywords: [CMU15-445/645, Database Logging, CMU15-445/645 筆記]
 
 ### Storage Media Failure
 
-這種故障發生在物理存儲設備受到損壞並且無法修復時，
-通常無法修復，只能從備用的硬碟恢復。
+這種故障發生在物理存儲設備受到損壞並且無法修復時，通常無法修復，只能從備用的硬碟恢復。
 
 ## Buffer Pool Management Policies
 
-在我們修改資料時，DBMS 需要先把資料讀到記憶體中，然後根據請求進行修改，
-最後再將修改後的資料寫回硬碟，在這個過程中，DBMS 需要保證以下兩點
+在我們修改資料時，DBMS 需要先把資料讀到記憶體中，然後根據請求進行修改，最後再將修改後的資料寫回硬碟，在這個過程中，DBMS 需要保證以下兩點 :
 
 - 一旦提交後，交易的修改就應該是永久的
 - 如果中止，交易的修改不應該被持久化
 
-如果真的遇到了故障，DBMS 可以採用以下的方法來恢復資料
+如果真的遇到了故障，DBMS 可以採用以下的方法來恢復資料 :
 
 - Undo : 回滾到交易開始前的狀態
 - Redo : 重做交易中的修改
 
-DBMS 如何處理 undo / redo 主要取決於 Buffer Pool Management Policies，
-有兩個策略 Steal Policy 跟 Force Policy。
+DBMS 如何處理 undo / redo 主要取決於 Buffer Pool Management Policies，有兩個策略 Steal Policy 跟 Force Policy。
 
 - Steal Policy : DBMS 是否允許將未提交的更改寫入硬碟
 - Force Policy : DBMS 是否要求將提交的更改寫入硬碟
 
-![Buffer Pool Management Policies](/img/cmu15-445/c19/image-1.png)
+以下圖為例，T1 要修改 A 而 T2 要修改 B，且 A 和 B 都位在同一個 page 中，當 T2 提交時，T1 尚未提交但已經修改了 A，這時候就需要根據 Steal Policy 和 Force Policy 來決定如何處理。
 
-以上圖為例，T1 要修改 A 而 T2 要修改 B，且 A 和 B 都位在同一個 page 中，
-當 T2 提交時，T1 尚未提交但已經修改了 A，這時候就需要根據 Steal Policy 和 Force Policy 來決定如何處理。
+![Buffer Pool Management Policies](/img/cmu15-445/c19/image-1.png)
 
 ### Steal Policy
 
-如果選擇 steal，若 T1 rollback，則需要把已經進行持久化的資料重新修改回原本的狀態再存回硬碟，
-這種方法在不發生故障的情況下可以提高效率。
+如果選擇 steal，若 T1 rollback，則需要把已經進行持久化的資料重新修改回原本的狀態再存回硬碟，這種方法在不發生故障的情況下可以提高效率。
 
-如果選擇 no-steal，若 T1 rollback，DBMS 不需要進行任何操作，
-這種方法在發生故障時效率較高。
+如果選擇 no-steal，若 T1 rollback，DBMS 不需要進行任何操作，這種方法在發生故障時效率較高。
 
 ### Force Policy
 
@@ -83,80 +75,66 @@ DBMS 如何處理 undo / redo 主要取決於 Buffer Pool Management Policies，
 
 ## Shadow Paging
 
-在 buffer pool 的策略上，最容易選擇的就是 No-Steal / Force 的組合，
-在交易被中止時不需要回滾資料，提交後也不需要 redo 資料，
-唯一的問題是無法處理超過 buffer pool 大小的資料。
+在 buffer pool 的策略上，最容易選擇的就是 No-Steal / Force 的組合，在交易被中止時不需要回滾資料，提交後也不需要 redo 資料，唯一的問題是無法處理超過 buffer pool 大小的資料。
 
-而 shadow paging 就是一種使用 no-steal / force 的代表，
-它會維護兩份獨立的資料版本
+而 shadow paging 就是一種使用 no-steal / force 的代表，它會維護兩份獨立的資料版本
 
 - Master : 包含了所有已提交的交易變更，是目前被所有讀取操作使用的資料庫版本
 - Shadow : 包含了未提交的交易變更的臨時資料庫版本，所有的更新操作都會在這個陰影版本中進行
 
+左邊是記憶體中的位置，右邊是硬碟中的位置
+
 ![Shadow Paging](/img/cmu15-445/c19/image-2.png)
 
-左邊是記憶體中的位置，右邊是硬碟中的位置
+當寫入的交易發生時，DBMS 會生成一份 shadow page，並在 shadow page 上進行修改，並將 DB root 的指針指向 shadow page，同時將資料都存在硬碟上。
 
 ![Shadow Paging](/img/cmu15-445/c19/image-3.png)
 ![Shadow Paging](/img/cmu15-445/c19/image-4.png)
 
-當寫入的交易發生時，DBMS 會生成一份 shadow page，並在 shadow page 上進行修改，
-並將 DB root 的指針指向 shadow page，同時將資料都存在硬碟上。
+在 commit 之後，DBMS 會刪除舊的 master page。
 
 ![Shadow Paging](/img/cmu15-445/c19/image-5.png)
 ![Shadow Paging](/img/cmu15-445/c19/image-6.png)
 
-在 commit 之後，DBMS 會刪除舊的 master page。
+在 shadow page 的實現中，不管是 undo 還是 redo 都非常簡單，undo 只需要刪除 shadow page，而因為每次都會將資料寫入硬碟， redo 也不需要進行任何操作。
 
-在 shadow page 的實現中，不管是 undo 還是 redo 都非常簡單，
-undo 只需要刪除 shadow page，而因為每次都會將資料寫入硬碟， redo 也不需要進行任何操作。
-
-但 shadow page 的缺點也很明顯
+但 shadow page 的缺點也很明顯 :
 
 - 複製 page table 的 overhead 較大，可以使用 copy-on-write 來減少 overhead
 - 每次提交需要將頁表、根頁面和所有更新的頁面同步到硬碟中，導致大量的隨機寫入
 - 由於相關資料可能被分割到不同的頁面中，可能會導致資料碎片化
 - 隨著資料的更新，對應頁面的引用將會失效，所以需要進行 garbage collection
-- Shadow Paging 通常只支持單一寫入，或者需要將多個交易以批次形式提交這限制了併發性
+- shadow page 通常只支持單一寫入，或者需要將多個交易以批次形式提交這限制了併發性
 
-在 2010 年以前的 SQLite 也曾採用過類似的 shadow paging 的方法，
-它會將原始的 page 先保存到一個 journal file 中，然後再進行修改並存入硬碟，
-如果中途發生故障，可以根據 journal file 來進行恢復。
+在 2010 年以前的 SQLite 也曾採用過類似的 shadow paging 的方法，它會將原始的 page 先保存到一個 journal file 中，然後再進行修改並存入硬碟，如果中途發生故障，可以根據 journal file 來進行恢復。
 
 ## Write-Ahead Logging (WAL)
 
-對於 shadow paging 來說，最大的問題就是需要將許多不連續的頁面寫入硬碟，
-而 WAL 就是一種能夠解決這個問題的方法。
+對於 shadow paging 來說，最大的問題就是需要將許多不連續的頁面寫入硬碟，而 WAL 就是一種能夠解決這個問題的方法。
 
-WAL 的核心概念是在資料庫進行變更之前，先將變更寫入一個 log file 並寫入硬碟，
-然後再修改真正的數據頁面，這樣可以保證即使發生故障，也可以根據 log file 來進行恢復，
-童長 WAL 採用的 buffer pool 策略通常是 Steal / No-Force。
+WAL 的核心概念是在資料庫進行變更之前，先將變更寫入一個 log file 並寫入硬碟，然後再修改真正的數據頁面，這樣可以保證即使發生故障，也可以根據 log file 來進行恢復，通常 WAL 採用的 buffer pool 策略通常是 Steal / No-Force。
 
-在 transaction 開始時，DBMS 會在 log file 中寫入一條 `BEGIN` 記錄，
-結束時需要寫入一條 `COMMIT` 記錄，
-在執行過程中會記錄完整的資訊，包含了 transaction id、object id、舊值、新值等。
+在 transaction 開始時，DBMS 會在 log file 中寫入一條 `BEGIN` 記錄，結束時需要寫入一條 `COMMIT` 記錄，在執行過程中會記錄完整的資訊，包含了 transaction id、object id、舊值、新值等。
+
+如下面的範例所示，我們會先寫入 WAL buffer 中，再修改值，coomit 之後再清空。
 
 ![Write-Ahead Logging](/img/cmu15-445/c19/image-7.png)
 ![Write-Ahead Logging](/img/cmu15-445/c19/image-8.png)
 ![Write-Ahead Logging](/img/cmu15-445/c19/image-9.png)
 ![Write-Ahead Logging](/img/cmu15-445/c19/image-10.png)
 
-如上面的範例所示，我們會先寫入 WAL buffer 中，再修改值，coomit 之後再清空。
-
 ### WAL Group Commit
 
-每次都將 log flush 到硬碟可能會成為效能瓶頸，因此我們可以透過 group commit 來提高效能，
-只在達到一定數量或者一定時間後才進行 flush。
+每次都將 log flush 到硬碟可能會成為效能瓶頸，因此我們可以透過 group commit 來提高效能，只在達到一定數量或者一定時間後才進行 flush。
 
 ### Log-Structured System
 
 在 log-structured 的 DBMS 中，交易的 log 首先寫入一個稱為 MemTable 的記憶體緩衝區，當 MemTable 滿了之後，會將其刷新到硬碟。
-但這個方法依然需要 WAL，因為 WAL 通常比 MemTable 刷新頻繁，並且包含未提交的交易，
-可以在崩潰時能夠恢復 MemTable 的內容。
+但這個方法依然需要 WAL，因為 WAL 通常比 MemTable 刷新頻繁，並且包含未提交的交易，可以在崩潰時能夠恢復 MemTable 的內容。
 
 ## Logging Schemes
 
-log 紀錄的內容可能依據不同的策略而有所不同，主要有以下幾種
+log 紀錄的內容可能依據不同的策略而有所不同，主要有以下幾種 :
 
 - Physical Logging
 - Logical Logging
@@ -166,8 +144,7 @@ log 紀錄的內容可能依據不同的策略而有所不同，主要有以下�
 
 ### Physical Logging
 
-物理日誌記錄是對資料庫中特定位置的位元級別變更進行記錄。每條日誌記錄都詳細記錄了在資料庫頁面上的具體變更位置和變更內容，
-類似於 `git diff` 的方式。
+物理日誌記錄是對資料庫中特定位置的位元級別變更進行記錄。每條日誌記錄都詳細記錄了在資料庫頁面上的具體變更位置和變更內容，類似於 `git diff` 的方式。
 
 ### Logical Logging
 
@@ -180,28 +157,26 @@ log 紀錄的內容可能依據不同的策略而有所不同，主要有以下�
 具體來說，它針對單個頁面進行日誌記錄，但不具體記錄頁面中數據的組織方式。
 這種方法會基於頁面的 slot number 來識別資料列，但不指定變更在頁面中的確切位置。
 
-這種方法是當下最流行的方法。
+這種方法也是當下最流行的方法。
 
 ## Checkpoint
 
-在使用 WAL 時，log 會隨著時間不段增長，這樣會導致 log file 過大，並且在恢復時需要不斷地回放 log，
-為了避免這種情況，DBMS 會定時將所有 buffer 中的資料寫到硬碟上，縮短故障恢復的時間。
+在使用 WAL 時，log 會隨著時間不段增長，這樣會導致 log file 過大，並且在恢復時需要不斷地回放 log，為了避免這種情況，DBMS 會定時將所有 buffer 中的資料寫到硬碟上，縮短故障恢復的時間。
 
 ![Checkpoints](/img/cmu15-445/c19/image-12.png)
 
 當資料庫故障時，DBMS 可以根據 checkpoint 來進行恢復，所有在 checkpoint 之前 commit 的交易都可以被視為已經持久化，如 T1。
 而在 checkpoint 之後 commit 的交易，則需要根據 log file 來進行 redo，如 T2、T3。
 
-chekcpoint 最主要要考慮的問題是多久執行一次 checkpoint，如果 checkpoint 過於頻繁，會導致效能下降，
-如果 checkpoint 過於稀疏，則在故障恢復時需要回放的 log 過多，導致恢復時間過長。
+chekcpoint 最主要要考慮的問題是多久執行一次 checkpoint，如果 checkpoint 過於頻繁，會導致效能下降，如果 checkpoint 過於稀疏，則在故障恢復時需要回放的 log 過多，導致恢復時間過長。
 
 ### Blocking Checkpoint
 
-blocking checkpoint 是一種最簡單的 checkpoint 實作方法，步驟如下
+blocking checkpoint 是一種最簡單的 checkpoint 實作方法，步驟如下 :
 
 - 暫停新交易 : 暫停接受新的交易，並等待所有當前活躍的交易完成
 - 刷新緩衝區 : 將當前記憶體中的所有日誌記錄和修改過的緩衝區寫到硬碟中
-- 記錄 Checkpoint : 寫入一個 `<CHECKPOINT>` 記錄到日誌檔案中，並將其寫入硬碟
+- 記錄 checkpoint : 寫入一個 `<CHECKPOINT>` 記錄到日誌檔案中，並將其寫入硬碟
 
 ## References
 

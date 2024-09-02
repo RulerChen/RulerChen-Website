@@ -9,7 +9,7 @@ keywords: [CMU15-445/645, Concurrency Control Theory, CMU15-445/645 筆記]
   <title>CMU 15-445/645 筆記 Concurrency Control Theory</title>
 </head>
 
-對於 DBMS 來說，除了基本的功能外，我們還有兩個問題需要解決
+對於 DBMS 來說，除了基本的功能外，我們還有兩個問題需要解決 :
 
 - 如何在同時更新時避免 race condition (concurrency control)
 - 當資料庫發生故障時，我們如何保證資料的完整性 (recovery)
@@ -20,23 +20,21 @@ keywords: [CMU15-445/645, Concurrency Control Theory, CMU15-445/645 筆記]
 
 transaction 是 DBMS 中最基本的操作單位，指的是一系列操作的執行，且這些操作要麼全部執行成功，要麼全部不執行。
 
-如以下的範例，假設你要從 Andy 的銀行帳戶中轉出 $100 給他的經紀人，這個交易涉及以下步驟
+如以下的範例，假設你要從 Andy 的銀行帳戶中轉出 $100 給他的經紀人，這個交易涉及以下步驟 :
 
 - 確認 Andy 帳戶中是否有 $100
 - 從 Andy 的帳戶中扣除 $100
 - 將 $100 加到他的經紀人的帳戶
 
-這個交易要麼全部完成（即上述三個步驟都成功執行），要麼不會改變任何帳戶的狀態。
+這個交易要麼全部完成 (即上述三個步驟都成功執行)，要麼不會改變任何帳戶的狀態。
 
 ### The Strawman System
 
-strawman system 是一個簡單的 transaction system，它只有一個 thread 來執行所有的 transaction，
-因此不管在任何時刻都只能有一個 transaction 在執行。
+strawman system 是一個簡單的 transaction system，它只有一個 thread 來執行所有的 transaction，因此不管在任何時刻都只能有一個 transaction 在執行。
 
-這個系統的處理方式是將所有檔案都複製一份，然後對這個新的檔案進行修改，如果成功就全部覆蓋，
-這種方式雖然簡單但是缺點是顯而易見的，就是無法利用多核來處理獨立的 transaction。
+這個系統的處理方式是將所有檔案都複製一份，然後對這個新的檔案進行修改，如果成功就全部覆蓋，這種方式雖然簡單但是缺點是顯而易見的，就是無法利用多核來處理獨立的 transaction。
 
-為了提高效率，我們必須允許多個 transaction 同時執行，但這樣就會產生正確性的問題，如
+為了提高效率，我們必須允許多個 transaction 同時執行，但這樣就會產生正確性的問題，如 :
 
 - Temporary Inconsistency: 不可避免，不會影響正確性
 - Permanent Inconsistency: 不可接收，會影響正確性
@@ -47,59 +45,52 @@ strawman system 是一個簡單的 transaction system，它只有一個 thread �
 
 ## ACID - Atomicity
 
-DBMS 需要保證 transaction 的原子性，即所有操作只有全部完成跟全部未完成兩種結果，
-如果在過程中出現錯誤，DBMS 需要回滾到原本的狀態。
+DBMS 需要保證 transaction 的原子性，即所有操作只有全部完成跟全部未完成兩種結果，如果在過程中出現錯誤，DBMS 需要回滾到原本的狀態。
 
-主要有兩種策略
+主要有兩種策略 :
 
 - Logging : 目前主流的實作方式，會記錄交易過程中的每一項變更，並同時保存在記憶體跟硬碟上
 - Shadow Paging : 將交易需要修改的頁面複製，並只在新的頁面中修改，當交易提交時才會覆蓋原本的檔案，通常在 single thread 的環境中使用
 
 ## ACID - Consistency
 
-表示在資料庫中的邏輯是正確的，主要分為兩種
+表示在資料庫中的邏輯是正確的，主要分為兩種 :
 
-- Database Consistency : 遵循 integrity constraints，例如人的年齡不可能是負數，
-  可以使用 SQL 中的 `CHECK` 或 `CONSTRAINT` 來實現
+- Database Consistency : 遵循 integrity constraints，例如人的年齡不可能是負數，可以使用 SQL 中的 `CHECK` 或 `CONSTRAINT` 來實現
 - Transaction Consistency : 如果交易前是一致，交易後也應該是一致的
 
 ## ACID - Isolation
 
-不同的 transaction 在執行過程中應該互相隔離且互不影響，就像在單獨運行一樣。
-但在實際情況中，由於效能問題，DBMS 需要將多個同時執行的交易交錯執行，並同時保持隔離性。
+不同的 transaction 在執行過程中應該互相隔離且互不影響，就像在單獨運行一樣。但在實際情況中，由於效能問題，DBMS 需要將多個同時執行的交易交錯執行，並同時保持隔離性。
 
-舉例如下，
-有兩個 transaction t1 和 t2
+舉例如下，有兩個 transaction t1 和 t2
 
 - t1 : A 轉給 B 100 元
 - t2 : A 和 B 獲得 6% 利息
 
 ![Isolation](/img/cmu15-445/c15/image.png)
 
-當這兩個 transaction 發生之後，
-不管順序如何，DBMS 需要確保最後兩者加起來的結果是 $2000 \times 1.06 = 2120$ 元。
+當這兩個 transaction 發生之後，不管順序如何，DBMS 需要確保最後兩者加起來的結果是 $2000 \times 1.06 = 2120$ 元。
 
 ### Concurrency Control
 
-concurrency control 指的是 DBMS 如何決定多個交易操作的正確順序，大致有兩種方式
+concurrency control 指的是 DBMS 如何決定多個交易操作的正確順序，大致有兩種方式 :
 
 - Pessimistic (悲觀) : DBMS 假設會發生衝突，可以透過鎖定資源來實現
 - Optimistic (樂觀) : DBMS 假設不會發生衝突，直到 commit 時才會檢查衝突並回滾
 
 ### Schedule
 
-DBMS 的執行順序被稱為 execution schedule，我們希望可以盡量交錯 transaction 來最大程度的提高倂發性，
-這樣當某個 transaction 在等待資源 (disk IO、page fault) 或 CPU 有空閒時，就可以繼續執行其他交易。
+DBMS 的執行順序被稱為 execution schedule，我們希望可以盡量交錯 transaction 來最大程度的提高倂發性，這樣當某個 transaction 在等待資源 (disk IO、page fault) 或 CPU 有空閒時，就可以繼續執行其他交易。
 
 ![Schedule](/img/cmu15-445/c15/image-1.png)
 ![Schedule](/img/cmu15-445/c15/image-2.png)
 
-我們需要保證 schedule 是 serial schedule 或是等價於 serial schedule (serializable schedule)，
-也就是說，這些交易的結果應該與某個 serial schedule 的結果相同，這樣才能保證 transaction 的正確性。
+我們需要保證 schedule 是 serial schedule 或是等價於 serial schedule (serializable schedule)，也就是說，這些交易的結果應該與某個 serial schedule 的結果相同，這樣才能保證 transaction 的正確性。
 
 ### Conflict
 
-當兩個 operation 滿足以下條件時，我們稱之為 conflict
+當兩個 operation 滿足以下條件時，我們稱之為 conflict :
 
 - 這兩個 operation 是不同的 transaction
 - 這兩個 operation 操作的資源是相同的
@@ -107,25 +98,25 @@ DBMS 的執行順序被稱為 execution schedule，我們希望可以盡量交�
 
 #### Read-Write Conflict
 
-![Conflict](/img/cmu15-445/c15/image-3.png)
-
 會導致 unrepeatable read，也就是當一個 transaction 多次讀取同一個資源時，資源的值不同。
+
+![Conflict](/img/cmu15-445/c15/image-3.png)
 
 #### Write-Read Conflict
 
-![Conflict](/img/cmu15-445/c15/image-4.png)
-
 會導致 dirty read，也就是當一個 transaction 讀取到另一個 transaction 還未 commit 的資源。
+
+![Conflict](/img/cmu15-445/c15/image-4.png)
 
 #### Write-Write Conflict
 
-![Conflict](/img/cmu15-445/c15/image-5.png)
-
 會導致 lost update，也就是當兩個 transaction 同時寫入同一個資源時，後者會覆蓋前者的值。
+
+![Conflict](/img/cmu15-445/c15/image-5.png)
 
 ### Serializability
 
-可序列化性主要有兩種
+可序列化性主要有兩種 :
 
 - Conflict Serializability : 大多數 DBMS 支持
 - View Serializability : 沒有 DBMS 支持，因為很難判斷是否是 view serializable
@@ -137,28 +128,24 @@ DBMS 的執行順序被稱為 execution schedule，我們希望可以盡量交�
 - conflict equivalent : 兩個 scheduler 在 transaction 中有相同的 action，且每一對 conflicting operations 的順序在這兩個排程中都是相同的
 - conflict serializable : 如果一個 scheduler 是 conflict equivalent 於某個 serial scheduler，則這個 scheduler 是 conflict serializable
 
-如果我們可以通過交換不同 transaction 中連續的 non-conflicting operations 來將一個 scheduler 轉換為 serial scheduler，
-則這個 scheduler 是 conflict serializable，但這種方式在多個 transaction 的情況下不好用。
+如果我們可以通過交換不同 transaction 中連續的 non-conflicting operations 來將一個 scheduler 轉換為 serial scheduler，則這個 scheduler 是 conflict serializable，但這種方式在多個 transaction 的情況下不好用。
+
+我們可以構建 dependency graph 來判斷是否是 conflict serializable。在這個圖中，每個事務都是一個節點，如果事務 $T_i$ 中的操作 $O_i$ 與事務 $T_j$ 中的操作 $O_j$ 衝突且 $O_i$ 在排程中先於 $O_j$，則從節點 $T_i$ 到 $T_j$ 有一條有向邊，只有當這個圖是無環時，這個 scheduler 才是 conflict serializable。
 
 ![Dependency Graph](/img/cmu15-445/c15/image-6.png)
 
-我們可以構建 dependency graph 來判斷是否是 conflict serializable。
-在這個圖中，每個事務都是一個節點，
-如果事務 $T_i$ 中的操作 $O_i$ 與事務 $T_j$ 中的操作 $O_j$ 衝突且 $O_i$ 在排程中先於 $O_j$，則從節點 $T_i$ 到 $T_j$ 有一條有向邊，
-只有當這個圖是無環時，這個 scheduler 才是 conflict serializable。
-
 #### View Serializability
-
-![View Serializability](/img/cmu15-445/c15/image-8.png)
-![View Serializability](/img/cmu15-445/c15/image-9.png)
 
 與 conflict serializability 相比，view serializability 是一種更寬鬆的標準，並允許盲寫 (blind write)。
 
-它需要滿足三個條件
+它需要滿足三個條件 :
 
 - Initial Read Equivalence : 每個事務讀取的值與在串行排程中讀取的值相同
 - Final Write Equivalence : 每個資料項的最終寫入操作（即最終結果）與串行排程中的相同
 - Read-Write Equivalence : 對於每個讀操作，其讀取的值必須來自與在串行排程中相同的最後一次寫操作
+
+![View Serializability](/img/cmu15-445/c15/image-8.png)
+![View Serializability](/img/cmu15-445/c15/image-9.png)
 
 ## ACID - Durability
 

@@ -9,56 +9,70 @@ keywords: [CMU15-445/645, Introduction to Distributed Databases, CMU15-445/645 �
   <title>CMU 15-445/645 筆記 Introduction to Distributed Databases</title>
 </head>
 
-分散式資料庫管理系統是一種將單一邏輯資料庫分散到多個物理資源上的系統，
-跟 Parallel DBMS 的差異在於分散式的節點相對距離較遠，且可能要通過公共網路進行通信。
+Distributed DBMS 是一種將單一邏輯資料庫分散到多個物理資源上的系統，跟 Parallel DBMS 的差異在於分散式的節點相對距離較遠，且可能要通過公共網路進行通信。
 
-這節我會用之前學過的 single node 的知識來構建一個分散式資料庫系統，像是
+在此之前，我們已經學過了許多在 single node 環境下的資料庫技術，如 :
 
 - Optimization & Planning
 - Concurrency Control
 - Recovery
 
-都有可能在分散式上遇到新的問題
+而這些技術在分散式系統中都會有不同的挑戰，也是我們要討論的主題。
 
 ## System Architecture
 
-DBMS 的 system architecture 定義了 CPU 可以直接訪問那些共享資源，
-其中 single node 的架構被稱作 shared everything。
+DBMS 的 system architecture 定義了 CPU 可以直接訪問那些共享資源，其中 single node 的架構就是 shared everything，而在分散式系統中，我們主要討論的是另外三種架構 :
+
+- Shared Memory
+- Shared Disk
+- Shared Nothing
 
 ![System Architecture](/img/cmu15-445/c21/image.png)
 
 ### Shared Memory
 
-不同的 CPU 可以訪問同一個記憶體位置，這種架構很難在雲原生的環境下實現。
+不同的 CPU 可以訪問同一個記憶體位置，這種架構幾乎沒有人使用。
 
 ### Shared Disk
 
-![Shared Disk](/img/cmu15-445/c21/image-3.png)
-![Shared Disk](/img/cmu15-445/c21/image-4.png)
-
 在這種架構下，不同的 CPU 可以透過網路訪問同一塊邏輯硬碟，但各自有各自的記憶體。
-這種架構的優點在於可以將運算層跟存儲層分開，方便獨立擴容，缺點是 CPU 之間需要更多通訊來了解彼此的狀態或者更新別人的 buffer，
-常見於雲端服務。
+
+- 優點
+  - 將運算層跟存儲層分開，方便獨立擴容
+- 缺點
+  - CPU 之間需要更多通訊來了解彼此的狀態
+
+使用這種架構的系統如下圖所示 :
+
+![Shared Disk](/img/cmu15-445/c21/image-3.png)
 
 ### Shared Nothing
 
-![Shared Nothing](/img/cmu15-445/c21/image-1.png)
-![Shared Nothing](/img/cmu15-445/c21/image-2.png)
+在這種環境下，每個節點都有自己的 CPU、Memory、Disk，節點之間會透過網路來通信。
 
-在這種環境下，每個節點都有自己的 CPU、Memory、Disk，只會透過網路來進行通信。
-這種架構的優點在於可以提供很好的效能，缺點在於很難增加容量。
+- 優點
+  - 可以提供很好的效能
+- 缺點
+  - 較難確保一致性
+  - 較難進行擴容，在新增節點時，需要重新分配資料到新節點上，這會需要進行物理移動，且同時還要保證資料的一致性和可用性。
+
+使用這種架構的系統如下圖所示 :
+
+![Shared Nothing](/img/cmu15-445/c21/image-1.png)
 
 ## Design Issues
 
-接下來我們會討論在分散式系統中可能遇到的問題
+接下來我們會討論在分散式系統中可能遇到的問題 :
 
 - 應用程式如何獲取資料
 - 如何在分散式系統中進行查詢
 - 如何保證正確性
 
-對於 Distributed DBMS 的使用者來說，他們不需要知道資料是如何分散的，只需要知道如何訪問資料。
+對於 distributed DBMS 的使用者來說，他們不需要知道資料是如何分散的，只需要知道如何訪問資料。
 
 ### Homogeneous VS Heterogeneous
+
+在分散式系統中，我們需要先決定節點與節點之間的關係，可以分為兩種 :
 
 - Homogeneous (同質節點) : 每個節點在叢集中能夠執行相同的任務，在擴容以及故障恢復比較簡單
 - Heterogeneous (異質節點): 節點被分配特定的任務，因此不同節點之間需要進行通信才能完成任務，可以在一個物理節點上執行多個虛擬節點
@@ -70,25 +84,21 @@ DBMS 的 system architecture 定義了 CPU 可以直接訪問那些共享資源�
 
 ## Partitioning Schemes
 
-Partitioning Schemes 是一種把資料庫的資源分散到多個節點上的方法，也常被稱作 sharding。
+Partitioning Schemes 是一種把資料庫分散到多個節點上的方法，也常被稱作 sharding。
 
 ### Naive Table Partitioning
 
-![Naive Table Partitioning](/img/cmu15-445/c21/image-6.png)
-
-每個節點存儲一張表格，假設該節點有足夠的存儲空間來容納該表格的資料。
-缺點是擴展性較差，且會導致資料不均勻。
+假設一個節點有足夠的容量，我們可以讓一個節點儲存一張表，缺點是可能導致資料不均勻。
 
 ### Vertical Partitioning
 
-![Vertical Partitioning](/img/cmu15-445/c21/image-7.png)
-
 將表格的屬性拆分成不同的分區。每個分區還必須存儲元組信息，以便能夠重建原始記錄。
+
+![Vertical Partitioning](/img/cmu15-445/c21/image-7.png)
 
 ### Horizontal Partitioning
 
-將表的資料切成多個不相關的子集，並且使用一個 key 來將資料平均分配到不同的節點上，
-常見的分配方式有
+將表的資料切成多個不相關的子集，並且找到一個 key 來將資料平均分配到不同的節點上，常見的分配方式有 :
 
 - Range Partitioning
 - Hash Partitioning
@@ -96,12 +106,13 @@ Partitioning Schemes 是一種把資料庫的資源分散到多個節點上的�
 
 ![Horizontal Partitioning](/img/cmu15-445/c21/image-8.png)
 
-通常會使用 partitionKey 來查詢資料，並使用 Consistent Hashing 來決定資料應該存儲在哪個節點上。
+通常會使用 partitionKey 來查詢資料，並使用 consistent Hashing 來決定資料應該存儲在哪個節點上。
+
 ![Consistent Hashing](/img/cmu15-445/c21/image-11.png)
 
-將每個節點分配到邏輯環上的一個位置。
-然後，每個分區鍵的哈希值會對應到環上的一個位置，由最接近該位置的節點 (順時針方向) 負責該鍵。
+將每個 hash 值到邏輯環上的一個位置，然後由最接近該位置的節點 (順時針方向) 負責該鍵。
 當一個節點被添加或移除時，只有相鄰的節點之間的鍵會被移動，並且只有 1/n 的鍵會被重新分配。
+除此之外，我們也可以利用 consistent hashing 來做 replication 。
 
 在 shared nothing 的架構下，通常使用物理分片
 
@@ -113,58 +124,57 @@ Partitioning Schemes 是一種把資料庫的資源分散到多個節點上的�
 
 ## Distributed Concurrency Control
 
-在分散式系統中，交易會訪問一個或多個分區的資料，這就需要複雜的協調，即 Transaction Coordination，
-通常分為中心化和去中心化兩種方式。
+在分散式系統中，交易會訪問一個或多個分區的資料，就會需要複雜的協調，即所謂的 transaction coordination，通常分為中心化和去中心化兩種方式。
 
 ### Centralized Coordinator
 
 #### Transaction Processing Monitor (TP Monitor)
 
-中心化的協調氣就需要有一個元件來管理所有的交易，這個元件被稱作 Transaction Processing Monitor (TP Monitor)，
-每次發送請求時，都要經過 TP Monitor 來進行協調。
+要實現中心化的協調就需要有一個元件來管理所有的交易，這個元件被稱作 Transaction Processing Monitor (TP Monitor)，每次發送請求時，都要經過 TP Monitor 來進行協調。
+
+舉例如下所示
+
+假設一個 DBMS 有四個 partitions，分別是 P1、P2、P3、P4，並且有一個 TP Monitor 來管理所有的交易。
+這時有一個交易需要修改 P1、P3、P4 上的資料，那麼它首先要向 TP Monitor 請求 P1、P3、P4 上的鎖
 
 ![Centralized Coordinator](/img/cmu15-445/c21/image-12.png)
-![Centralized Coordinator](/img/cmu15-445/c21/image-13.png)
 
-假設有一個交易需要請求 P1、P3、P4，那麼就需要先向 TP Monitor 請求鎖，
-拿到鎖之後才能修改資料，修改完畢後再發送 COMMIT 請求，TP Monitor 會向所有的分區詢問這個交易是否可以 COMMIT，
-最後返還 ACK 給使用者。
+拿到鎖之後才能修改資料，修改完畢後再向 coordinator 發送 commit 請求，coordinator 會向所有的分區詢問這個交易是否可以 commit，最後返還 ACK 給使用者。
+
+![Centralized Coordinator](/img/cmu15-445/c21/image-13.png)
 
 #### Middleware
 
-![Middleware](/img/cmu15-445/c21/image-14.png)
+Middleware 是一個位於應用程式和資料庫之間的軟體，負責跟資料庫進行通信，對於應用程式來說，它就是資料庫本身。
 
-Middleware 是一個位於應用程式和資料庫之間的軟體，它負責跟資料庫進行通信，
-對於應用程式來說，它就是資料庫本身。
+![Middleware](/img/cmu15-445/c21/image-14.png)
 
 ### Decentralized Coordinator
 
-![Decentralized Coordinator](/img/cmu15-445/c21/image-15.png)
+再去中心化的架構中，執行某個交易時會選擇一個節點作為 master，負責協調所有的交易。
 
-當執行某個交易時，會選擇一個節點作為 master，這個節點會負責協調所有的交易。
+![Decentralized Coordinator](/img/cmu15-445/c21/image-15.png)
 
 ### Federated Database
 
+在前面的範例中，我們都假設資料庫是同一種的，但在實際應用中，我們可能會想要使用不同種類的資料庫，並只暴露一個統一的介面。
+
+這種技術有很多的挑戰，像是 query optimization、data migration、data consistency，目前仍然沒有一個很好的解決方法。
+
 ![Federated Database](/img/cmu15-445/c21/image-16.png)
-
-在前面的範例中，我們都只假設資料庫是同一種的，但在實際應用中，我們可能會使用不同種類的資料庫，
-並只曝露一個統一的介面給使用者。
-
-這種技術有很多的挑戰，目前沒有很好的解決方案。
 
 ### Distributed Concurrency Control
 
-分散式的併發控制有很多挑戰，比如
+分散式的併發控制有很多挑戰，比如 :
 
 - Replication
 - Network Communication Overhead
 - Node Failures
 - Clock Skew
 
-![Distributed Concurrency Control](/img/cmu15-445/c21/image-17.png)
+在下圖的例子中，我們可以看到由於沒有中心化的協調器，一旦發現如圖中的死鎖情況，就很難進行協調。
 
-在上圖的例子中，我們可以看到由於沒有中心化的協調器，
-一旦發現如上圖般的死鎖情況，就很難進行協調。
+![Distributed Concurrency Control](/img/cmu15-445/c21/image-17.png)
 
 ## References
 

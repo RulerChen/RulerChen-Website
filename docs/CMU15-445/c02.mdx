@@ -13,25 +13,26 @@ keywords: [CMU15-445/645, Modern SQL, CMU15-445/645 筆記]
 
 1971 年，IBM 發明了第一個查詢語言叫做 SEQUEL (Structured English Query Language)，
 接著又在 1983 年推出了採用了其語法的 DB2，SEQUEL 也隨之改名為 SQL (Structured Query Language)，
-並加入了 ANSI 和 ISO 的標準。
+並加入了 ANSI (1986) 和 ISO (1987) 的標準。
 
 - SQL:1999 Regular expressions, Triggers
 - SQL:2003 XML, Windows, Sequences
 - SQL:2008 Truncation, Fancy sorting
 - SQL:2011 Temporal DBs, Pipelined DML
 - SQL:2016 JSON, Polymorphic tables
+- SQL:2023 Property Graph Queries, Muti-Dim. Arrays
 
 ## SQL Introduction
 
 與傳統的 relational algebra 相比，SQL 採用的是 bag (無序可重覆) 而非 set (無序不可重覆)。
 
-SQL 語法可以被分為三類
+SQL 語法可以被分為三類 :
 
 - DML (Data Manipulation Language) : 查詢、插入、更新、刪除資料
 - DDL (Data Definition Language) : 定義 table、view、index 等等
 - DCL (Data Control Language) : 定義權限 (資安相關)
 
-接下來會介紹常用語法，使用的資料表如下
+接下來會介紹常用語法，使用的資料表如下 :
 
 ![sample table](/img/cmu15-445/c02/image.png)
 
@@ -78,16 +79,15 @@ INSERT INTO enrolled (sid, cid, grade) VALUES
 
 可以用於連接兩張 table，並且可以依據不同的條件來連接。
 
-包含了
-
 - Inner Join
 - Left Join
 - Right Join
-- Full Join
 - Cross Join
 
 ```SQL
-SELECT * FROM student AS s JOIN enrolled AS e ON s.sid = e.sid;
+SELECT *
+FROM student AS s
+JOIN enrolled AS e ON s.sid = e.sid;
 ```
 
 ### Aggregates
@@ -124,8 +124,7 @@ FROM student
 WHERE login LIKE '%@cs';
 ```
 
-Aggregates function 不能與其他欄位同時出現在 SELECT 子句中，
-因此下面的寫法是錯誤的
+Aggregates function 不能與其他欄位同時出現在 SELECT 子句中，因此下面的寫法是錯誤的 :
 
 ```SQL
 SELECT AVG(s.gpa), e.cid
@@ -154,7 +153,7 @@ HAVING AVG(s.gpa) > 3.8;
 
 ### String Operations
 
-不同的資料庫有不同的比較字串以及大小寫敏感度
+不同的資料庫有不同的比較字串以及大小寫敏感度，如下圖所示 :
 
 ![string operations](/img/cmu15-445/c02/image-1.png)
 
@@ -171,7 +170,7 @@ FROM student AS s
 WHERE s.login LIKE '%@c_';
 ```
 
-SQL-92 中定義了一些字串函數，例如
+SQL-92 中定義了一些字串函數，例如 :
 
 ```SQL
 SELECT SUBSTRING(name,1,5) AS abbrv_name
@@ -181,7 +180,7 @@ SELECT * FROM student AS s
 WHERE UPPER(s.name) LIKE 'KAN%'
 ```
 
-除此之外，各個資料庫有不同的字串函數，例如
+除此之外，各個資料庫有不同的字串函數，例如 :
 
 ```SQL
 -- SQL-92
@@ -226,7 +225,7 @@ INTO TEMPORARY CourseIds
 FROM enrolled;
 ```
 
-也可以用於 insert 語句中，將查詢結果插入到另一張 table 中
+也可以用於 insert 語句中，將查詢結果插入到另一張 table 中。
 
 ```SQL
 -- PostgreSQL
@@ -259,7 +258,7 @@ ORDER BY sid
 LIMIT 1 OFFSET 1;
 ```
 
-還有一種使用 `FETCH` 的方法，語法如下 (WITH TIES 會將相同的資料列全部取出)
+還有一種使用 `FETCH` 的方法，語法如下 (WITH TIES 會將相同的資料列全部取出) :
 
 ```SQL
 SELECT sid, name
@@ -306,9 +305,7 @@ WHERE ranking.rank = 1;
 
 ### Nested Queries
 
-包含了 inner query 以及 outer query，
-inner query 會先執行，然後再執行 outer query，
-且 inner query 可以使用 outer query 中的欄位。
+包含了 inner query 以及 outer query，inner query 會先執行，然後再執行 outer query，且 inner query 可以使用 outer query 中的欄位。
 
 可以支持 `NOT`、`IN`、`ANY`、`ALL`、`EXISTS` 等等。
 

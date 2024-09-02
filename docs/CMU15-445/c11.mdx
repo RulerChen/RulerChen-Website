@@ -9,65 +9,65 @@ keywords: [CMU15-445/645, Joins Algorithms, CMU15-445/645 筆記]
   <title>CMU 15-445/645 筆記 Joins Algorithms</title>
 </head>
 
-在 RDBMS 中，我們常常會依據 normalization 的原則將資料分散到不同的表格中以避免記錄到重複的資料，
-因此在查詢時，我們就需要透過 Join 來將資料合併。
+在 RDBMS 中，我們常常會依據 normalization 的原則將資料分散到不同的表格中以避免記錄到重複的資料，因此在查詢時，我們就需要透過 Join 來將資料合併。
 
-在這節中，我們主要會討論兩個 table 做 inner join 的情況 (當然這種方法也可以擴展到其他 join 方式及多個 table)，
-在一般情況下，我們會希望比較小的 table 作為 outer table，而比較大的 table 作為 inner table，
+在這節中，我們主要會討論兩個 table 做 inner join 的情況 (當然這種方法也可以擴展到其他 join 方式及多個 table)，在一般情況下，我們會希望比較小的 table 作為 outer table，而比較大的 table 作為 inner table，
 
 ## Join
 
-![Join](/img/cmu15-445/c11/image.png)
-
-我們主要要討論兩個部分，分別是
+我們主要要討論兩個部分，分別是 :
 
 - Output
 - Cost Analysis Criteria
+
+![Join](/img/cmu15-445/c11/image.png)
 
 ### Output
 
 ![Join Output](/img/cmu15-445/c11/image-1.png)
 
-主要有兩種連結方式
+主要有兩種連結方式 :
+
+- Early Materialization
+- Late Materialization
 
 #### Early Materialization
 
-![Early Materialization](/img/cmu15-445/c11/image-2.png)
-
 將所有的資料都放到新的 tuple 中，這樣之後就不需要在回去表中讀取資料，較適合 row store。
+
+![Early Materialization](/img/cmu15-445/c11/image-2.png)
 
 #### Late Materialization
 
-![Late Materialization](/img/cmu15-445/c11/image-3.png)
-
 也可以只複製 join key 跟 record id，之後再去表中讀取資料，較適合 column store。
+
+![Late Materialization](/img/cmu15-445/c11/image-3.png)
 
 ### Cost Analysis Criteria
 
-由於資料庫的資料通常無法一次性的讀進記憶體中，因此我們需要透過 join algorithms 來最大化減少硬碟 I/O 的次數，
-對於 join algorithms 來說，唯一的評論標準就是 I/O 數量。
+由於資料庫的資料通常無法一次性的讀進記憶體中，因此我們需要透過 join algorithms 來最大化減少硬碟 I/O 的次數，對於 join algorithms 來說，唯一的評論標準就是 I/O 數量。
 
-接下來的資料都是基於以下的假設
+接下來的資料都是基於以下的假設 :
 
-- 對 R 跟 S 兩個 table 做 join
-- R 有 $M$ 個 page， $m$ 個 tuple
-- S 有 $N$ 個 page， $n$ 個 tuple
+- 對 $R$ 跟 $S$ 兩個 table 做 join
+- $R$ 有 $M$ 個 page， $m$ 個 tuple
+- $S$ 有 $N$ 個 page， $n$ 個 tuple
 
 ## Nested Loop Join
 
 ### Naive Nested Loop Join
 
-![Naive Nested Loop Join](/img/cmu15-445/c11/image-4.png)
-
 對於 outer table 的每一個 tuple，都會去 inner table 中找尋符合的 tuple 來比對。
 
 cost 是 $M + (m \times N)$
 
+![Naive Nested Loop Join](/img/cmu15-445/c11/image-4.png)
+
 ### Block Nested Loop Join
 
-![Block Nested Loop Join](/img/cmu15-445/c11/image-5.png)
-
 每次取 R 中的所有 tuple 出來，並與 S 的所有 tuple 比對一次。
+
+![Block Nested Loop Join](/img/cmu15-445/c11/image-5.png)
 
 cost 是 $M + (M \times N)$
 
@@ -77,17 +77,15 @@ cost 則變為 $M + \lceil \frac{M}{B-2} \rceil \times N$
 
 ### Index Nested Loop Join
 
-![Index Nested Loop Join](/img/cmu15-445/c11/image-6.png)
-
 前面幾種較慢的原因在於我們需要多次對全表掃描，但若 inner table 在 join attribute 上有 index，我們就可以透過 index 來加速，只需掃描一次即可。
+
+![Index Nested Loop Join](/img/cmu15-445/c11/image-6.png)
 
 cost 是 $M + m \times C$，其中 C 是掃描一次 index 的 cost。
 
 ## Sort-Merge Join
 
-![Sort-Merge Join](/img/cmu15-445/c11/image-7.png)
-
-主要分為兩個步驟
+主要分為兩個步驟 :
 
 - Sort
   - 將兩個 table 依照 join attribute 排序
@@ -95,38 +93,37 @@ cost 是 $M + m \times C$，其中 C 是掃描一次 index 的 cost。
   - 從兩個 table 的端點開始進行掃描，並進行比對
   - 如果遇到重複則需要 backtracking
 
+![Sort-Merge Join](/img/cmu15-445/c11/image-7.png)
+
 sort cost (R) : $2M \times (1 + \lceil \log_{B-1} \lceil\frac{M}{B} \rceil \rceil)$  
 sort cost (S) : $2N \times (1 + \lceil \log_{B-1} \lceil\frac{N}{B} \rceil \rceil)$  
 merge cost : $M + N$
 
 最差的情況就是所有的 join attribute 都一樣，此時的 cost 是 $M \times N$ + sort cost。
 
-sort meger 主要適用的情境是
+sort meger 主要適用的情境是 :
 
 - 當 table 的某個 attribute 已經排好序了，如 clustered index
 - SQL 的輸出必須要排序時
 
 ## Hash Join
 
-如果有兩個分別在 R 跟 S 的 tuple 有相同的值，則代表他們 hash 之後的值也必定相等，
-所以我們也可以只針對 hash 之後相同的值進行處理。
+如果有兩個分別在 R 跟 S 的 tuple 有相同的值，則代表他們 hash 之後的值也必定相等，所以我們也可以只針對 hash 之後相同的值進行處理。
 
 ### Simple Hash Join
 
-主要分為兩個階段
+主要分為兩個階段 :
 
 - Build
   - 將 outer table 中的 join attribute 透過 hash function h1 進行 hash，並放入 hash table T 中
 - Probe
   - 將 inner table 中的 join attribute 透過 hash function h1 得到這個 tuple 在 T 中的位置，並進行比對
 
-其中 T 的 key 是 join attribute，value 則可以是 early materialization 或 late materialization，
-在這個方法中，T 有可能沒辦法被放入 memory 中，導致需要進行多次 I/O，
-如果可以預測 T 的大小，我們也可以使用靜態 hash table。
+其中 T 的 key 是 join attribute，value 則可以是 early materialization 或 late materialization，在這個方法中，T 有可能沒辦法被放入 memory 中，導致需要進行多次 I/O，如果可以預測 T 的大小，我們也可以使用靜態 hash table。
+
+也可以使用 bloom filter 來幫助我們快速找到不在 T 中的 tuple。
 
 ![Simple Hash Join](/img/cmu15-445/c11/image-8.png)
-
-我們也可以使用 bloom filter 來幫助我們快速找到不在 T 中的 tuple。
 
 ### Grace Hash Join / Partitioned Hash Join
 
@@ -140,8 +137,7 @@ sort meger 主要適用的情境是
 - Probe
   - 將每一組 partition 中的 tuple 進行 hash join
 
-如果一次 partition 後還是無法放入 memory 中，我們可以進行多次 partition (recursive partitioning)，
-如果單一的 key 有太多的 tuple，可以使用 block nested loop join 來處理。
+如果一次 partition 後還是無法放入 memory 中，我們可以進行多次 partition (recursive partitioning)，如果單一的 key 有太多的 tuple，可以使用 block nested loop join 來處理。
 
 partition cost : $2(M + N)$ read + write both tables  
 probe cost : $M + N$ read both tables  
@@ -153,9 +149,9 @@ total : $3(M + N)$
 
 ## Conclusion
 
-![Join Algorithms](/img/cmu15-445/c11/image-12.png)
-
 對於大部分的 join 來說，hash join 都是比較好的選擇，除非你的 SQL 需要排序才會考慮 sort-merge join。
+
+![Join Algorithms](/img/cmu15-445/c11/image-12.png)
 
 ## References
 

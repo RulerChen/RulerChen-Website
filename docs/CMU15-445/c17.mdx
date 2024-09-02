@@ -10,10 +10,9 @@ keywords: [CMU15-445/645, Timestamp Ordering Concurrency Control, CMU15-445/645 
 </head>
 
 Timestamp Ordering (T/O) concurrency control 是一種樂觀的並發控制協議，這種協議會假設衝突不常發生，因此不會在讀取或寫入資料庫之前獲取鎖。
-T/O 的主要概念是為每個 transaction 分配一個 timestamp，
-如果 $TS(T_i) < TS(T_j)$，則 DBMS 需要確保執行計劃等價於一個交易順序為 $T_i, T_j$ 的序列。
+T/O 的主要概念是為每個 transaction 分配一個 timestamp，如果 $TS(T_i) < TS(T_j)$，則 DBMS 需要確保執行計劃等價於一個交易順序為 $T_i, T_j$ 的序列。
 
-而實現 T/O 需要單調遞增的 timestamp，通常有以下幾種方法
+而實現 T/O 需要單調遞增的 timestamp，通常有以下幾種方法 :
 
 - system clock : 使用系統的時鐘來生成 timestamp，有可能會受到夏令時間 (Daylight Savings Time，會在夏令時調整時鐘) 等意外狀況的影響
 - logical counter : 使用邏輯計數器來生成 timestamp，這種方法可能會有溢出問題，並且很難在分散式系統中維持一致性
@@ -21,10 +20,8 @@ T/O 的主要概念是為每個 transaction 分配一個 timestamp，
 
 ## Basic Timestamp Ordering (BASIC T/O)
 
-Basic Timestamp Ordering (BASIC T/O) 是一種最基本的 T/O 協議，
-在這個協議中，事務讀寫都不需要加鎖，且每條資料 $X$ 都會有兩個 timestamp，
-分別是 read timestamp ($R-TS(X)$) 和 write timestamp ($W-TS(X)$)，
-Basic T/O 會在每次操作時檢查這些時間戳。如果交易試圖讀取未來的資料，該交易將被中止並重新啟動。
+Basic Timestamp Ordering (BASIC T/O) 是一種最基本的 T/O 協議。
+在這個協議中，事務讀寫都不需要加鎖，且每條資料 $X$ 都會有兩個 timestamp，分別是 read timestamp ($R-TS(X)$) 和 write timestamp ($W-TS(X)$)，Basic T/O 會在每次操作時檢查這些時間戳。如果交易試圖讀取未來的資料，該交易將被中止並重新啟動。
 
 ### Read
 
@@ -49,14 +46,13 @@ Basic T/O 會在每次操作時檢查這些時間戳。如果交易試圖讀取�
 
 ### Thomas Write Rule (TWR)
 
-如果 $TS(T_i) < W-TS(X)$，根據 Thomas Write Rule，DBMS 可以選擇忽略這個寫入操作並繼續執行，
-雖然這違反了 T/O 的原則，但是由於沒有其他操作依賴於這個寫入操作 (會寫入到 local copy 中)，
-因此不會影響 schedule 的 serializability。
+如果 $TS(T_i) < W-TS(X)$，根據 Thomas Write Rule，DBMS 可以選擇忽略這個寫入操作並繼續執行，雖然這違反了 T/O 的原則，但是由於沒有其他操作依賴於這個寫入操作 (會寫入到 local copy 中)，因此不會影響 schedule 的 serializability。
 
 ### Summary
 
 如果不使用 TWR，則 Basic T/O 可以保證 schedule 是 conflict serializable，
-其優缺點如下
+
+其優缺點如下:
 
 - 優點
   - 無需加鎖
@@ -70,10 +66,8 @@ Basic T/O 會在每次操作時檢查這些時間戳。如果交易試圖讀取�
 
 Optimistic Concurrency Control (OCC) 是一種樂觀的並發控制協議，使用時間戳來驗證交易。
 OCC 適合在衝突較少的情況下使用，比如當所有交易都是唯讀的，或者當交易訪問不重疊的資料子集時。
-如果資料庫規模較大且工作負載分佈均勻，且衝突發生的概率較低，OCC 是一個不錯的選擇。
 
-在 OCC 中，所有的交易都會被放在一個私有空間中，且所有的修改都會在裡面進行，
-主要分為三個階段
+在 OCC 中，所有的交易都會被放在一個私有空間中，且所有的修改都會在裡面進行，主要分為三個階段 :
 
 - Read Phase
   - 追蹤每個交易讀取和寫入的資料，並放到私有空間中，並在結束時獲得 timestamp
@@ -84,22 +78,22 @@ OCC 適合在衝突較少的情況下使用，比如當所有交易都是唯讀�
 
 ### Example
 
-![Example](/img/cmu15-445/c17/image-2.png)
-
 與 Basic T/O 相比，OCC 只需要儲存 $W-TS(X)$
 
-![Example](/img/cmu15-445/c17/image-3.png)
+![Example](/img/cmu15-445/c17/image-2.png)
 
 接著 T1 跟 T2 會將資料放到私有空間中
 
-![Example](/img/cmu15-445/c17/image-4.png)
+![Example](/img/cmu15-445/c17/image-3.png)
 
 T2 完成整個交易，由於沒有資料要寫入，因此跳過 write phase，並獲得 timestamp 1
 
-![Example](/img/cmu15-445/c17/image-5.png)
+![Example](/img/cmu15-445/c17/image-4.png)
 
 T1 將值修改為 456，由於還不知道 timestamp，因此暫時為無限大。
 接著進行 validation phase，由於 $W-TS(A) = 1$，因此 T1 可以提交，並將 $W-TS(A)$ 更新為 2。
+
+![Example](/img/cmu15-445/c17/image-5.png)
 
 ### Validation Phase
 
@@ -125,7 +119,7 @@ DBMS 檢查提交中的交易與所有其他正在運行的交易的順序。尚
 
 ### Summary
 
-OCC 會有以下的問題
+OCC 會有以下的問題 :
 
 - 將資料複製到私有空間會增加系統的開銷
 - validation / write phase 需要在全局的 critical section 中執行，這可能會造成瓶頸
@@ -134,13 +128,15 @@ OCC 會有以下的問題
 
 ## Dynamic Databases and Phantom Problem
 
-到目前為止，我們只討論了資料庫的讀取以及更新，而沒有考慮到插入和刪除等等的操作，
-這些操作可能會帶來新的問題，其中一個問題就是 Phantom Problem。
+到目前為止，我們只討論了資料庫的讀取以及更新，而沒有考慮到插入和刪除等等的操作，這些操作可能會帶來新的問題，其中一個問題就是 Phantom Problem。
 
 ![Example](/img/cmu15-445/c17/image-8.png)
 
-幻影問題是指在交易執行期間，其他交易插入了新的資料，導致同樣的查詢產生了不同的結果，
-解決方式大致有以下三種
+幻影問題是指在交易執行期間，其他交易插入了新的資料，導致同樣的查詢產生了不同的結果，解決方式大致有以下三種 :
+
+- Re-Execute Scans
+- Predicate Locking
+- Index Locking
 
 ### Re-Execute Scans
 
@@ -199,11 +195,10 @@ BEGIN TRANSACTION ISOLATION LEVEL <isolation-level>;
 
 ![Isolation Levels](/img/cmu15-445/c17/image-12.png)
 
-除了 SQL-92 定義的四種 isolation level 外，還有其他的 isolation level，如
+除了 SQL-92 定義的四種 isolation level 外，還有其他的 isolation level，如 :
 
 - Cursor Stability : 介於可重複讀和讀已提交之間，避免了丟失更新異常 (Lost Update Anomaly)。
-- Snapshot Isolation : 保證交易在執行過程中讀到的是交易開始時的數據快照。只有當寫入集不與其他同時進行的更新衝突時，
-  交易才能提交，但有可能遇到 Write Skew 問題 (兩個快照對同一個地方進行修改)。
+- Snapshot Isolation : 保證交易在執行過程中讀到的是交易開始時的數據快照。只有當寫入集不與其他同時進行的更新衝突時，交易才能提交，但有可能遇到 Write Skew 問題 (兩個快照對同一個地方進行修改)。
 
 ## References
 

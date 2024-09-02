@@ -9,18 +9,16 @@ keywords: [CMU15-445/645, Query Planning & Optimization, CMU15-445/645 筆記]
   <title>CMU 15-445/645 筆記 Query Planning & Optimization</title>
 </head>
 
-由於 SQL 是一種宣告式的語言，所以 DBMS 不會具體知道自己應該要怎麼執行，
-而是需要將 SQL 語句轉換成可執行的 query plan。
+由於 SQL 是一種宣告式的語言，所以 DBMS 不會具體知道自己應該要怎麼執行，而是需要將 SQL 語句轉換成可執行的 query plan。
 
-找到最佳的 query plan 是一個 NP-hard 的問題，
-因此本節的主要內容就是如何透過演算法在有限的時間內找到一個好的 query plan。
+但找到最佳的 query plan 是一個 NP-hard 的問題，因此本節的主要內容就是如何透過演算法在有限的時間內找到一個好的 query plan。
 
-我們使用的策略主要有兩個
+我們使用的策略主要有兩個 :
 
 - Heuristic-based : 使用既定的規則來調整順序
 - Cost-based : 依據統計資料來估算成本，選擇 cost 最低的 query plan
 
-而 query plan 主要也有兩種類型
+而 query plan 主要也有兩種類型 :
 
 - Logical Plan: 查詢中的關係代數表達式
 - Physical Plan: 具體的執行策略，如排序的方法、join 的方式等
@@ -29,8 +27,7 @@ import p1 from '@site/static/img/cmu15-445/c14/image.png';
 
 <img src={p1} alt="test" style={{ width: '100%', height: 'auto' }} />
 
-在這個 SQL 語句執行的流程圖中 tree rewriter 會負責將 SQL 語句轉換成 logical plan，
-而 optimizer 則會透過 system catalog 所提供的資訊來將 logical plan 轉換成 physical plan。
+在這個 SQL 語句執行的流程圖中 tree rewriter 會負責將 SQL 語句轉換成 logical plan，而 optimizer 則會透過 system catalog 所提供的資訊來將 logical plan 轉換成 physical plan。
 
 ## Logical Query Optimization
 
@@ -59,25 +56,18 @@ import p1 from '@site/static/img/cmu15-445/c14/image.png';
 
 除了一些基本的 heuristic 外，有許多操作在 DBMS 中沒有一定的優劣，所以我們需要透過 cost estimation 來估算成本。
 
-查詢成本通常取決於很多因素，如
+查詢成本通常取決於很多因素，如 CPU、硬碟 I/O、記憶體、網絡等。
 
-- CPU
-- 磁碟 I/O
-- 記憶體
-- 網絡
-
-但大部分的成本依舊取決於在整個 query plan 中我們要讀寫多少 tuple，
-因此 DBMS 需要維護一些統計資料，如 tuple 數量、篩選條件的選擇性等等來幫助估算成本。
+但大部分的成本依舊取決於在整個 query plan 中我們要讀寫多少 tuple，因此 DBMS 需要維護一些統計資料，如 tuple 數量、篩選條件的選擇性等等來幫助估算成本。
 
 ### Statistics
 
-通常對於一個任意的 table R，DBMS 都會維護以下統計資料
+通常對於一個任意的 table R，DBMS 都會維護以下統計資料 :
 
 - $N_R$ : R 中的 tuple 數量
 - $V(A,R)$ : R 中屬性 A 的不同值數量
 
-透過這兩個資訊，我們可以得到 selection cardinality $SC(A,R) = N_R / V(A,R)$，
-這種方式通常會有三個假設
+透過這兩個資訊，我們可以得到 selection cardinality $SC(A,R) = N_R / V(A,R)$，這種方式通常會有三個假設 :
 
 - Uniform Data : 值的分布是一致的
 - Independent Predicates : 屬性之間是獨立的
@@ -85,8 +75,7 @@ import p1 from '@site/static/img/cmu15-445/c14/image.png';
 
 ### Histograms
 
-真實的資料中幾乎不可能是 uniform 的，因此我們可以使用 histogram 來更好的估算成本，
-儲存方式通常有以下幾種可能
+真實的資料中幾乎不可能是 uniform 的，因此我們可以使用 histogram 來更好的估算成本，儲存方式通常有以下幾種可能 :
 
 ![Histograms](/img/cmu15-445/c14/image-1.png)
 ![Histograms](/img/cmu15-445/c14/image-2.png)
@@ -94,22 +83,19 @@ import p1 from '@site/static/img/cmu15-445/c14/image.png';
 
 ### Sketches
 
-我們可以使用 Probabilistic data structures 來產生近似於 dataset 的資料，
-如 HyperLogLog、Count-Min Sketch 等等。
+我們可以使用 Probabilistic data structures 來產生近似於 dataset 的資料，如 HyperLogLog、Count-Min Sketch 等等。
 
 ### Sampling
 
-DBMS 可以針對 table 的部分資料進行 sampling 來估算成本，並在 table 變動超過一定比例時重新進行 sampling，
-如 PostgreSQL 的 `ANALYZE` 指令。
+DBMS 可以針對 table 的部分資料進行 sampling 來估算成本，並在 table 變動超過一定比例時重新進行 sampling，如 PostgreSQL 的 `ANALYZE` 指令。
 
 ## Query Plan
 
-在執行完 rule-based 的 rewrite 之後，DBMS 會枚舉不同的查詢計畫並估計成本，
-直到嘗試完所有可能或超時為止。
+在執行完 rule-based 的 rewrite 之後，DBMS 會枚舉不同的查詢計畫並估計成本，直到嘗試完所有可能或超時為止。
 
 ### Single-Relation Query Plans
 
-只需要使用簡單的啟發式規則即可，目標使找到最佳的 access method。
+只需要使用簡單的啟發式規則即可，目標是找到最佳的 access method。
 
 - sequential scan
 - index scan
@@ -117,12 +103,9 @@ DBMS 可以針對 table 的部分資料進行 sampling 來估算成本，並在 
 
 ### Multi-Relation Query Plans
 
-隨著連結數量的增加，可以選擇的計劃數量會急劇增加，因此我們需要限制搜索空間以便在有限時間內找到最佳計劃，
-通常有 bottom-up 和 top-down 兩種方法。
+隨著連結數量的增加，可以選擇的計劃數量會急劇增加，因此我們需要限制搜索空間以便在有限時間內找到最佳計劃，通常有 bottom-up 和 top-down 兩種方法。
 
 #### Buttom-Up
-
-![Buttom-Up](/img/cmu15-445/c14/image-4.png)
 
 使用動態規劃 (Dynamic Programming) 來找到最佳的 join order，步驟如下
 
@@ -130,11 +113,13 @@ DBMS 可以針對 table 的部分資料進行 sampling 來估算成本，並在 
 - 對每個 logical operator 找到最佳的 physical operator (hash join、sort merge join ...)
 - 使用 left-deep tree 並透過動態規劃找到最佳的 join order
 
+![Buttom-Up](/img/cmu15-445/c14/image-4.png)
+
 #### Top-Down
 
-![Top-Down](/img/cmu15-445/c14/image-5.png)
-
 optimizer 會從 logical plan 開始，使用 branch and bound 的方法來遍歷樹狀結構，並將 logical operator 轉換成 physical operator。
+
+![Top-Down](/img/cmu15-445/c14/image-5.png)
 
 ## References
 

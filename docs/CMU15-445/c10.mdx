@@ -11,24 +11,22 @@ keywords: [CMU15-445/645, Sorting & Aggregations Algorithms, CMU15-445/645 筆�
 
 ## Query Plan
 
-![Query Plan](/img/cmu15-445/c10/image.png)
-
 DBMS 會將 SQL 編譯成 query plan，query plan 是一種由 operator 組成的樹狀結構。
 
-對於 disk-oriented 的 DBMS，我們會使用 buffer pool 來實現需要溢出到 disk 的演算法，
-並且最小化 I/O。
+![Query Plan](/img/cmu15-445/c10/image.png)
+
+對於 disk-oriented 的 DBMS，我們會使用 buffer pool 來實現需要溢出到 disk 的演算法，並且最小化 I/O。
 
 ## Sorting
 
-在 DBMS 中，tuple 在 page 中是無序的，因此我們在執行以下操作時可能會需要排序
+在 DBMS 中，tuple 在 page 中是無序的，因此我們在執行以下操作時可能會需要排序 :
 
 - 在 SQL 中使用 `ORDER BY`
 - 使用 `DISTINCT` 去除重複的 tuple 時，如果有排序就可以加快運算
 - 將大量排序好的資料插入到 B+Tree 中
 - Aggregations (GROUP BY)
 
-如果資料的大小很小 (可以放入 memory)，我們可以使用如 quick sort 的方式來進行排序，
-否則我們就必須考慮到 disk I/O 的成本來選擇排序演算法。
+如果資料的大小很小 (可以放入 memory)，我們可以使用如 quick sort 的方式來進行排序，否則我們就必須考慮到 disk I/O 的成本來選擇排序演算法。
 
 ### TOP-N Heap Sort
 
@@ -36,7 +34,7 @@ DBMS 會將 SQL 編譯成 query plan，query plan 是一種由 operator 組成�
 
 ### External Merge Sort
 
-外部排序通常會使用 divide and conquer 的方式來實現，主要包含 2 個步驟
+外部排序通常會使用 divide and conquer 的方式來實現，主要包含 2 個步驟 :
 
 - sorting : 將資料分割成小塊，並且在 memory 中進行排序
 - merging : 將排序好的資料合併
@@ -50,13 +48,12 @@ DBMS 會將 SQL 編譯成 query plan，query plan 是一種由 operator 組成�
 
 ### General (K-way) Merge Sort
 
+我們假設 file 被分成 N 個 page，且 DBMS 有 B 個 fixed-size buffers。
+需要把每個 page 讀入 buffer，並且進行排序，最後再將排序好的 page 寫回 disk，並透過不斷的合併來完成排序。
+
 ![General Merge Sort](/img/cmu15-445/c10/image-2.png)
 
-我們假設 file 被分成 N 個 page，且 DBMS 有 B 個 fixed-size buffers。
-接著我們會把每個 page 讀入 buffer，並且進行排序，最後再將排序好的 page 寫回 disk，
-並透過不斷的合併來完成排序。
-
-其複雜度如下
+其複雜度如下 :
 
 - pass 的數量 : $1 + \lceil \log_{B-1} N \rceil$
 - I/O 數量 : $2N \times$ pass 的數量
@@ -76,21 +73,18 @@ DBMS 會將 SQL 編譯成 query plan，query plan 是一種由 operator 組成�
 
 #### Using B+tree
 
-如果已經有 B+tree 的索引，我們可以使用 B+tree 來加速排序，
-我們只需遍歷 leaf node 即可得到排序好的資料，
-會分成兩種情況
+如果已經有 B+tree 的索引，我們可以使用 B+tree 來加速排序，我們只需遍歷 leaf node 即可得到排序好的資料，會分成兩種情況 :
 
 - clustered B+tree
+  I/O 是順序的，比外部排序效率更高
 
 ![Clustered B+tree](/img/cmu15-445/c10/image-4.png)
 
-I/O 是順序的，比外部排序效率更高
-
 - unclustered B+tree
 
-![Unclustered B+tree](/img/cmu15-445/c10/image-5.png)
-
 I/O 是隨機的，效率極低
+
+![Unclustered B+tree](/img/cmu15-445/c10/image-5.png)
 
 ## Aggregations
 
@@ -110,19 +104,18 @@ I/O 是隨機的，效率極低
 
 - Partition
 
-![Partition](/img/cmu15-445/c10/image-7.png)
-
 使用 hash function h1 來將 tuple 分配到 disk 中
+
+![Partition](/img/cmu15-445/c10/image-7.png)
 
 - ReHash
 
-![ReHash](/img/cmu15-445/c10/image-8.png)
-![ReHash](/img/cmu15-445/c10/image-9.png)
-
 對每個 partition 利用 hash table 計算聚合的內容。
 
-在 rehash 的過程中，存在一組 grouping key -> return value 的 hash table，
-我們只需要更新這個 key-value pair 即可。
+在 rehash 的過程中，存在一組 grouping key -> return value 的 hash table，我們只需要更新這個 key-value pair 即可。
+
+![ReHash](/img/cmu15-445/c10/image-8.png)
+![ReHash](/img/cmu15-445/c10/image-9.png)
 
 ## References
 
