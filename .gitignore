@@ -22,7 +22,7 @@ yarn-error.log*
 *.env
 
 /temp
-/.vscode
+**/.vscode/
 
 *.bkp
 *.dtmp 
