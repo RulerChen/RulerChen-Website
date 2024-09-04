@@ -1,0 +1,51 @@
+---
+title: 'P0 - C++ Primer'
+sidebar_position: '30'
+description: C++ Primer
+keywords: [CMU15-445/645, C++ Primer, CMU15-445/645 筆記]
+---
+
+<head>
+  <title>CMU 15-445/645 Project#0 筆記</title>
+</head>
+
+## Overview
+
+這個作業是一個較為簡易的 C++ 練習，主要是為了熟悉 C++ 的語法和一些基本的概念。
+
+作業的目標是實現一個 copy-on-write 的 key-value trie。
+
+## Learning Resource
+
+- [15-445 Bootcamp](https://github.com/cmu-db/15445-bootcamp) : 課程提供的一個簡單 bootcamp，裡面有一些範例程式碼
+- [cppreference](https://en.cppreference.com/w/) : C++ 的官方文件，可以查詢 C++ 的語法和標準函式庫
+- [Debug a C++ project in VS Code](https://www.youtube.com/watch?v=G9gnSGKYIg4) : 在 VSCode 中 debug C++ 程式碼的教學
+- [gdb](https://www.youtube.com/watch?v=PorfLSr3DDI) : gdb 的教學
+
+## Environment Setup
+
+我使用 WSL (Ubuntu 22.04) + VSCode 來開發這個作業，首先是安裝 VScode 套件 C/C++ Extension Pack、clangd。
+
+```bash
+sudo build_support/packages.sh
+
+mkdir build
+cd build
+cmake ..
+make
+```
+
+在安裝了 package 之後，我們還需要安裝 clangd (通常 vscode 會提示安裝)，接著我們可以設定 formatter，這樣就可以在 save 的時候自動格式化。
+
+```json title=".vscode/settings.json"
+{
+  "C_Cpp.clang_format_path": "/usr/bin/clang-format-14",
+  "C_Cpp.formatting": "clangFormat",
+  "C_Cpp.clang_format_style": "file",
+  "editor.formatOnSave": true
+}
+```
+
+## C++ Basics
+
+筆者平常會使用 C++ 刷題，但沒有使用 C++ 來打造任何的 project，因此這篇筆記主要會記錄我比較少的使用的特性。
