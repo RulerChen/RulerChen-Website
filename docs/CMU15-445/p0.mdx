@@ -13,50 +13,40 @@ keywords: [CMU15-445/645, C++ Primer, CMU15-445/645 筆記]
 
 ## Problem Description
 
-在這個 project 中，我們需要實現一個 key-value store 的 copy-on-write 的 trie，總共有 4 個 Task
+在這個 project 中，我們需要實現一個 key-value store 的 copy-on-write 的 trie，總共有 4 個 Task :
 
-### Copy-On-Write Trie
-
-修改 `trie.h` 跟 `trie.cpp` 來實現一個 copy-on-write trie，這個 trie 會有 `GET`、`PUT`、`DELETE` 三個操作。
-
-### Concurrent Key-Value Store
-
-將原本 single-thread 的 trie 改成 concurrent 的版本，一樣有 `GET`、`PUT`、`DELETE` 三個操作。
-
-### Debugging
-
-練習使用 debugger 來 debug，可以參考 `trie_debug_test.cpp`。
-
-### SQL String Functions
-
-這部份是要為 bustub 完成 `lower` 和 `upper` 兩個 SQL 的 function。
+- Copy-On-Write Trie : 修改 `trie.h` 跟 `trie.cpp` 來實現一個 copy-on-write trie，有 `GET`、`PUT`、`DELETE` 三個操作。
+- Concurrent Key-Value Store : 將原本 single-thread 的 trie 改成 concurrent 的版本，一樣有 `GET`、`PUT`、`DELETE` 三個操作。
+- Debugging : 在 `trie_debug_test.cpp`，練習使用 debugger 來 debug。
+- SQL String Functions : 實現 `lower` 和 `upper` 兩個 SQL 的 function。
 
 ## Learning Resource
 
 - [15-445 Bootcamp](https://github.com/cmu-db/15445-bootcamp) : 課程提供的一個簡單 bootcamp，裡面有一些範例程式碼
-- [cppreference](https://en.cppreference.com/w/) : C++ 的官方文件，可以查詢 C++ 的語法和標準函式庫
-- [Debug a C++ project in VS Code](https://www.youtube.com/watch?v=G9gnSGKYIg4) : 在 VSCode 中 debug C++ 程式碼的教學
-- [gdb](https://www.youtube.com/watch?v=PorfLSr3DDI) : gdb 的教學
-- [CMake](https://www.youtube.com/watch?v=dIs7TFBDbIw)
+- [Debug a C++ project in VS Code](https://www.youtube.com/watch?v=G9gnSGKYIg4) : 在 VSCode 中 debug 的教學
+- [Visual Studio Code (VSCode) 中配置 C++ 调试环境](https://blog.csdn.net/hengyuwuhui/article/details/138494068) : 在 VSCode 中配置 lldb 的教學
+- [CMake](https://www.youtube.com/watch?v=dIs7TFBDbIw) : CMake 的簡易教學
 
 ## Environment Setup
 
-我使用 WSL (Ubuntu 22.04) + VSCode 來開發這個作業，首先是安裝 VScode 套件 C/C++ Extension Pack、clangd。
+我使用 WSL (Ubuntu 22.04) + VSCode 來完成這個作業，以下是我的環境設定。
 
-接著將專案 clone 下來，並且回退到作業年份的 commit。
+首先是安裝 VSCode 套件 `C/C++ Extension Pack` 跟 `clangd`。
 
-安裝 package :
+接著將 bustub clone 下來，並且回退到 2023 Fall 的 commit。
+
+安裝 package 並編譯 :
 
 ```bash
 sudo build_support/packages.sh
 
 mkdir build
 cd build
-cmake ..
-make
+cmake -DCMAKE_BUILD_TYPE=Debug ..
+make -j`nproc`
 ```
 
-在安裝完了之後，我們還需要安裝 clangd (通常 vscode 會提示安裝)，接著我們可以設定 formatter，這樣就可以在 save 的時候自動格式化。
+在安裝完了之後，我們還需要安裝 clangd (通常 VSCode 會提示安裝)，接著我們可以設定 formatter，這樣就可以在 save 的時候自動格式化。
 
 ```json title=".vscode/settings.json"
 {
@@ -67,6 +57,63 @@ make
 }
 ```
 
+接著設定 debugger，需要先安裝 lldb :
+
+```bash
+sudo apt-get install lldb-14
+```
+
+使用 lldb 來 debug，設定如下 :
+
+```json title=".vscode/launch.json"
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "C/C++: clang++ build and debug active file",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/test/${fileBasenameNoExtension}",
+      "args": [],
+      "cwd": "${fileDirname}"
+    }
+  ]
+}
+```
+
+以 `test/primer/trie_test.cpp` 為例，我們可以在 VSCode 中設定 breakpoint，然後按下 F5 來執行 debugger。
+
+如果要執行測試，可以執行以下指令 :
+
+```bash
+cd build
+make trie_test trie_store_test -j$(nproc)
+make trie_noncopy_test trie_store_noncopy_test -j$(nproc)
+./test/trie_test
+./test/trie_noncopy_test
+./test/trie_store_test
+./test/trie_store_noncopy_test
+```
+
+如果要進行排版，可以執行以下指令 :
+
+```bash
+make format
+make check-clang-tidy-p0
+```
+
+如果要繳交作業，可以執行以下指令 :
+
+```bash
+make submit-p0
+```
+
 ## Solution
 
 ### Copy-On-Write Trie
+
+### Concurrent Key-Value Store
+
+### Debugging
+
+### SQL String Functions
