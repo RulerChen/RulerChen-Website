@@ -19,6 +19,8 @@ keywords: ['CVE-2021-44228', 'log4j', 'log4j 漏洞']
 
 ![image](/img/security/log4j/1.png)
 
+有另一點值得注意的是，我們在使用時都是使用本地 windows 的 powershell 來連線 gce，我在操作時發現使用 cloud shell 似乎沒辦法正常接收 reverse shell，建議如果有要進行操作的話可以在 Compute Engine -> 中繼資料 -> 安全殼層金鑰 中加入自己的金鑰來進行 ssh。
+
 ## LDAP 主機架設
 
 在 LDAP 主機中，我們參考了 [這篇 GitHub](https://github.com/mbechler/marshalsec/tree/master) 上的做法，並使用以下指令來執行 :
