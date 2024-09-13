@@ -9,16 +9,14 @@ keywords: [CMU15-445/645, C++ Primer, CMU15-445/645 筆記]
   <title>CMU 15-445/645 Project#0 筆記</title>
 </head>
 
-這個作業是一個較為簡易的 C++ 練習，主要是為了熟悉 C++ 的語法和一些基本的概念，如果有需要可以參考下面的學習資源。
-
 ## Problem Description
 
 在這個 project 中，我們需要實現一個 key-value store 的 copy-on-write 的 trie，總共有 4 個 Task :
 
-- Copy-On-Write Trie : 修改 `trie.h` 跟 `trie.cpp` 來實現一個 copy-on-write trie，有 `GET`、`PUT`、`DELETE` 三個操作。
-- Concurrent Key-Value Store : 將原本 single-thread 的 trie 改成 concurrent 的版本，一樣有 `GET`、`PUT`、`DELETE` 三個操作。
-- Debugging : 在 `trie_debug_test.cpp`，練習使用 debugger 來 debug。
-- SQL String Functions : 實現 `lower` 和 `upper` 兩個 SQL 的 function。
+- Copy-On-Write Trie : 修改 `/src/primer/trie.cpp` 來實現一個 copy-on-write trie，有 `GET`、`PUT`、`DELETE` 三個操作。
+- Concurrent Key-Value Store : 修改 `/src/primer/trie_store.cpp` 來將原本 single-thread 的 trie 改成 concurrent 的版本，一樣有 `GET`、`PUT`、`DELETE` 三個操作。
+- Debugging : 在 `/test/primer/trie_debug_test.cpp` 中練習使用 debugger 來 debug，並在 `/src/include/primer/trie_answer.h` 中填入答案。
+- SQL String Functions : 在 ` src/execution/expressions/string_expression.h` 和 `src/planner/plan_func_call` 中實現 `lower` 和 `upper` 兩個 SQL function。
 
 ## Learning Resource
 
@@ -29,13 +27,10 @@ keywords: [CMU15-445/645, C++ Primer, CMU15-445/645 筆記]
 
 ## Environment Setup
 
-我使用 WSL (Ubuntu 22.04) + VSCode 來完成這個作業，以下是我的環境設定。
-
-首先是安裝 VSCode 套件 `C/C++ Extension Pack` 跟 `clangd`。
-
-接著將 bustub clone 下來，並且回退到 2023 Fall 的 commit。
-
-安裝 package 並編譯 :
+1. 我使用的環境是 WSL (Ubuntu 22.04) 和 VSCode
+2. 安裝 VSCode 套件 `C/C++ Extension Pack` 跟 `clangd`
+3. 將 bustub clone 下來，並且回退到 2023 Fall 的 commit，建議至少回退到 2023 12/27 的 `add request signature script (#674)`
+4. 安裝 package 並編譯 :
 
 ```bash
 sudo build_support/packages.sh
@@ -46,7 +41,14 @@ cmake -DCMAKE_BUILD_TYPE=Debug ..
 make -j`nproc`
 ```
 
-在安裝完了之後，我們還需要安裝 clangd (通常 VSCode 會提示安裝)，接著我們可以設定 formatter，這樣就可以在 save 的時候自動格式化。
+如果出現 compiler 的版本警告，可以將 cmake 改成以下指令 :
+
+```bash
+cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=/usr/bin/clang-14 -DCMAKE_CXX_COMPILER=/usr/bin/clang++-14 ..
+```
+
+5. 安裝 clangd (通常 VSCode 會提示安裝)
+6. 設定 formatter，這樣就可以在 save 的時候自動格式化 :
 
 ```json title=".vscode/settings.json"
 {
@@ -57,13 +59,11 @@ make -j`nproc`
 }
 ```
 
-接著設定 debugger，需要先安裝 lldb :
+7. 接著設定 debugger，需要先安裝 lldb，並在 VSCode 中設定 debugger
 
 ```bash
 sudo apt-get install lldb-14
 ```
-
-使用 lldb 來 debug，設定如下 :
 
 ```json title=".vscode/launch.json"
 {
@@ -81,39 +81,121 @@ sudo apt-get install lldb-14
 }
 ```
 
-以 `test/primer/trie_test.cpp` 為例，我們可以在 VSCode 中設定 breakpoint，然後按下 F5 來執行 debugger。
+## Solution
 
-如果要執行測試，可以執行以下指令 :
+### Copy-On-Write Trie
+
+- `GET` : 需要處理 root 是 nullptr 的情況，其餘的情況就是從 root 開始往下找，最後用 `dynamic_cast` 來轉型。
+- `PUT` : 需要處理 key 是空的情況 (在 root 上直接插入)，其餘的情況就是從 root 開始往下找，並新增一個 `TrieNodeWithValue`。
+- `DELETE` : 需要先遍歷到要刪除的 node，並記錄中途經過的 node，最後再沿途刪除沒有 value 的 node。
+
+接著在本地進行 `trie_test` 的單元測試 :
 
 ```bash
 cd build
-make trie_test trie_store_test -j$(nproc)
-make trie_noncopy_test trie_store_noncopy_test -j$(nproc)
+make trie_test trie_noncopy_test -j$(nproc)
+
 ./test/trie_test
 ./test/trie_noncopy_test
+```
+
+### Concurrent Key-Value Store
+
+- `GET` : 使用 `lock_guard` 來讀取 root，並依據是否有這個 key 來決定要回傳 `nullopt` 或是 `ValueGuard`。
+- `PUT` : 使用 `unique_lock` 來獲取全局的 `write_lock`，並獲取 `root_lock` 來讀取 root 和寫入。
+- `DELETE` : 與 `PUT` 類似，也是使用 `unique_lock` 來獲取全局的 `write_lock`，並獲取 `root_lock` 來讀取 root 和刪除。
+
+接著在本地進行 `trie_store_test` 的單元測試 :
+
+```bash
+cd build
+make trie_store_test trie_store_noncopy_test -j$(nproc)
+
 ./test/trie_store_test
 ./test/trie_store_noncopy_test
 ```
 
-如果要進行排版，可以執行以下指令 :
+### Debugging
+
+前面兩題的答案可以在 VSCode 的 debugger 內看出，第三題可以直接 cout 得出答案，並在 `/src/include/primer/trie_answer.h` 中填入答案。
+
+答案如下 :
+
+1. 10
+2. 1
+3. 25
+
+### SQL String Functions
+
+在 `string_expression.h` 中依據 `expr_type` 來判斷要執行哪個 function，並使用 `std::transform` 來將字串轉換成大寫或小寫。
+
+在 `plan_func_call.cpp` 中依據 `func_name` 和參數數量來判斷要執行哪個 function。
+
+可以直接使用 shell 來測試，會顯示錯誤是正常的 :
+
+```bash
+cd build
+make -j`nproc` shell
+
+./bin/bustub-shell
+```
+
+```sql
+select upper('AbCd'), lower('AbCd');
++-------------+-------------+
+| __unnamed#0 | __unnamed#1 |
++-------------+-------------+
+| ABCD        | abcd        |
++-------------+-------------+
+```
+
+同樣可以進行單元測試 :
+
+```bash
+make -j`nproc` sqllogictest
+
+./bin/bustub-sqllogictest ../test/sql/p0.01-lower-upper.slt --verbose
+./bin/bustub-sqllogictest ../test/sql/p0.02-function-error.slt --verbose
+./bin/bustub-sqllogictest ../test/sql/p0.03-string-scan.slt --verbose
+```
+
+## Submit
+
+如果要註冊 GradeScope，可以參考 [這個網站](https://blog.csdn.net/qq_40878302/article/details/136005292)
+
+1. 首先修改 `CMakeLists.txt`，將 `P0_FILES` 設定為以下 ( 需要重新執行 `cmake` 指令來更新 makefile ):
+
+```CMake title="CMakeLists.txt"
+set(P0_FILES
+        "src/include/primer/trie_answer.h"
+        "src/include/primer/trie_store.h"
+        "src/include/primer/trie.h"
+        "src/primer/trie_store.cpp"
+        "src/primer/trie.cpp"
+        "src/planner/plan_func_call.cpp"
+        "src/include/execution/expressions/string_expression.h"
+        "GRADESCOPE.md"
+)
+```
+
+2. 進行排版，確定消除所有 error 和 warning ( 特別是 check-clang-tidy-p0 ):
 
 ```bash
 make format
+make check-lint
 make check-clang-tidy-p0
 ```
 
-如果要繳交作業，可以執行以下指令 :
+3. 簽名，會產生一個 `GRADESCOPE.md` :
+
+```bash
+python3 gradescope_sign.py
+```
+
+4. 繳交作業，可能需要先執行 `sudo apt-get install zip` 來安裝 `zip`，然後執行以下指令 :
 
 ```bash
 make submit-p0
 ```
 
-## Solution
-
-### Copy-On-Write Trie
-
-### Concurrent Key-Value Store
-
-### Debugging
-
-### SQL String Functions
+5. 上傳 `.zip` 檔到 GradeScope
