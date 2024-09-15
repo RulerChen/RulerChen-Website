@@ -1,0 +1,124 @@
+---
+title: '[Python] Project Setup'
+sidebar_position: '1'
+description: Python Project Setup
+keywords: [Python, Project Setup, Black, Flake8, isort, mypy, Poetry, ipdb]
+---
+
+## Poetry
+
+可以使用 Poetry 來管理 Python 專案的相依套件，在這之前需要先安裝 python 的環境，我使用的是 `pyenv-win` 來管理 python 的版本。
+
+1. 安裝 `pyenv-win`
+2. 安裝 python 版本
+
+```bash
+pyenv install -l
+pyenv install <python version>
+pyenv global <python version>
+
+python --version
+```
+
+3. 安裝 Poetry
+
+```bash
+pip install poetry
+```
+
+```bash
+poetry about
+```
+
+```bash
+poetry init
+
+# OR
+
+poetry new <your project name>
+```
+
+4. 安裝套件
+
+```bash
+poetry add <package name>
+poetry add <package name> --dev
+
+poetry remove <package name>
+```
+
+5. 進入虛擬環境
+
+```bash
+poetry shell
+```
+
+## flake8
+
+```bash
+poetry add flake8 --dev
+```
+
+創建一個 `.flake8` 檔案
+
+```bash title=".flake8"
+[flake8]
+max-line-length = 88
+extend-ignore = E203, W503
+exclude = .git, __pycache__, build, dist
+```
+
+## black
+
+```bash
+poetry add black --dev
+```
+
+```bash title="pyproject.toml"
+[tool.black]
+line-length = 88
+target-version = ['py310']
+```
+
+## isort
+
+```bash
+poetry add isort --dev
+```
+
+```bash title="pyproject.toml"
+[tool.isort]
+profile = "black"
+```
+
+## mypy
+
+```bash
+poetry add mypy --dev
+```
+
+## Git
+
+```bash title=".gitattributes"
+*.py text eol=lf
+```
+
+`.gitignore` 可以參考 [GitHub](https://github.com/github/gitignore/blob/main/Python.gitignore)
+
+## 執行
+
+```bash
+poetry run python src/main.py
+
+poetry run black src
+
+poetry run isort src
+
+poetry run mypy src
+
+poetry run flake8 src
+```
+
+## References
+
+- [如何打造 Production-Ready 的 ML Libraries](https://cinnamonaitaiwan.medium.com/%E5%A6%82%E4%BD%95%E6%89%93%E9%80%A0-production-ready%E7%9A%84-ai-libraries-83492c18a9d1)
