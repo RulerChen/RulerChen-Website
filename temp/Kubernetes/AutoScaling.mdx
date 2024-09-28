@@ -1,0 +1,44 @@
+---
+title: '[K8s] Kubernetes Auto Scaling'
+sidebar_position: '70'
+description: Kubernetes Auto Scaling
+keywords: [kubernetes, k8s, auto scaling]
+---
+
+## Auto Scaling Overview
+
+在有了能夠監控系統狀態的工具後，我們同時也會需要能自動調整系統資源的工具，這就是 Auto Scaling 的概念。
+
+## Cluster Autoscaler
+
+![Cluster Autoscaler](/img/k8s/4.png)
+
+CA 可以自動幫我們調整 Node 的數量，當 Pod 佔據了所有 Node 的資源後，CA 就會自動增加 Node 的數量。
+
+需要在雲端平台上才能使用，例如 GCP、AWS、Azure 等等。
+
+## Horizontal Pod Autoscaler
+
+import hpa from '../../static/img/k8s/5.png';
+
+<img src={hpa} alt="hpa" width="100%" height="auto" />
+
+適用於自動增加或減少 Pod 的數量，如果 deployment 的 replicas 數量不足以滿足 Pod 的資源需求，HPA 就會自動增加 Pod 的數量。
+
+## Vertical Pod Autoscaler
+
+可以自動推薦 Pod 的 pod resource requests/limits，並且調整 Pod 的資源，主要由三個部分組成：
+
+![Vertical Pod Autoscaler](/img/k8s/7.png)
+
+- Recommender：監控並調整 Pod 的資源需求
+- Updater：刪除需要更新的 Pod
+- Admission Controller：更新 Pod 的資源需求
+
+## Multidim Pod Autoscaler
+
+import multidim from '../../static/img/k8s/6.png';
+
+<img src={multidim} alt="multidim" width="100%" height="auto" />
+
+可以同時使用多種 Autoscaler，例如同時依據 CPU 進行 HPA，同時依據 Memory 進行 VPA。

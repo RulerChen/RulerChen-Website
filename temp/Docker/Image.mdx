@@ -1,0 +1,118 @@
+---
+title: '[Docker] Image'
+sidebar_position: '20'
+description: Docker Image
+keywords: [Docker Image, Docker 鏡像]
+---
+
+## 甚麼是 Docker Image
+
+Docker Image 是一種唯讀的模板，用來建立 Docker 容器。
+Docker Image 主要是由 Dockerfile 建立，
+我們可以在 Dockerfile 中定義我們需要的環境，例如：作業系統、套件、依賴等等。
+Docker Image 同時具有分層的特性，這麼做的好處是有些層可以重複使用，減少儲存空間的使用，
+比如說在某些不同版本的套件中，有些層是相同的，我們可以將這些相同的層抽離出來，讓不同版本的套件共用這些層。
+
+在使用 Docker Container 之後，它會在 Docker Image 的最上層建立一個可寫的層，用來儲存 Container 的變更。
+
+![docker-image-layer](/img/docker/4.webp)
+
+我們可以使用 `docker image history` 來查看 Docker Image 的分層資訊。
+
+```bash
+docker image pull nginx:latest
+docker image history nginx:latest
+```
+
+![docker-image-history](/img/docker/5.png)
+
+## Dockerfile
+
+Dockerfile 是一個文本檔案，用來定義 Docker Image 的內容，我們以一個簡單的 Node.js 範例來說明。
+
+```dockerfile
+FROM node:16-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+
+RUN npm install
+
+COPY . .
+
+EXPOSE 8080
+
+CMD ["node", "app.js"]
+```
+
+- `FROM`：指定 Docker Image 的基底，我們需要盡量指令版本號而不要使用 `latest`，並且盡量選擇官方和體積小的版本。
+- `WORKDIR`：設定工作目錄。
+- `COPY`：複製檔案或目錄到 Docker Image 中。
+- `RUN`：用於執行指令，像是安裝套件等等。
+- `EXPOSE`：告訴使用者監聽的 Port，但實際上並不會開啟 Port，需要使用 `-p` 參數來開啟 Port。
+- `CMD`：設定 Container 啟動時要執行的指令。
+
+除此之外，還有一些其他的指令
+
+- `ADD`：功能與 `COPY` 類似，但是 `ADD` 會自行幫你解壓縮檔案。
+- `ENV`：設定環境變數。
+- `ARG`：與 `ENV` 類似，都可以設置一個變數，但是 `ARG` 只能在建立 Docker Image 時使用，不能在 Container 中使用。
+- `VOLUME`：用來儲存資料。
+- `USER`：設定使用者，預設是 `root`。
+- `HEALTHCHECK`：設定健康檢查。
+- `Entry Point`：設定 Container 啟動時要執行的指令，與 `CMD` 類似，但是 `Entry Point` 是一定會被執行的，而 `CMD` 則是可以被覆寫的。
+
+## Dockerfile 技巧
+
+- 使用 Cache 來加速建立 Docker Image 的速度
+
+  在 Dockerfile 中，每一個指令都會建立一個新的分層，當我們在執行 Dockerfile 時，如果發現某個指令的分層已經存在，
+  就會使用 Cache，而不是重新建立一個新的分層，這樣可以加速建立 Docker Image 的速度，所以我們應該盡量把不常變動的指令放在前面，才能最大程度的使用 Cache。
+
+- 盡量使用單一的 RUN 指令
+
+  在 Dockerfile 中，每一個指令都會建立一個新的分層，所以我們應該盡量使用單一的 RUN 指令，這樣可以減少分層的數量，減少儲存空間的使用。
+
+- 使用多階段建置
+
+  通常對於需要編譯的程式，如 C++ 等會更有效果，我們可以在編譯完成後，將編譯的結果複製到另一個 Docker Image 中，這樣可以減少儲存空間的使用。
+
+- 使用 .dockerignore
+
+  與 .gitignore 類似，可以用來忽略不需要的檔案，例如：node_modules 等等。
+
+## Docker Image 的常見指令
+
+可以使用 `docker image --help` 查看所有的指令。
+
+- `docker image ls -a`：列出本機的 Docker Image。
+- `docker image pull`：下載 Docker Image。
+- `docker image build -t <image name> .`：建立 Docker Image，`-t` 可以指定 Tag 名稱，`.` 代表 Dockerfile 的路徑。
+- `docker image history <image name>`：查看 Docker Image 的分層資訊。
+- `docker image inspect <image name>`：查看 Docker Image 的詳細資訊。
+- `docker image rm <image name>`：刪除 Docker Image。
+
+## 上傳 Docker Image 到 Docker Hub
+
+1. 需要先 build Docker Image，並且加上 Tag 名稱，名稱一定要與 Docker Hub 的名稱相同。
+
+   ```bash
+   docker image build -t <docker hub username>/<image name>:<tag name> .
+   ```
+
+2. 登入 Docker Hub
+
+   ```bash
+    docker login
+   ```
+
+3. 上傳 Docker Image
+
+   ```bash
+   docker image push <docker hub username>/<image name>:<tag name>
+   ```
+
+## 參考資料
+
+- [Docker 进阶之镜像分层详解](https://developer.aliyun.com/article/981453) : 對 Docker Image 分層的詳細解說

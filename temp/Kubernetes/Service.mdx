@@ -1,0 +1,145 @@
+---
+title: '[K8s] Kubernetes Service'
+sidebar_position: '30'
+description: Kubernetes Service
+keywords: [kubernetes, service]
+---
+
+## Service Overview
+
+Service 是 Kubernetes 中的一個概念，它是一個抽象層，用來定義一個應用程式的一個邏輯集合，
+這個邏輯集合可以是一個 Pod 或是一個 Pod 的群集，Service 會提供一個固定的 IP 位址，
+讓其他的應用程式可以透過這個 IP 位址來存取這個 Service，而不需要知道背後的 Pod 的 IP 位址，
+這樣的好處是當 Pod 的 IP 位址改變時，不需要修改其他應用程式的設定，只需要修改 Service 的設定即可。
+
+![Service](/img/k8s/1.gif)
+
+Service 有以下幾種:
+
+- ClusterIP
+- NodePort
+- LoadBalancer
+- ExternalName
+
+## ClusterIP
+
+ClusterIP 是 Kubernetes 中預設的 Service，它會提供一個固定的 IP 位址，
+讓其他的應用程式可以透過這個 IP 位址來存取這個 Service，而不需要知道背後的 Pod 的 IP 位址。
+
+我們首先要先創一個 Deployment。
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-nginx
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: my-nginx
+  template:
+    metadata:
+      labels:
+        app: my-nginx
+    spec:
+      containers:
+        - name: nginx
+          image: nginx
+          ports:
+            - containerPort: 80
+```
+
+接著創一個 Service。
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-nginx-service
+spec:
+  type: ClusterIP
+  selector:
+    app: my-nginx
+  ports:
+    - port: 80
+      targetPort: 80
+```
+
+最後我們就可以在節點中透過 service ip 位址來存取 Pod。
+
+## NodePort
+
+當我們需要從外部存取 Pod 時，可以使用 NodePort，NodePort 會在每個節點上開啟一個 Port，
+並將 Service 的 Port 對應到節點的 Port 上，這樣就可以透過節點的 IP 位址加上對應的 Port 來存取 Service。
+
+我們一樣使用上面的 Deployment，只需要修改 Service 的 type 為 NodePort。
+
+```bash
+kubectl expose deployment my-nginx  --target-port=80 --type=NodePort
+```
+
+查詢目前的 Service。
+
+```bash
+kubectl get svc
+
+NAME         TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
+kubernetes   ClusterIP   10.96.0.1       <none>        443/TCP        8d
+my-nginx     NodePort    10.110.29.234   <none>        80:31916/TCP   7s
+```
+
+最後可以在 localhost 上訪問我們的 Pod。
+
+```bash
+curl 127.0.0.1:31916
+```
+
+## LoadBalancer
+
+LoadBalancer 會在 Cloud Provider 上建立一個 Load Balancer，並將 Service 的 Port 對應到 Load Balancer 的 Port 上，
+這樣就可以透過 Load Balancer 的 IP 位址加上對應的 Port 來存取 Service。
+
+```bash
+kubectl expose deployment my-nginx  --target-port=80 --type=LoadBalancer
+```
+
+查詢目前的 Service。
+
+```bash
+kubectl get svc
+
+$ kubectl get service
+NAME         TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
+kubernetes   ClusterIP      10.96.0.1       <none>        443/TCP        8d
+my-nginx     LoadBalancer   10.109.64.250   localhost     80:31261/TCP   7s
+```
+
+最後可以在 localhost 上訪問我們的 Pod。
+
+```bash
+curl localhost:80
+```
+
+## ExternalName
+
+ExternalName 會將 Service 的名稱導向指定的 DNS 名稱。
+
+```yaml
+kind: Service
+apiVersion: v1
+metadata:
+  name: my-service
+  namespace: prod
+spec:
+  type: ExternalName
+  externalName: my.database.example.com
+```
+
+當我們再找 my-service.prod.svc 的 IP 位址時，k8s DNS service 就會回應 my.database.example.com 這個 CNAME recrd。
+
+## Service Discovery
+
+Service Discovery 是 Kubernetes 中的一個概念，
+可以讓我我們在不知道 Pod 的 IP 位址的情況下，透過 Service 的名稱來存取 Pod，
+預設是 `{service_name}.{namespace}.svc.cluster.local`。

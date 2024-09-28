@@ -1,0 +1,134 @@
+---
+title: '[K8s] Kubernetes Monitor'
+sidebar_position: '60'
+description: 'Kubernetes Monitor'
+keywords: ['Kubernetes Monitor']
+---
+
+## Log
+
+### Pod Log
+
+我們可以透過查看 Pod 的 log 來了解 Pod 的狀態。
+
+```bash
+$ kubectl logs $POD_NAME
+$ kubectl logs $POD_NAME -c $CONTAINER_NAME
+$ kubectl logs $POD_NAME --all-containers
+$ kubectl logs --selector app=demo
+$ kubectl logs -f $POD_NAME   # 跟蹤 log
+$ kubectl logs $POD_NAME --tail 5   # 查看最後 5 行
+```
+
+如果我們無法使用 api server 來查看 log，我們就需要手動去那個 node 上查看 log。
+
+```bash
+crictl --runtime-endpoint unix:///run/containerd/containerd.sock logs $CONTAINER_ID
+```
+
+或是
+
+```bash
+tail /var/log/containers/$CONTAINER_NAME_$CONTAINER_ID
+```
+
+### Node Log
+
+我們也可以查看 Node 的 log。
+
+```bash
+systemctl status kubelet.service  # check service status
+
+journalctl -u kubelet.service
+journalctl -u kubelet.service | grep -i ERROR
+journalctl -u kubelet.service --since today --no-pager
+```
+
+### Control Plane Log
+
+或者是查看 Control Plane 的 log。
+
+```bash
+kubectl logs -n kube-system $POD_NAME
+```
+
+### Centralized Logging
+
+import logging from '../../static/img/k8s/3.png';
+
+<img src={logging} alt="logging" width="100%" height="auto" />
+
+## Event
+
+```bash
+kubectl get events
+kubectl get events --field-selector type=Warning,reason=Failed
+kubectl get events --watch &   # ( run `fg` and ctrl +c to break it)
+
+kubectl describe pods nginx
+```
+
+## Request / Limit
+
+request 是容器最小需要的資源，只有當前節點有足夠的資源時，Pod 才會被調度到該節點上。
+
+limit 是容器最大可以使用的資源，設置為 0 表示不限制。
+
+k8s 會依據 request 和 limit 來決定 Pod 的 QoS 種類:
+
+- Guaranteed: request = limit
+- Burstable: request < limit
+- BestEffort: request = limit = 0
+
+在資源不足時，k8s 會依照 QoS 種類來決定哪些 Pod 會被 kill 掉，其中 BestEffort 會被優先 kill 掉。
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: qos-demo
+  namespace: qos-example
+spec:
+  containers:
+    - name: qos-demo-ctr
+      image: nginx
+      resources:
+        limits:
+          memory: '200Mi'
+          cpu: '700m'
+        requests:
+          memory: '200Mi'
+          cpu: '700m'
+```
+
+## Limit Range
+
+我們可以透過 LimitRange 來限制 Pod 和 PVC 最多能使用到的資源。
+
+```yaml
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: my-limit-range
+spec:
+  limits:
+    - max:
+        cpu: 1
+        memory: 1Gi
+      min:
+        cpu: 0.5
+        memory: 500Mi
+  requests:
+    - cpu: 0.2
+      memory: 200Mi
+```
+
+## Metric
+
+如果我們想要了解我們集群內的資源使用情況，我們可以透過 [Metric Server](https://kubernetes-sigs.github.io/metrics-server/) 來查看，
+也可以使用 Garfana 和 Prometheus 來監控我們的集群。
+
+```bash
+kubectl top node
+kubectl top pod
+```

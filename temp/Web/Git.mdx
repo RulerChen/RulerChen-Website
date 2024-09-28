@@ -1,0 +1,77 @@
+---
+title: '[Git] 常見問題'
+sidebar_position: '20'
+description: ''
+keywords: ['Git', 'common problem with git']
+enableComments: true
+---
+
+## 我的 git 設定
+
+1. `git config --global user.name "<your_name>"` : 設定名字
+2. `git config --global user.email "<your_email>"` : 設定 email
+3. `git config --global core.autocrlf input` : 設定換行符號
+4. `git config --global init.defaultBranch main` : 設定預設 branch 名稱為 main
+
+## 如何推送到 GitHub
+
+1. `git init` : 初始化一個 git repository
+2. `git add .` : 將所有檔案加入 git 暫存區
+3. `git commit -m "<commit_message>"` : 將暫存區的檔案 commit 到本地端
+4. `git remote add origin <GitHub repository url>` : 將本地端的 repository 與 GitHub repository 連結
+5. `git push origin <your_branch_name>` : 將本地端的 repository 推送到 GitHub repository，`<your_branch_name>` 可能是 main 或 master。
+
+## 如何放下手邊的工作去做其他事情
+
+有以下兩種方法 :
+
+1. 先 commit 手上的東西，等修完之後再使用 `git reset` 繼續目前的工作
+2. 使用 `git stash`
+   - `git stash -u` : 暫存目前的工作狀態 (有 Untrack 檔案需加 -u)
+   - 切換到其他 branch 做其他事情
+   - `git stash list` : 查看 stash 的狀態
+   - `git stash pop "<stash_id>"` : 把東西用在目前的分支上，並刪除 stash
+   - `git stash drop "<stash_id>"` : 刪除 stash (預設刪除最後一個 stash)
+   - `git stash apply "<stash_id>"` : 把東西用在目前的分支上，但不刪除 stash
+   - `git stash clear` : 刪除所有 stash
+
+## git merge、git rebase、git cherry-pick
+
+- `git merge <your_branch_name>`  
+  故名思義，可以把兩條分支合併並產生一個新的 commit 紀錄，但是當快轉模式觸發時就不會產生新的 commit 紀錄，你也可以使用 `--no-ff` 來強制產生新的 commit 紀錄。
+
+<img src="https://i.imgur.com/17uZWnb.gif" style={{ width: '900px' }} alt="git merge" />
+
+<img src="https://i.imgur.com/G7imG9E.gif" style={{ width: '900px' }} alt="git merge no-ff" />
+
+- `git rebase <your_branch_name>`
+
+<img src="https://i.imgur.com/Xo25Cge.gif" style={{ width: '900px' }} alt="git rebase" />
+
+- `git cherry-pick <commit_id>^..<commit_id>`
+
+這個寫法可以讓你抓到包含頭尾的 commit 紀錄。
+
+GIF 來源於 [用樂高玩轉 GIT 版本控制](https://ithelp.ithome.com.tw/articles/10222637)
+
+## git reset 的三種模式
+
+1. `git reset --soft HEAD^` : 回到上一個版本，HEAD 的變更回到舞台區。
+2. `git reset --mixed HEAD^` : (預設) 回到上一個版本，HEAD 的變更回到工作區。
+3. `git reset --hard HEAD^` : 回到上一個版本，HEAD 的變更直接刪除。
+
+## 如何修改 commit message
+
+以下有四種方式 :
+
+1. 使用 `git commit -m --amend '<commit_message>'` 來修改最後一次的 commit 紀錄
+2. 使用 `git reset --hard HEAD^` 來刪除最後一次的 commit 紀錄
+3. 使用 `git rebase -i HEAD^` 來修改多個 commit 紀錄  
+   將你要改的 commit 紀錄由 pick 改成 r (reword)，儲存之後再修改 commit 紀錄。  
+   vim 的操作方法為按下 i 進入編輯模式，修改完之後按下 esc 鍵，再輸入 :wq 儲存並離開。
+4. 開大絕 => ~~刪除 .git 檔案夾，重新初始化 git repository~~
+
+## 如何同步遠端 main 分支的更新
+
+1. `git checkout <your_branch_name>` 先切換到你要發 PR 的 branch
+2. `git pull --rebase origin main` 來更新

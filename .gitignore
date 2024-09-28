@@ -21,7 +21,6 @@ yarn-error.log*
 
 *.env
 
-/temp
 **/.vscode/
 
 *.bkp
