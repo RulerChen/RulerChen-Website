@@ -1,34 +1,53 @@
 ---
-title: '[Python] Project Setup'
+title: '[Python] Project Setup (Poetry + Pyenv) on Windows'
 sidebar_position: '1'
 description: Python Project Setup
 keywords: [Python, Project Setup, Black, Flake8, isort, mypy, Poetry, ipdb]
 ---
 
-## Poetry
+## Pyenv
 
-可以使用 Poetry 來管理 Python 專案的相依套件，在這之前需要先安裝 python 的環境，我使用的是 `pyenv-win` 來管理 python 的版本。
-
-1. 安裝 `pyenv-win`
-2. 安裝 python 版本
+由於我使用的是 windows，所以我們需要使用 pyenv-win 來安裝 python 版本。
 
 ```bash
-pyenv install -l
-pyenv install <python version>
-pyenv global <python version>
+Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/pyenv-win/pyenv-win/master/pyenv-win/install-pyenv-win.ps1" -OutFile "./install-pyenv-win.ps1"; &"./install-pyenv-win.ps1"
+```
 
+安裝好之後輸入 `pyenv --version` 來確認是否安裝成功。
+
+```bash
+pyenv install -l # 列出所有 python 版本
+pyenv install <python version> # 安裝 python 版本
+pyenv global <python version> # 設定全域 python 版本
+```
+
+```bash
 python --version
 ```
 
-3. 安裝 Poetry
+如果我們要切換不同 python 版本的專案，可以使用以下指令，會在當前目錄下建立一個 `.python-version` 檔案。
 
 ```bash
-pip install poetry
+pyenv local <python version>
 ```
 
+## Poetry
+
+Poetry 可以做到以下的事情 :
+
+- 管理 Python 專案的相依套件
+- 建立虛擬環境
+- 發布與打包套件
+
+Poetry 在 windows 上的安裝如下 :
+
 ```bash
-poetry about
+(Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | python -
 ```
+
+將 `%APPDATA%\Python\Scripts` 加入到環境變數中，接著輸入 `poetry --version` 來確認是否安裝成功。
+
+接著建立專案並且安裝套件
 
 ```bash
 poetry init
@@ -38,8 +57,6 @@ poetry init
 poetry new <your project name>
 ```
 
-4. 安裝套件
-
 ```bash
 poetry add <package name>
 poetry add <package name> --dev
@@ -47,10 +64,14 @@ poetry add <package name> --dev
 poetry remove <package name>
 ```
 
-5. 進入虛擬環境
+如果我們要使用不同版本的 python，可以使用以下指令，這樣就可以在當前目錄下建立一個虛擬環境。
 
 ```bash
-poetry shell
+poetry config virtualenvs.in-project true
+```
+
+```bash
+poetry env use <python version>
 ```
 
 ## flake8
@@ -108,8 +129,6 @@ poetry add mypy --dev
 ## 執行
 
 ```bash
-poetry run python src/main.py
-
 poetry run black src
 
 poetry run isort src
@@ -122,3 +141,5 @@ poetry run flake8 src
 ## References
 
 - [如何打造 Production-Ready 的 ML Libraries](https://cinnamonaitaiwan.medium.com/%E5%A6%82%E4%BD%95%E6%89%93%E9%80%A0-production-ready%E7%9A%84-ai-libraries-83492c18a9d1)
+- [Python 套件管理器——Poetry 完全入門指南](https://blog.kyomind.tw/python-poetry/#%E5%BE%9E%E9%9B%B6%E9%96%8B%E5%A7%8B%E4%BD%BF%E7%94%A8-Poetry)
+- [Poetry + pyenv 教學：常用指令與注意事項](https://blog.kyomind.tw/poetry-pyenv-practical-tips/)
