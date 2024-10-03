@@ -28,8 +28,8 @@ export default function Home() {
         >
           求學經歷
         </h1>
-        <Experience Experiences={Experiences} />
-        <Projects ProjectsData={Project} title="Side Projects" />
+        {/* <Experience Experiences={Experiences} /> */}
+        {/* <Projects ProjectsData={Project} title="Side Projects" /> */}
       </main>
     </Layout>
   );
