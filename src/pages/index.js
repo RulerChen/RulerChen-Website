@@ -18,7 +18,7 @@ export default function Home() {
     <Layout title={`${siteConfig.title}`} wrapperClassName="Layout">
       <main>
         <Banner />
-        <h1
+        {/* <h1
           style={{
             fontSize: 'clamp(2rem, 3vw + 1rem, 3rem)',
             textAlign: 'center',
@@ -27,7 +27,7 @@ export default function Home() {
           }}
         >
           求學經歷
-        </h1>
+        </h1> */}
         {/* <Experience Experiences={Experiences} /> */}
         {/* <Projects ProjectsData={Project} title="Side Projects" /> */}
       </main>
