@@ -1,31 +1,33 @@
 ---
-title: '[Python] Project Setup (Poetry + Pyenv) on Windows'
+title: '[Python] Poetry + Pyenv + PyTorch Setup on Windows'
 sidebar_position: '1'
 description: Python Project Setup
 keywords: [Python, Project Setup, Black, Flake8, isort, mypy, Poetry, ipdb]
 ---
 
+這篇文章會說明如何在 Windows 上使用 Poetry + Pyenv + PyTorch with cuda 來建立 Python 專案。
+
 ## Pyenv
 
-由於我使用的是 windows，所以我們需要使用 pyenv-win 來安裝 python 版本。
+由於我使用的是 windows，所以我們需要使用 [pyenv-win](https://github.com/pyenv-win/pyenv-win) 來管理 python 版本
 
 ```bash
 Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/pyenv-win/pyenv-win/master/pyenv-win/install-pyenv-win.ps1" -OutFile "./install-pyenv-win.ps1"; &"./install-pyenv-win.ps1"
 ```
 
-安裝好之後輸入 `pyenv --version` 來確認是否安裝成功。
+安裝好之後輸入 `pyenv --version` 來確認是否安裝成功
+
+接著是一些 pyenv 的指令
 
 ```bash
-pyenv install -l # 列出所有 python 版本
-pyenv install <python version> # 安裝 python 版本
-pyenv global <python version> # 設定全域 python 版本
+pyenv install -l                    # 列出所有 python 版本
+pyenv install <python version>      # 安裝 python 版本
+pyenv global <python version>       # 設定全域 python 版本
+pyenv versions                      # 列出所有安裝過的 python 版本
+pyenv uninstall <python version>    # 移除 python 版本
 ```
 
-```bash
-python --version
-```
-
-如果我們要切換不同 python 版本的專案，可以使用以下指令，會在當前目錄下建立一個 `.python-version` 檔案。
+如果我們要不同專案中使用不同的 python 版本，可以使用以下指令，在當前目錄下建立一個 `.python-version` 檔案，pyenv 會自動讀取這個檔案
 
 ```bash
 pyenv local <python version>
@@ -45,16 +47,12 @@ Poetry 在 windows 上的安裝如下 :
 (Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | python -
 ```
 
-將 `%APPDATA%\Python\Scripts` 加入到環境變數中，接著輸入 `poetry --version` 來確認是否安裝成功。
+將 `%APPDATA%\Python\Scripts` 加入到環境變數中，接著輸入 `poetry --version` 來確認是否安裝成功
 
 接著建立專案並且安裝套件
 
 ```bash
 poetry init
-
-# OR
-
-poetry new <your project name>
 ```
 
 ```bash
@@ -64,23 +62,79 @@ poetry add <package name> --dev
 poetry remove <package name>
 ```
 
-如果我們要使用不同版本的 python，可以使用以下指令，這樣就可以在當前目錄下建立一個虛擬環境。
+我們可以先設定 `virtualenvs.in-project` 為 `true`，這樣虛擬環境就會被建立在專案的資料夾中
 
 ```bash
 poetry config virtualenvs.in-project true
 ```
 
+接著使用以下指令來建立虛擬環境
+
 ```bash
 poetry env use <python version>
 ```
 
-## flake8
+或使用以下指令進入虛擬環境
+
+```bash
+poetry shell
+```
+
+可以安裝一些常用的開發套件
+
+```bash
+poetry add flake8 black isort ipdb --dev
+```
+
+### PyTorch
+
+Poetry 預設會從 PyPI 上抓取套件，但是 Pytorch 需要從另外的地方下載，所以我們需要使用以下指令新增來源 (需要修改最後的 cuda 版本)
+
+```bash
+poetry source add --priority=supplemental torch https://download.pytorch.org/whl/cu124
+```
+
+接著安裝 PyTorch
+
+```bash
+poetry add torch==2.4.1+cu124 --source torch
+```
+
+執行完之後，`pyproject.toml` 應該會是類似以下的樣子
+
+```bash title="pyproject.toml"
+[tool.poetry]
+name = "test"
+version = "0.1.0"
+description = ""
+authors = [""]
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.10"
+torch = {version = "2.4.1+cu124", source = "torch"}
+
+
+[[tool.poetry.source]]
+name = "torch"
+url = "https://download.pytorch.org/whl/cu124"
+priority = "supplemental"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+```
+
+### flake8
+
+flake8 是一個 Python 的 Linter，可以用來檢查程式碼是否符合規範，建議安裝 VSCode 的 extension (Flake8)
 
 ```bash
 poetry add flake8 --dev
 ```
 
-創建一個 `.flake8` 檔案
+在根目錄創建一個 `.flake8` 檔案
 
 ```bash title=".flake8"
 [flake8]
@@ -89,7 +143,26 @@ extend-ignore = E203, W503
 exclude = .git, __pycache__, build, dist
 ```
 
-## black
+```bash
+poetry run flake8 .
+```
+
+### black
+
+black 是一個 Python 的 code formatter，建議安裝 VSCode 的 extension (Black Formatter)，並設定 `.vscode`
+
+```json title=".vscode/settings.json"
+{
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    }
+  },
+  "isort.args": [" - profile", "black"]
+}
+```
 
 ```bash
 poetry add black --dev
@@ -101,45 +174,20 @@ line-length = 88
 target-version = ['py310']
 ```
 
-## isort
+```bash
+poetry run black .
+```
+
+### isort
+
+isort 是一個 Python 的 import sorter，可以幫助我們整理 import 的順序，同樣建議安裝 VSCode 的 extension (isort)
 
 ```bash
 poetry add isort --dev
 ```
 
-```bash title="pyproject.toml"
-[tool.isort]
-profile = "black"
-```
-
-## mypy
-
 ```bash
-poetry add mypy --dev
-```
-
-## Git
-
-```bash title=".gitattributes"
-*.py text eol=lf
-```
-
-`.gitignore` 可以參考 [GitHub](https://github.com/github/gitignore/blob/main/Python.gitignore)
-
-## 執行
-
-```bash
-poetry add flake8 black isort mypy ipdb --dev
-```
-
-```bash
-poetry run black src
-
-poetry run isort src
-
-poetry run mypy src
-
-poetry run flake8 src
+poetry run isort .
 ```
 
 ## References
