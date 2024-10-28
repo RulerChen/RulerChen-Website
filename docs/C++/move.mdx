@@ -1,0 +1,146 @@
+---
+title: '[C++] 移動語意 (Move Semantics)'
+sidebar_position: '100'
+description: C++ 移動語義
+keywords: [C++, 移動語義, Move Semantics]
+---
+
+本文會講解 C++ 中移動語義 (move semantics) 以及左值 (lvalue) 和右值 (rvalue) 的基本概念。
+
+右值引用是在 C++11 引入的新特性，它的引入解決了 C++ 中大量的歷史遺留問題，像是對臨時物件的拷貝造成的效能問題。
+
+## 左值和右值
+
+在了解這個強大功能之前，我們需要先了解左值和右值的概念 :
+
+- **左值 (lvalue、left value)**: 表達式結束後依然存在的對象，通常在等號左邊。
+- **右值 (rvalue、right value)**: 表達式結束後就會被銷毀的臨時對象，通常在等號右邊，包含純右值 (prvalue) 跟將亡值 (xvalue)。
+
+而為了實現右值引用，C++11 做了更精確的定義 :
+
+- **泛左值 (glvalue、generalized lvalue)**: 包含 lvalue 跟 xvalue ，代表所有可以被取址的對象。
+- **純右值 (prvalue、pure rvalue)**: 純粹的臨時對象，像是 `int a = 42;` 中的 `42`，但 string 則為左值，像是 `const char* str = "Hello";`。
+- **將亡值 (xvalue、expiring value)**: 即將被銷毀的對象卻能被移動的值，舉例如下 :
+
+```cpp
+std::vector<int> foo() {
+    std::vector<int> temp = {1, 2, 3};
+    return v;
+}
+
+std::vector<int> v = foo();
+```
+
+在上面的例子中，temp 會被創建然後傳給 v 再被銷毀，這個過程中 `foo()` 返回的是一個將亡值。
+
+當 temp 中的資料很大時，這樣的拷貝操作會導致效能問題，因此在 C++11 之後，編譯器就會幫我們做隱性轉換，相當於 `static_cast<std::vector<int>&&>(temp)`，也就是我們之後會提及的移動語意。
+
+## 左值引用和右值引用
+
+要拿到一個將亡值，我們就需要用到右值引用，它的語法是 `T&&`，其中 T 是一個型別，右值引用可以讓這個將亡值的生命週期延長，只要這個右值引用還在作用域內，這個將亡值就不會被銷毀。
+
+C++ 提供的 `std::move` 可以讓我們將左值轉換為右值，方便進行右值引用的操作，例如 :
+
+```cpp
+#include <iostream>
+#include <utility>
+#include <vector>
+
+int main() {
+    std::vector<int> int_array = {1, 2, 3, 4};
+    std::vector<int> stealing_ints = std::move(int_array);
+    std::vector<int> &&rvalue_stealing_ints = std::move(stealing_ints);
+
+    // std::cout << "Printing from int_array: " << int_array[1] << std::endl; // int_array has been moved from
+    std::cout << "Printing from stealing_ints: " << stealing_ints[1] << std::endl;
+    std::cout << "Printing from rvalue_stealing_ints: " << rvalue_stealing_ints[1] << std::endl;
+
+    return 0;
+}
+```
+
+## 移動語意
+
+在傳統的 C++ 中並沒有移動語意，當我們對一個右值進行拷貝時，實際上是在做一次深拷貝，這樣的操作會導致效能問題。
+如果使用參考的話，原始物件的所有權就不會被轉移，且如果 buffer1 跟 buffer2 都指向相同的資料的話，可能導致 double deletion 的問題。
+
+可以透過以下的例子來了解移動語意的概念和用途 :
+
+```cpp
+#include <iostream>
+#include <string>
+#include <utility>
+
+class Buffer {
+private:
+    std::string data;
+
+public:
+    Buffer() {
+        std::cout << "Default-constructed Buffer\n";
+    }
+    Buffer(const std::string& init_data) : data(init_data) {
+        std::cout << "Constructed with data: " << data << "\n";
+    }
+    Buffer(Buffer&& other) : data(std::move(other.data)) {
+        std::cout << "Moved from another Buffer\n";
+    }
+    Buffer& operator=(Buffer&& other) {
+        if (this != &other) {
+            data = std::move(other.data);
+            std::cout << "Move-assigned from another Buffer\n";
+        }
+        return *this;
+    }
+
+    // Delete the copy constructor and copy assignment operator
+    Buffer(const Buffer&) = delete;
+    Buffer& operator=(const Buffer&) = delete;
+
+    void print() const {
+        std::cout << "Buffer data: " << data << std::endl;
+    }
+};
+
+int main() {
+    Buffer buffer1("This is some large data");
+    buffer1.print();
+
+    Buffer buffer2;
+    buffer2 = std::move(buffer1);
+    buffer1.print();
+    buffer2.print();
+
+    Buffer buffer3 = std::move(buffer2);
+    buffer2.print();
+    buffer3.print();
+
+    // Buffer buffer4;
+    // buffer4 = buffer3; // Error: copy assignment operator is deleted
+
+    // Buffer buffer5(buffer3); // Error: copy constructor is deleted
+
+    return 0;
+}
+```
+
+它的輸出如下 :
+
+```
+Constructed with data: This is some large data
+Buffer data: This is some large data
+Default-constructed Buffer
+Move-assigned from another Buffer
+Buffer data:
+Buffer data: This is some large data
+Moved from another Buffer
+Buffer data:
+Buffer data: This is some large data
+```
+
+在這個範例中，如果我們使用類似 buffer4 或 buffer5 的方式來進行拷貝，我們就需要對 buffer3 的所有資料進行 deep copy 從而導致效能問題。
+
+## 參考文章
+
+- [What are rvalues, lvalues, xvalues, glvalues, and prvalues?](https://stackoverflow.com/questions/3601602/what-are-rvalues-lvalues-xvalues-glvalues-and-prvalues)
+- [Modern C++ Tutorial](https://changkun.de/modern-cpp/zh-cn/03-runtime/#3-3-%E5%8F%B3%E5%80%BC%E5%BC%95%E7%94%A8)
