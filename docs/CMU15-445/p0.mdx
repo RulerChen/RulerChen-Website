@@ -24,6 +24,7 @@ keywords: [CMU15-445/645, C++ Primer, CMU15-445/645 筆記]
 - [Debug a C++ project in VS Code](https://www.youtube.com/watch?v=G9gnSGKYIg4) : 在 VSCode 中 debug 的教學
 - [Visual Studio Code (VSCode) 中配置 C++ 调试环境](https://blog.csdn.net/hengyuwuhui/article/details/138494068) : 在 VSCode 中配置 lldb 的教學
 - [CMake](https://www.youtube.com/watch?v=dIs7TFBDbIw) : CMake 的簡易教學
+- [智慧指標](https://rulerchen.github.io/RulerChen-Website/docs/C++/smartpointer/)、[移動語意](https://rulerchen.github.io/RulerChen-Website/docs/C++/move/)、[同步原語](https://rulerchen.github.io/RulerChen-Website/docs/C++/synchronize/) : 自己寫的 C++ 筆記
 
 ## Environment Setup
 
@@ -87,7 +88,7 @@ sudo apt-get install lldb-14
 
 - `GET` : 需要處理 root 是 nullptr 的情況，其餘的情況就是從 root 開始往下找，最後用 `dynamic_cast` 來轉型。
 - `PUT` : 需要處理 key 是空的情況 (在 root 上直接插入)，其餘的情況就是從 root 開始往下找，並新增一個 `TrieNodeWithValue`。
-- `DELETE` : 需要先遍歷到要刪除的 node，並記錄中途經過的 node，最後再沿途刪除沒有 value 的 node。
+- `DELETE` : 需要先遍歷到要刪除的 node，並記錄中途經過的 node，最後再沿途刪除沒有 value 的 node，我的方法是使用 `std::stack` 來記錄。
 
 接著在本地進行 `trie_test` 的單元測試 :
 
@@ -101,9 +102,9 @@ make trie_test trie_noncopy_test -j$(nproc)
 
 ### Concurrent Key-Value Store
 
-- `GET` : 使用 `lock_guard` 來讀取 root，並依據是否有這個 key 來決定要回傳 `nullopt` 或是 `ValueGuard`。
-- `PUT` : 使用 `unique_lock` 來獲取全局的 `write_lock`，並獲取 `root_lock` 來讀取 root 和寫入。
-- `DELETE` : 與 `PUT` 類似，也是使用 `unique_lock` 來獲取全局的 `write_lock`，並獲取 `root_lock` 來讀取 root 和刪除。
+- `GET` : 使用 `lock_guard` 來獲取 `root_lock_`，並依據是否有這個 key 來決定要回傳 `nullptr` 或是 `ValueGuard`。
+- `PUT` : 使用 `lock_guard` 來獲取全局的 `write_lock`，並獲取 `root_lock` 來讀取 root 和寫入。
+- `DELETE` : 與 `PUT` 類似，也是使用 `lock_guard` 來獲取全局的 `write_lock`，並獲取 `root_lock` 來讀取 root 和刪除。
 
 接著在本地進行 `trie_store_test` 的單元測試 :
 
