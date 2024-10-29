@@ -254,3 +254,125 @@ int main() {
 ```
 
 `std::shared_mutex` 允許以兩種方式鎖定：共享鎖 (shared lock) 和獨佔鎖 (exclusive lock)。共享鎖允許多個執行緒同時讀取資源，而獨佔鎖則只允許一個執行緒寫入資源。
+
+## Future
+
+`std::future` 是在 C++11 中引入的同步工具，主要用於異步操作 (asynchronous operation) 和多執行緒之間的通信，可以讓一個執行緒等待另一個執行緒的結果。
+
+### std::promise
+
+```cpp
+#include <chrono>
+#include <future>
+#include <iostream>
+
+int longComputation(int x) {
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    return x * x;
+}
+
+int main() {
+    std::future<int> result = std::async(std::launch::async, longComputation, 5);
+
+    // do something else
+    std::cout << "Performing other work...\n";
+
+    int value = result.get();
+    std::cout << "Result of computation: " << value << '\n';
+
+    return 0;
+}
+```
+
+如上方所示，我們使用 `std::async` 來啟動一個異步操作，並使用 `std::future` 來等待結果。
+
+### std::promise
+
+如果想要傳遞資訊給其他執行緒，可以使用 `std::promise` 和 `std::future` 來實現。
+
+```cpp
+#include <future>
+#include <iostream>
+#include <thread>
+
+void setPromiseValue(std::promise<int> &&promise, int value) {
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    promise.set_value(value * 2);
+}
+
+int main() {
+    std::promise<int> promise;
+    std::future<int> result = promise.get_future();
+
+    std::thread t(setPromiseValue, std::move(promise), 10);
+
+    std::cout << "Waiting for the result...\n";
+    int value = result.get();
+    std::cout << "Result from promise: " << value << '\n';
+
+    t.join();
+    return 0;
+}
+```
+
+### std::packaged_task
+
+也可以使用 `std::packaged_task` 來將函數包裝成一個 `std::future`。
+
+```cpp
+#include <chrono>
+#include <future>
+#include <iostream>
+#include <thread>
+
+int square(int x) {
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    return x * x;
+}
+
+int main() {
+    std::packaged_task<int(int)> task(square);
+
+    std::future<int> result = task.get_future();
+
+    std::thread t(std::move(task), 5);
+
+    std::cout << "Calculating...\n";
+    std::cout << "Result of square computation: " << result.get() << '\n';
+
+    t.join();
+    return 0;
+}
+```
+
+### std::shared_future
+
+如果要在多個執行緒之間共享資料，可以使用 `std::shared_future`。
+
+```cpp
+#include <future>
+#include <iostream>
+#include <thread>
+
+int longComputation(int x) {
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    return x * x;
+}
+
+int main() {
+    std::future<int> fut = std::async(std::launch::async, longComputation, 5);
+    std::shared_future<int> shared_result = fut.share();
+
+    auto print_result = [](std::shared_future<int> shared_result) {
+        std::cout << "Computed result: " << shared_result.get() << '\n';
+    };
+
+    std::thread t1(print_result, shared_result);
+    std::thread t2(print_result, shared_result);
+
+    t1.join();
+    t2.join();
+
+    return 0;
+}
+```
