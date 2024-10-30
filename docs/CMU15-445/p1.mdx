@@ -18,3 +18,54 @@ keywords: [CMU15-445/645, Buffer Pool Manager, CMU15-445/645 筆記]
 - Buffer Pool Manager : 修改 `/src/buffer/buffer_pool_manager.cpp` 來實現 buffer pool manager
 
 ## Solution
+
+暫時沒有針對 leaderboard 做任何優化，如果想要進行效能優化，可以參考最下方 Reference 中的文章。
+
+### LRU-K Replacement Policy
+
+只需要全部都使用 `std::scoped_lock` 即可，順便針對 `LRUKNode` 寫一些 get function 來方便取得資料。
+
+- `Evict` : 優先度是先找有 inf 的，都是 inf 就比上次的時間誰比較早，都沒有 inf 的話也是找最早的
+- `RecordAccess` : 更新 `history_` 中的資料
+- `Remove` : 直接刪除即可
+- `SetEvictable` : 判斷現在的情況並設定即可
+- `Size` : 直接回傳 `curr_size_` 即可
+
+在執行測試之前，需要先去 `/test/buffer/lru_k_replacer_test.cpp` 中將測試名稱中的 `DISABLED_SampleTest` 改成 `SampleTest`，然後執行以下指令 :
+
+```bash
+cd build
+make lru_k_replacer_test -j$(nproc)
+
+./test/lru_k_replacer_test
+```
+
+### Disk Scheduler
+
+需要修改兩個 function :
+
+- `Schedule` : 只需要將 r 丟到 `request_queue_` 中即可
+- `StartWorkerThread` : 設計一個 while 迴圈，並將 request 依據 read / write 的情況來執行
+
+在執行測試之前，需要先去 `/test/storage/disk_scheduler_test,` 中將測試名稱中的 `DISABLED_` 拿掉，然後執行以下指令 :
+
+```bash
+cd build
+make disk_scheduler_test -j$(nproc)
+
+./test/disk_scheduler_test
+```
+
+### Buffer Pool Manager
+
+- `FetchPage` :
+- `UnpinPage` :
+- `FlushPage` :
+- `NewPage` :
+- `DeletePage` :
+- `FlushAllPages` :
+
+## Reference
+
+- [CMU 15445 Project 1](https://4ever-xxxl.github.io/cmu-15445-project-1/)
+- [CMU 15-445 2023 P1 优化攻略](https://www.aneureka.com/posts/cmu-15445-p1-opt)
