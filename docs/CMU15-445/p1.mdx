@@ -19,19 +19,19 @@ keywords: [CMU15-445/645, Buffer Pool Manager, CMU15-445/645 筆記]
 
 ## Solution
 
-暫時沒有針對 leaderboard 做任何優化，如果想要進行效能優化，可以參考最下方 Reference 中的文章。
+暫時沒有針對 leaderboard 做任何優化 (希望以後有時間...)，如果想要進行效能優化，可以參考最下方 Reference 中的文章。
+
+在執行測試前，需要把測試中的 `DISABLED_` 拿掉再執行。
 
 ### LRU-K Replacement Policy
 
 只需要全部都使用 `std::scoped_lock` 即可，順便針對 `LRUKNode` 寫一些 get function 來方便取得資料。
 
-- `Evict` : 優先度是先找有 inf 的，都是 inf 就比上次的時間誰比較早，都沒有 inf 的話也是找最早的
+- `Evict` : 優先度是先找有 inf 的，都是 inf 就比第一次讀取的時候哪個最早，如果都沒有 inf 的話就也找第一次讀取的時候哪個最早 (`this->history_.back()`)
 - `RecordAccess` : 更新 `history_` 中的資料
-- `Remove` : 直接刪除即可
-- `SetEvictable` : 判斷現在的情況並設定即可
-- `Size` : 直接回傳 `curr_size_` 即可
-
-在執行測試之前，需要先去 `/test/buffer/lru_k_replacer_test.cpp` 中將測試名稱中的 `DISABLED_SampleTest` 改成 `SampleTest`，然後執行以下指令 :
+- `Remove` : 直接刪除並注意拋出錯誤
+- `SetEvictable` : 判斷現在的情況並更改狀態
+- `Size` : 直接回傳 `curr_size_`
 
 ```bash
 cd build
@@ -47,8 +47,6 @@ make lru_k_replacer_test -j$(nproc)
 - `Schedule` : 只需要將 r 丟到 `request_queue_` 中即可
 - `StartWorkerThread` : 設計一個 while 迴圈，並將 request 依據 read / write 的情況來執行
 
-在執行測試之前，需要先去 `/test/storage/disk_scheduler_test,` 中將測試名稱中的 `DISABLED_` 拿掉，然後執行以下指令 :
-
 ```bash
 cd build
 make disk_scheduler_test -j$(nproc)
@@ -58,12 +56,21 @@ make disk_scheduler_test -j$(nproc)
 
 ### Buffer Pool Manager
 
-- `FetchPage` :
-- `UnpinPage` :
-- `FlushPage` :
-- `NewPage` :
-- `DeletePage` :
-- `FlushAllPages` :
+一樣也是每個 function 都使用 `std::scoped_lock` 鎖住，需要特別注意如果要在如 NewPage 的 function 裡面使用 FlushPage 的話，要注意不要造成 deadlock。
+
+- `FetchPage` : 先判斷有沒有在 buffer pool 中，如果有的話就直接回傳，沒有的話就要用跟 NewPage 一樣的方式來找一個位置，並且將資料讀進來，特別注意修改如 `pin_count_` 等資料
+- `UnpinPage` : 處理 `pin_count_` 為 0 的情況以及 `is_dirty_` 的情況
+- `FlushPage` : 將資料寫回 disk，需要特別注意鎖的問題，我的作法是寫兩個 function，一個有鎖一個沒有鎖，如果其他有鎖的 function 要呼叫的話就使用沒有鎖的 function
+- `NewPage` : 先檢查 `free_list_` 有沒有空間，如果有的話就直接使用，沒有的話就要從 `lru_k_replacer` 中排除一個資料並寫入
+- `DeletePage` : 刪除資料，需要特別注意一些 metadata 的更新
+- `FlushAllPages` : 遞迴的 call 沒有鎖的 `FlushPage` function 即可
+
+```bash
+cd build
+make buffer_pool_manager_test -j$(nproc)
+
+./test/buffer_pool_manager_test
+```
 
 ## Reference
 

@@ -11,7 +11,7 @@ keywords: [CMU15-445/645, C++ Primer, CMU15-445/645 筆記]
 
 ## Problem Description
 
-在這個 project 中，我們需要實現一個 key-value store 的 copy-on-write 的 trie，總共有 4 個 Task :
+在這個 project 中，我們需要實現一個 key-value store 的 copy-on-write 的 trie 並練習使用 debugger，總共有 4 個 Task :
 
 - Copy-On-Write Trie : 修改 `/src/primer/trie.cpp` 來實現一個 copy-on-write trie，有 `GET`、`PUT`、`DELETE` 三個操作。
 - Concurrent Key-Value Store : 修改 `/src/primer/trie_store.cpp` 來將原本 single-thread 的 trie 改成 concurrent 的版本，一樣有 `GET`、`PUT`、`DELETE` 三個操作。
@@ -22,7 +22,6 @@ keywords: [CMU15-445/645, C++ Primer, CMU15-445/645 筆記]
 
 - [15-445 Bootcamp](https://github.com/cmu-db/15445-bootcamp) : 課程提供的一個簡單 bootcamp，裡面有一些範例程式碼
 - [Debug a C++ project in VS Code](https://www.youtube.com/watch?v=G9gnSGKYIg4) : 在 VSCode 中 debug 的教學
-- [Visual Studio Code (VSCode) 中配置 C++ 调试环境](https://blog.csdn.net/hengyuwuhui/article/details/138494068) : 在 VSCode 中配置 lldb 的教學
 - [CMake](https://www.youtube.com/watch?v=dIs7TFBDbIw) : CMake 的簡易教學
 - [智慧指標](https://rulerchen.github.io/RulerChen-Website/docs/C++/smartpointer/)、[移動語意](https://rulerchen.github.io/RulerChen-Website/docs/C++/move/)、[同步原語](https://rulerchen.github.io/RulerChen-Website/docs/C++/synchronize/) : 自己寫的 C++ 筆記
 
@@ -60,23 +59,40 @@ cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=/usr/bin/clang-14 -DCMAKE_CX
 }
 ```
 
-7. 接著設定 debugger，需要先安裝 lldb，並在 VSCode 中設定 debugger
+7. 接著設定 debugger，我使用的 debugger 是 `GDB`
 
 ```bash
-sudo apt-get install lldb-14
+sudo apt install gdb
 ```
+
+以下這個設定可以幫助我們顯示 STL 容器的內容 :
 
 ```json title=".vscode/launch.json"
 {
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "C/C++: clang++ build and debug active file",
-      "type": "lldb",
+      "name": "C/C++: g++ build and debug active file",
+      "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/build/test/${fileBasenameNoExtension}",
       "args": [],
-      "cwd": "${fileDirname}"
+      "cwd": "${workspaceFolder}",
+      "stopAtEntry": false,
+      "MIMode": "gdb",
+      "miDebuggerPath": "/usr/bin/gdb",
+      "setupCommands": [
+        {
+          "description": "Test",
+          "text": "python import sys;sys.path.insert(0, '/usr/share/gcc/python');from libstdcxx.v6.printers import register_libstdcxx_printers;register_libstdcxx_printers(None)",
+          "ignoreFailures": false
+        },
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        }
+      ]
     }
   ]
 }
@@ -118,9 +134,7 @@ make trie_store_test trie_store_noncopy_test -j$(nproc)
 
 ### Debugging
 
-前面兩題的答案可以在 VSCode 的 debugger 內看出，第三題可以直接 cout 得出答案，並在 `/src/include/primer/trie_answer.h` 中填入答案。
-
-答案如下 :
+可以直接在 debugger 中看出答案，如下 :
 
 1. 10
 2. 1
@@ -164,7 +178,7 @@ make -j`nproc` sqllogictest
 
 如果要註冊 GradeScope，可以參考 [這個網站](https://blog.csdn.net/qq_40878302/article/details/136005292)
 
-1. 首先修改 `CMakeLists.txt`，將 `P0_FILES` 設定為以下 ( 需要重新執行 `cmake` 指令來更新 makefile ):
+1. 首先修改 `CMakeLists.txt`，將 `P0_FILES` 設定為以下 (需要重新執行 `cmake` 指令來更新 makefile):
 
 ```CMake title="CMakeLists.txt"
 set(P0_FILES
@@ -179,7 +193,7 @@ set(P0_FILES
 )
 ```
 
-2. 進行排版，確定消除所有 error 和 warning ( 特別是 check-clang-tidy-p0 ):
+2. 進行排版，確定消除所有 error 和 warning (特別是 check-clang-tidy-p0):
 
 ```bash
 make format
