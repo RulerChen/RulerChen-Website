@@ -1,35 +1,34 @@
 ---
-title: '[PG] Postgres Tuning'
+title: '[PG] PostgreSQL Performance Tuning'
 sidebar_position: '10'
 description: Postgres 性能調校
 keywords: [Postgres, 調校]
 ---
 
+這篇文章是我看了 [PostgreSQL High Performance Tuning Guide](https://www.udemy.com/course/postgresql-high-performance-tuning-guide) 的筆記
+
 ## Environment Setup
 
-在這篇文章中，我們會使用 docker 來進行示範 :
+在這篇文章中，我會在 GCP 上面建立一個 VM (Debian) 來安裝 PostgreSQL (15.10) 來做 demo
 
 ```bash
-docker run --name postgres-tuning -e POSTGRES_PASSWORD=postgres -d postgres:16-alpine
+sudo apt install postgresql
 ```
+
+安裝完之後應該會自行啟動，我們可以透過以下指令來確認是否有啟動
 
 ```bash
-docker exec -it --user root postgres-tuning bash
+sudo systemctl status postgresql
 ```
 
-如果想要在容器中使用 nano (容器中預設可以使用 vi)，可以執行以下指令 :
+接著我們可以切換使用者並且進入 psql 來進行操作
 
 ```bash
-apk update && apk add nano
+sudo -i -u postgres
+psql
 ```
 
-接著進入到 postgres 使用者中 :
-
-```bash
-su postgres
-```
-
-如果要離開容器，可以執行 `exit` 指令。
+輸入 `\q` 即可離開 psql
 
 ## Postgres Architecture
 
@@ -37,23 +36,21 @@ su postgres
 
 ### Process manager
 
-![Postgres Architecture](/img/pg-tuning/image-1.png)
+PostgreSQL 是 client-server 的架構，client 端可以透過 TCP 連線到 server 端
 
-postgres 是 client-server 的架構，client 端可以透過 TCP/IP 連線到 server 端，server 端會執行 client 端發送的指令，並回傳結果。
-對於每一個 client 端連線，postgres 都會啟動一個 process 來處理這個連線。
+對於每一個連線，PostgreSQL 都會 fork 一個 process 來處理
+
+![Postgres Architecture](/img/pg-tuning/image-1.png)
 
 ### Shared Memory
 
-![Postgres Shared Buffer](/img/pg-tuning/image-2.png)
+PostgreSQL 並不會直接讀取硬碟上的資料，而是先嘗試從 shared buffer 中讀取來減少磁碟 I/O 的次數
 
-postgres 並不會直接讀取磁碟上的資料，而是先從 shared buffer 中讀取來減少磁碟 I/O 的次數。
+![Postgres Shared Buffer](/img/pg-tuning/image-2.png)
 
 ### Query processor
 
-![Postgres Query processor](/img/pg-tuning/image-3.png)
-![Postgres Query processor](/img/pg-tuning/image-4.png)
-
-Query processor 分為五個步驟
+Query processor 分為五個步驟 :
 
 1. Connection manager : 管理 client 端的連線
 2. Query parser : 解析 client 端發送的指令
@@ -61,18 +58,20 @@ Query processor 分為五個步驟
 4. Query planner : 依據統計資料，選擇最佳的執行計畫
 5. Query executor : 執行指令
 
+![Postgres Query processor](/img/pg-tuning/image-3.png)
+{/* ![Postgres Query processor](/img/pg-tuning/image-4.png) */}
+
 ### Checkpoint
+
+當要執行 checkpoint 時，會將 shared buffer 中的資料寫入到磁碟上，並且將 shared buffer 和 WAL 中的資料標記為乾淨
 
 ![Postgres Checkpoint](/img/pg-tuning/image-7.png)
 
-當要執行 checkpoint 時，會將 shared buffer 中的資料寫入到磁碟上，
-並且將 shared buffer 和 WAL 中的資料標記為乾淨。
+這樣當資料庫出現問題需要 recovery 時，可以從 checkpoint 的位置開始進行 recovery
 
 ![Postgres Checkpoint](/img/pg-tuning/image-6.png)
 
-這樣當資料庫出現問題需要 recovery 時，可以從 checkpoint 的位置開始進行 recovery。
-
-常見的參數包含以下，我們需要依據實際的狀況進行調整 :
+常見的參數包含以下幾個，可以依據實際的狀況進行調整 :
 
 - `checkpoint_flush_after` : 每寫入多少資料後就進行 flush
 - `checkpoint_timeout` : 設定 checkpoint 的時間間隔
@@ -80,12 +79,11 @@ Query processor 分為五個步驟
 
 ### WAL writer
 
+在資料被修改時，會先寫入到 WAL 的 buffer 中，直到被 commit 後才會寫入到磁碟上
+
 ![Postgres WAL writer](/img/pg-tuning/image-8.png)
 
-在資料被修改時，會先寫入到 WAL 的 buffer 中，
-直到被 commit 後才會寫入到磁碟上。
-
-同時，WAL 也會被用來進行 crash recovery 和 replication。
+同時，WAL 也會被用來進行 crash recovery 和 replication
 
 ### Utility process
 
@@ -99,31 +97,22 @@ Query processor 分為五個步驟
 
 ## Vacuum
 
-在 postgres 中，如果我們使用 `DELETE` 或 `UPDATE` 指令來刪除或修改資料，
-實際上並不會立即將資料從磁碟上刪除，而是將資料標記為 dead tuples (因為需要在失敗時進行 rollback)，
-這樣的資料會佔用磁碟空間，並且影響查詢效能，
-而 `VACUUM` 指令可以將被標記為已刪除或是過期的 tuple 標記為可重用，
-這樣當下一次有資料需要寫入時，會覆蓋掉原本的 dead tuples，
-因此如果我們再次執行 `UPDATE`，資料表的大小也不會增加。
+在 PostgreSQL 中，如果我們使用 `DELETE` 或 `UPDATE` 指令來刪除或修改資料，實際上並不會立即將資料從磁碟上刪除，而是將資料標記為 dead tuples (因為需要在失敗時進行 rollback)，這樣的資料會佔用磁碟空間，並且影響查詢效能。
+而 `VACUUM` 指令可以將被標記為已刪除或是過期的 tuple 標記為可重用，這樣當下一次有資料需要寫入時，會覆蓋掉原本的 dead tuples，因此如果我們再次執行 `UPDATE`，資料表的大小也不會增加
 
 如果我們想要刪除所有 dead tuples，可以執行 `VACUUM FULL` 指令，
-這樣會將整張表的資料重新寫入到磁碟上，並且釋放磁碟空間，
-但是這樣會使用排他鎖阻塞其他指令的執行。
+這樣會將整張表的資料重新寫入到硬碟上並且釋放硬碟空間，但是會阻塞其他指令的執行
 
 我們可以透過以下的範例來觀察 `VACUUM` 的影響 :
 
-首先我們先創建 10 萬筆資料並關閉 autovacuum
-
-```bash
-psql -U postgres -d postgres
-```
+首先創建 10 萬筆資料並關閉 autovacuum
 
 ```SQL
 CREATE TABLE test (id int) with (autovacuum_enabled = off);
 INSERT INTO test SELECT * FROM generate_series(1, 100000);
 ```
 
-接著我們查詢資料表的大小
+接著查詢資料表的大小
 
 ```SQL
 SELECT pg_size_pretty(pg_relation_size('test'));
@@ -160,7 +149,7 @@ SELECT pg_size_pretty(pg_relation_size('test'));
 (1 row)
 ```
 
-再執行一次 `UPDATE` 指令，大小並不會增加，因為他覆蓋掉原本的 dead tuples
+再執行一次 `UPDATE` 指令，大小並不會增加，因為覆蓋掉了原本的 dead tuples
 
 ```SQL
 UPDATE test SET id = id + 1;
@@ -186,7 +175,7 @@ SELECT pg_size_pretty(pg_relation_size('test'));
 (1 row)
 ```
 
-如果想要檢查 table 中有多少 dead tuples 可以執行以下指令 :
+如果想要檢查 table 中有多少 dead tuples 可以執行以下指令
 
 ```SQL
 SELECT relname, n_live_tup, n_dead_tup FROM pg_stat_user_tables WHERE relname = 'test';
@@ -213,7 +202,7 @@ where name in ('autovacuum_max_workers','autovacuum_naptime','autovacuum_vacuum_
 (4 rows)
 ```
 
-我們可以透過調整參數來控制 VACUUM 的行為，例如 :
+也可以透過調整參數來控制 VACUUM 的行為，例如 :
 
 - `autovacuum_max_workers` : 最大可以同時運行 vacuum 的 process 數量
 - `autovacuum_naptime` : 每多少秒需要檢查是否需要執行 vacuum
@@ -222,16 +211,15 @@ where name in ('autovacuum_max_workers','autovacuum_naptime','autovacuum_vacuum_
 
 而觸發 vacuum 的公式是 : dead tuples > autovacuum_vacuum_scale_factor \* tuple count + autovacuum_vacuum_threshold
 
-如果我們的資料量過大，`VACUUM` 在執行一段時間後就會進入到 delay 的時間，讓其他操作可以執行。
-如果一直無法完成，我們就需要去調整 `vacuum_cost_delay` 的時間。
+如果資料量過大，`VACUUM` 在執行一段時間後就會進入到 delay 的時間，讓其他操作可以執行，假如一直無法完成，就需要去調整 `vacuum_cost_delay`
 
 ## Index
 
 ### Index introduction
 
-索引通常是資料庫效能的瓶頸，因此我們需要適當的建立索引來提高查詢效能。
+索引通常是資料庫效能的瓶頸，因此我們需要適當的建立索引來提高查詢效能
 
-我們先建立範例資料表
+先建立範例資料表
 
 ```SQL
 CREATE TABLE test_index (id serial, name text);
@@ -262,7 +250,7 @@ EXPLAIN ANALYZE SELECT * FROM test_index WHERE id = 1000000;
 Time: 104.655 ms
 ```
 
-經由上面的查詢計畫可以看到，postgres 使用兩個 Workers 和 Parallel Seq Scan 來進行查詢。
+經由上面的查詢計畫可以看到，PostgreSQL 使用兩個 Workers 和 Parallel Seq Scan 來進行查詢
 
 ```SQL
 CREATE INDEX idx_id ON test_index (id);
@@ -280,9 +268,9 @@ EXPLAIN ANALYZE SELECT * FROM test_index WHERE id = 1000000;
 Time: 3.408 ms
 ```
 
-可以看到，使用 index 之後速度加快了許多，
+可以看到使用 index 之後速度加快了許多，
 但是要注意的是 index 會佔用硬碟空間，並且在寫入時會增加額外的開銷，
-因此我們需要觀察 index 和 table 的大小，並且在適當的時機使用索引。
+因此需要觀察 index 和 table 的大小，並且在適當的時機使用索引
 
 ```SQL
 \di+
@@ -309,7 +297,7 @@ Time: 3.408 ms
 除了在查詢的時候可以使用 index 來提高查詢性能，在做 join 的時候也可以使用 index 來提高性能，
 我們可以在 foreign key 上建立 index ，
 這樣除了可以提高 join 的效率外，
-在 parent table 變動時，也可以提高效能。
+在 parent table 變動時，也可以提高效能
 
 至於 index 的下法，我們除了針對全表建立 index 外，也可以針對某些特定的值來建立 index (partial index)
 
@@ -317,20 +305,19 @@ Time: 3.408 ms
 CREATE INDEX idx_name_res ON test_index(name) WHERE name not in ('alice', 'bob');
 ```
 
-還有一種 index 的模式叫做 combination index，這種 index 可以將多個欄位組合起來建立 index，
-這樣可以提高查詢效能，但同時也會增加 index 的大小，
-並且如果我們不對第一個欄位搜尋時，這個 index 就會失效。
+還有一種 index 的模式叫做 combination index，這種 index 可以將多個欄位組合起來建立 index
 
 ```SQL
 CREATE INDEX idx_name_res2 ON test_index(name, id);
 ```
 
+在上方的範例中，如果我們同時對 name 跟 id 查詢或單獨對 name 查詢，都可以使用到這個 index，但如果只對 id 查詢，就無法使用這個 index
+
 ### Index cluster
 
-除此之外 correlation 也可以用來提高查詢效能，
-由於資料的物理位置接近，可以減少 I/O 的次數，進而提高查詢效能。
+除此之外 correlation 也可以用來提高查詢效能，由於資料的物理位置接近，可以減少 I/O 的次數，進而提高查詢效能
 
-接下來我們透過兩個範例來說明 correlation 的影響。
+接下來我們透過兩個範例來說明 correlation 的影響 :
 
 ```SQL
 CREATE TABLE t_test (id serial, name text);
@@ -377,7 +364,7 @@ QUERY PLAN
 Time: 4.959 ms
 ```
 
-可以看到 Buffer 的 shared hit 相差很多，進而影響了效能。
+可以看到 Buffer 的 shared hit 相差很多，進而影響了效能
 
 我們可以透過以下的範例來查看 correlation 的數值
 
@@ -394,7 +381,7 @@ tablename | attname | correlation
 ```
 
 如果要解決這個問題，我們可以使用 `CLUSTER` 指令來將資料按照 index 的順序重新排列，來提高查詢效能，
-但這個方式會造成鎖表，且只能依據一個 index 來進行排序，同時當新的資料進入時，也不會自動重新排序。
+但這個方式會造成鎖表，且只能依據一個 index 來進行排序，並且當新的資料進入時，也不會自動重新排序
 
 ```SQL
 CLUSTER t_random USING t_random_idx;
@@ -409,13 +396,11 @@ tablename | attname | correlation
  t_test    | name    |           1
 ```
 
-在 postgres 中，有一個叫做 fill factor 的參數，預設是 100%，
+在 PostgreSQL 中，有一個參數叫做 fill factor ，預設是 100%，
 這個參數會決定 page 被填滿的程度，如果我們將 fill factor 設定為 90%，那麼當 page 被填滿 90% 時，
-就不會再寫入新的資料，
-把空間預留給更新和刪除的資料，
-使之變成 HOT update。
+就不會再寫入新的資料，而是把空間預留給更新和刪除的資料，使之變成 HOT update
 
-我們可以透過以下範例來宣告 fill factor 的值
+我們可以透過以下範例來宣告 fill factor 的值 :
 
 ```SQL
 CREATE TABLE test_fillfactor (id serial, name text) WITH (fillfactor = 90);
@@ -423,38 +408,40 @@ CREATE TABLE test_fillfactor (id serial, name text) WITH (fillfactor = 90);
 
 ## Statistics
 
-在 postgres 中，統計資料是非常重要的，它可以幫助我們了解資料庫的狀況，並且提供最佳化的建議。
+在 PostgreSQL 中，統計資料是非常重要的，它可以幫助我們了解資料庫的狀況，並且提供最佳化的建議。
 我們可以透過 `pg_stat_statements` 來查看統計資料，這個 view 會記錄所有執行的 SQL 語句，並且提供執行時間、執行次數、讀取的資料量等資訊。
 
-首先我們需要啟動這個 extension，我們先創建一個新的資料庫並使用 pgbench 生成一些假資料
+首先我們需要啟動這個 extension，我們需要先離開 psql 並創建一個新的資料庫並使用 pgbench 生成一些假資料 :
 
 ```bash
-su postgres
+\q
 
 createdb benchdb
 
 pgbench -i benchdb
-
-pgbench -c 10 -t 100000 benchdb
 ```
 
 接著需要調整 postgresql.conf 來啟動這個 extension
 
 ```bash
-cd /var/lib/postgresql/data
+cd /etc/postgresql/15/main
 nano postgresql.conf
 # change shared_preload_libraries = 'pg_stat_statements'
 
-# restart docker
-docker restart postgres-tuning
-docker exec -it --user root postgres-tuning bash
+exit
+sudo systemctl restart postgresql
 
-psql -U postgres -d benchdb
+sudo -i -u postgres
+psql benchdb
 CREATE EXTENSION pg_stat_statements;
+\q
+
+pgbench -c 10 -t 10000 benchdb
+psql benchdb
+\x
 ```
 
-接著我們可能需要調整一下顯示方式，輸入 `\x` 來顯示單行，
-接著查看 `pg_stat_statements` 的資料
+接著我們可能需要調整一下顯示方式，輸入 `\x` 來顯示單行，並查看 `pg_stat_statements` 的資料
 
 ```SQL
 SELECT * FROM pg_stat_statements;
@@ -491,8 +478,7 @@ temp_blks_written      | 0
 --More--
 ```
 
-這個 view 會記錄相同的 SQL 語句並生成統計資料(不同參數算同一語句)，
-我們可以重點關注一下數據，包含 :
+這個 view 會記錄相同的 SQL 語句並生成統計資料 (不同參數算同一語句)，我們可以重點注意幾個欄位 :
 
 - `mean_exec_time` : 平均執行時間
 - `stddev_exec_time` : 執行時間的標準差，可以判斷查詢是否穩定
@@ -503,7 +489,7 @@ temp_blks_written      | 0
 - `blk_read_time` : 讀取 disk 的時間
 - `blk_write_time` : 寫入 disk 的時間
 
-我們可以使用以下的指令來查詢前 10 個執行時間最長的 SQL 語句。
+我們可以使用以下的指令來查詢前 10 個執行時間最長的 SQL 語句 :
 
 ```SQL
 SELECT
@@ -517,7 +503,7 @@ ORDER BY total_exec_time DESC
 LIMIT 10;
 ```
 
-除了安裝這個 extension 之外，我們也可以透過系統內建的 `pg_stat_sys_table` 和 `pg_stat_user_table` 來查看系統和使用者表的統計資料。
+除了安裝這個 extension 之外，我們也可以透過系統內建的 `pg_stat_sys_table` 和 `pg_stat_user_table` 來查看系統和使用者表的統計資料
 
 ```bash
 psql -d benchdb
@@ -556,7 +542,7 @@ autoanalyze_count   | 1
 --More--
 ```
 
-我們可以關注一些參數，例如 :
+我們可以注意一些參數，例如 :
 
 - `seq_scan` : 使用 sequential scan 的次數
 - `idx_scan` : 使用 index scan 的次數
@@ -651,7 +637,7 @@ WHERE idx_scan > 0;
 
 ## Query Plan
 
-postgres 提供了四種 scan 的方式，分別是 :
+PostgreSQL 提供了四種 scan 的方式，分別是 :
 
 - Seq Scan : 全表掃描
 - Index Scan : 索引掃描
@@ -660,8 +646,7 @@ postgres 提供了四種 scan 的方式，分別是 :
 
 詳細的說明可以參考 [以 PostgreSQL 為例了解資料庫的 Query Plans](https://oldmo860617.medium.com/%E4%BB%A5-postgressql-%E7%82%BA%E4%BE%8B%E4%BA%86%E8%A7%A3%E8%B3%87%E6%96%99%E5%BA%AB%E7%9A%84-query-plans-abd8b5f54c66)
 
-在 postgres 中，我們可以使用 `EXPLAIN ANALYZE` 指令來查看查詢的執行計劃，這個指令會告訴我們查詢的執行流程，
-以及每個步驟的執行時間和資料量。
+在 PostgreSQL 中，我們可以使用 `EXPLAIN ANALYZE` 指令來查看查詢的執行計劃，這個指令會告訴我們查詢的執行流程，以及每個步驟的執行時間和資料量
 
 ```SQL
 EXPLAIN (analyze, verbose, costs, timing, buffers) SELECT * FROM pgbench_tellers;
@@ -677,16 +662,24 @@ EXPLAIN (analyze, verbose, costs, timing, buffers) SELECT * FROM pgbench_tellers
 (6 rows)
 ```
 
-這樣的執行結果代表這個執行只有一個 node ，並且是使用 sequential scan 的方式來進行掃描，
-其中 `cost` 的第一個數字代表輸出階段開始之前花費的時間，例如，在排序節點中進行排序的時間，
-第二個數字代表這個 node 的總成本，`row` 代表預期會回傳的行數，`width` 代表每個 row 的平均有多少 bytes，
-`loops` 代表循環的次數，如果有 join 的話就有可能大於 1。
+我們可以注意以下重點 :
+
+- `Seq Scan on public.pgbench_tellers` : 這次使用的是全表掃描
+- `cost=0.00..12.10` : 第一個數字代表節點前置作業所需的時間 (如果是 index scan，則可能代表定位到第一個索引的時間)，第二個數字代表執行完成所預估的時間
+- `rows=10` : 預估回傳的 row 數量
+- `width=352` : 每行資料的平均大小
+- `actual time=0.009..0.016` : 第一個數字代表節點開始處理的時間，第二個數字代表節點處理完成的時間
+- `rows=10` : 實際回傳的 row 數量
+- `loops=1` : 執行次數，如果有 join 的話可能會有多次執行
+- `Buffers: shared hit=12` : 從 shared buffer 中讀取的 page 數量
+- `Planning Time: 0.038 ms` : 計劃時間
+- `Execution Time: 0.027 ms` : 執行時間
 
 ![cost estimate](/img/pg-tuning/image-10.png)
 
-我們可以依據上面這張圖來計算 query 的 cost，進而產生最好的執行計劃。
+我們可以依據上面這張圖來計算 query 的 cost，進而產生最好的執行計劃
 
-我們也可以在 postgres 中使用 `pg_class` 來查看 table 的相關資訊
+我們也可以在 PostgreSQL 中使用 `pg_class` 來查看 table 的相關資訊
 
 ```SQL
 SELECT  relpages,
@@ -703,7 +696,7 @@ relpages | seq_page_cost | page_cost | reltuples | cpu_tuple_cost | tuple_cost
         7 | 1             |         7 |        10 | 0.01           |       0.07
 ```
 
-我們也有可能遇到 query plan 估計的值與實際相差很大的情況，例如以下的例子 :
+我們也有可能遇到 query plan 估計的值與實際相差很大的情況，例如 :
 
 ```SQL
 CREATE TABLE test_estimate as SELECT * FROM generate_series(1, 10000) as id;
@@ -718,7 +711,7 @@ EXPLAIN ANALYZE SELECT * FROM test_estimate WHERE cos(id) < 4;
 (4 rows)
 ```
 
-可以看到估計的 row 跟實際的 row 相差很大，這時候我們可能就需要使用 index 或是其他的手段來解決這個問題。
+可以看到估計的 row 跟實際的 row 相差很大，這時候我們可能就需要使用 index 或是其他的手段來解決這個問題
 
 ```SQL
 CREATE INDEX idx_test_estimate ON test_estimate (cos(id));
@@ -738,8 +731,7 @@ EXPLAIN ANALYZE SELECT * FROM test_estimate WHERE cos(id) > 4;
 
 ### Join Order
 
-postgres 會在 join 的時候嘗試不同的 join order 來找到最優的執行計劃，
-預設是 8 次，我們可以將其設置為 1 來強制使用手動的 join order。
+PostgreSQL 會在 join 的時候嘗試不同的 join order 來找到最優的執行計劃，預設是 8 次，我們可以將其設置為 1 來強制使用手動的 join order
 
 ```SQL
 SELECT * FROM pg_settings WHERE name = 'join_collapse_limit';
@@ -748,22 +740,20 @@ SET join_collapse_limit = 1;
 
 ### Avoid SELECT \*
 
-減少使用 `SELECT *`，可以讓 index scan 變成 index onlay scan。
+減少使用 `SELECT *`，有機會可以讓 index scan 變成 index only scan
 
 ### Avoid Order By
 
-由於 postgres 在執行 order by 的時候，會需要額外開啟一個排序的 buffer，
-這樣會導致記憶體使用量增加，進而影響效能，因此我們應該盡量避免使用 order by， 但如果有 index 則可以大幅減少這個問題。
+由於 PostgreSQL 在執行 order by 的時候，會需要額外開啟一個排序的 buffer，
+這樣會導致記憶體使用量增加，進而影響效能，因此我們應該盡量避免使用 order by，但如果有 index 則可以大幅減少這個問題
 
 ### Avoid Distinct
 
-在使用 distinct 時， postgres 需要產生一個額外的 Unique node 來處理，
-這樣會導致記憶體使用量增加，進而影響效能，因此我們應該盡量避免使用 distinct。
+在使用 distinct 時， PostgreSQL 需要產生一個額外的 Unique node 來處理，因此我們應該盡量避免使用 distinct
 
 ### Parallel Query
 
-postgres 可以使用平行的方式來執行 query，這樣可以大幅減少執行時間，
-可以透過以下指令來查看相關的設置
+PostgreSQL 可以使用平行的方式來執行 query，這樣可以大幅減少執行時間，可以透過以下指令來查看相關的設定 :
 
 ```SQL
 SHOW max_worker_processes;
@@ -772,10 +762,10 @@ SHOW max_parallel_workers_per_gather;
 
 ## Shared Buffer
 
-![shared buffer](/img/pg-tuning/image-11.png)
-![shared buffer](/img/pg-tuning/image-12.png)
+在不特別針對某個 table 的情況下，我們可以將 shared buffer 設置為 RAM 數量的 25% 左右，這是因為 PostgreSQL 使用了 OS 的 cache，因此不需要將 shared buffer 設置的太大
 
-在不特別針對某個 table 的情況下，我們可以將 shared buffer 設置為 RAM 數量的 25%。
+![shared buffer](/img/pg-tuning/image-11.png)
+{/* ![shared buffer](/img/pg-tuning/image-12.png) */}
 
 ## Reference
 
