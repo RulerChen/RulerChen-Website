@@ -15,13 +15,14 @@
             <pubDate>Thu, 31 Aug 2023 00:00:00 GMT</pubDate>
             <description><![CDATA[PChome 暑期實習 2023]]></description>
             <content:encoded><![CDATA[
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="前情提要">前情提要<a class="hash-link" aria-label="前情提要的直接連結" title="前情提要的直接連結" href="https://rulerchen.github.io/RulerChen-Website/blog/PChomeSummerIntern/#%E5%89%8D%E6%83%85%E6%8F%90%E8%A6%81">​</a></h2>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="前情提要">前情提要<a href="https://rulerchen.github.io/RulerChen-Website/blog/PChomeSummerIntern/#%E5%89%8D%E6%83%85%E6%8F%90%E8%A6%81" class="hash-link" aria-label="前情提要的直接連結" title="前情提要的直接連結">​</a></h2>
 <p>其實今年本來沒打算實習的，只是看到身邊的同學都逐漸找到目標，讓有點不知道方向的我也有點不安，
 但當時時間已經四月了，也沒啥暑期實習能找，再加上我也才大二，隨便面了幾次又剛好錄取了這裡的前端，就決定來這裡了。</p>
 <p>接下來我會說一下我今年在 PChome 技術部前端實習的心得，同時我也可能會說一下我在這裡的所見所聞 (有些可能只是聽到的風聲，請謹慎服用?)。
 整體來說學到的東西應該超過我原本的期待蠻多，畢竟我對 PChome 的印象還停留在那個古老的頁面，
 所以我原本以為這裡使用的技術應該也會很古老，事實上雖然有不少陳年舊債，但至少還是有在努力改變的。</p>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="面試過程">面試過程<a class="hash-link" aria-label="面試過程的直接連結" title="面試過程的直接連結" href="https://rulerchen.github.io/RulerChen-Website/blog/PChomeSummerIntern/#%E9%9D%A2%E8%A9%A6%E9%81%8E%E7%A8%8B">​</a></h2>
+<!-- -->
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="面試過程">面試過程<a href="https://rulerchen.github.io/RulerChen-Website/blog/PChomeSummerIntern/#%E9%9D%A2%E8%A9%A6%E9%81%8E%E7%A8%8B" class="hash-link" aria-label="面試過程的直接連結" title="面試過程的直接連結">​</a></h2>
 <p>之前我也沒有接觸過大規模的網站，所以我就只放了幾個做過的小專案就去面試了，可能唯一的優勢就是有一個台大的學歷嗎(?)。</p>
 <p>我記得沒錯的話，會有人資先打電話來問你幾個簡單的問題，像是怎麼團隊合作之類的，應該按自己的想法回答就好了。</p>
 <p>接下來我就遇到了一件有點鳥的事，他原本的面試時間我有課所以我想換時間，然後人資說他跟主管確認再連絡，
@@ -38,7 +39,7 @@
 確實我記得我們暑期實習的人似乎好像也都符合這個標準。
 但我們技術部好像比較好，收的人不侷限在那幾間學校，比較多元一點。</p>
 <p>面試的部分我也有聽到別人說他們完全沒問技術類的問題就純聊天，所以基本上只要對自己做過的東西有印象應該就可以了，不太需要特別準備。</p>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="環境--福利">環境 &amp; 福利<a class="hash-link" aria-label="環境 &amp; 福利的直接連結" title="環境 &amp; 福利的直接連結" href="https://rulerchen.github.io/RulerChen-Website/blog/PChomeSummerIntern/#%E7%92%B0%E5%A2%83--%E7%A6%8F%E5%88%A9">​</a></h2>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="環境--福利">環境 &amp; 福利<a href="https://rulerchen.github.io/RulerChen-Website/blog/PChomeSummerIntern/#%E7%92%B0%E5%A2%83--%E7%A6%8F%E5%88%A9" class="hash-link" aria-label="環境 &amp; 福利的直接連結" title="環境 &amp; 福利的直接連結">​</a></h2>
 <p>PChome 在的位置有點尷尬，算是在好幾個捷運站的中間，不管從哪裡走過去都需要一段時間，
 辦公室也有點小舊，我記得我們整個七月冷氣幾乎每周都壞(乖乖好沒用 😢)，所以後來好像常常都可以遠距上班。</p>
 <p>薪水好像是三萬初的樣子我也有點忘了，反正大概就比基本工資高一點點這樣，但因為我主要是去打發時間所以也沒特別在意。</p>
@@ -46,7 +47,7 @@
 然後一個月可以去按摩 15 分鐘，除此之外好像也沒想到有其他福利了。</p>
 <p>然後我小小靠北一下它配備的東西還蠻鳥的，我感覺電腦常常卡到需要重開(印象中是 2021 的 surface)，
 不知道是不是我運氣比較差，然後他還配了一個螢幕(2013)，但我大概只用了 10 分鐘不到我就再也沒用過了，我覺得這個螢幕我看一個暑假眼睛會瞎 ...</p>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="實習過程">實習過程<a class="hash-link" aria-label="實習過程的直接連結" title="實習過程的直接連結" href="https://rulerchen.github.io/RulerChen-Website/blog/PChomeSummerIntern/#%E5%AF%A6%E7%BF%92%E9%81%8E%E7%A8%8B">​</a></h2>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="實習過程">實習過程<a href="https://rulerchen.github.io/RulerChen-Website/blog/PChomeSummerIntern/#%E5%AF%A6%E7%BF%92%E9%81%8E%E7%A8%8B" class="hash-link" aria-label="實習過程的直接連結" title="實習過程的直接連結">​</a></h2>
 <p>在整個暑假大概只會有三件事做，個人專案、黑客松跟上課，我分開來說好了。</p>
 <p>首先是個人專案，這個應該是你在進來之前就會知道，像我這次是做 Next.js 的 POC，
 基本上就是用 Next.js 重寫一個頁面，然後測試看看這樣。
@@ -61,7 +62,7 @@
 <p>最後就是上課，基本上就是會有不同的講師來講一些有關電商的東西，
 算是上班生活的一點小小調劑，但我覺得有些行銷還有社群類的東西好像跟我關聯有點不大就是了，
 有沒有很大的收穫感覺也是看自己的興趣，我個人希望下次可以乾脆找我們技術部的主管上來分享技術我可能更有興趣(?)。</p>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="實習心得">實習心得<a class="hash-link" aria-label="實習心得的直接連結" title="實習心得的直接連結" href="https://rulerchen.github.io/RulerChen-Website/blog/PChomeSummerIntern/#%E5%AF%A6%E7%BF%92%E5%BF%83%E5%BE%97">​</a></h2>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="實習心得">實習心得<a href="https://rulerchen.github.io/RulerChen-Website/blog/PChomeSummerIntern/#%E5%AF%A6%E7%BF%92%E5%BF%83%E5%BE%97" class="hash-link" aria-label="實習心得的直接連結" title="實習心得的直接連結">​</a></h2>
 <p>整體來說，雖然我有點抱怨，但我其實還是覺得這裡對我這個大二甚麼都不懂的人來說其實還是可以的，
 特別是技術部的人跟主管都蠻 peace 的，人也都蠻好相處，
 我記得我在最後的個人專案報告的時候還在上面罵為啥 2023 年了 PChome 還在用 jsonp 這種早該被寫在歷史課本裡面的東西，
@@ -80,6 +81,7 @@
 所以可能就多參考別人的心得然後見仁見智囉~</p>
 <p>以上就是我這次實習的心得，也不知道有沒有遺忘的部分，如果有的話可能就等想到在更新了。</p>
 <p>最後就謝謝 Ted 跟 Sara 這個暑假對我的照顧吧，要走的那天你們都沒在位置上所以沒有當面跟你們說謝謝真的非常抱歉。</p>]]></content:encoded>
+            <author>a20196780@gmail.com (RulerChen)</author>
         </item>
     </channel>
 </rss>
