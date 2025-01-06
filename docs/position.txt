@@ -5,6 +5,7 @@ Programming Language : 5-100
 3. JavaScript : 7
 4. TypeScript : 8
 5. Node.js : 9
+6. Golang : 10
 
 Computer Science Basic Course : 200-300
 
