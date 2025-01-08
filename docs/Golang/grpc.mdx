@@ -1,0 +1,218 @@
+---
+title: '[Go] GRPC'
+sidebar_position: 20
+description: Go Remote Procedure Call
+keywords: [golang, go, grpc, rpc]
+---
+
+這篇文章會包含一些 GRPC 的介紹，使用 Golang 作為範例
+
+## RPC 的原理
+
+RPC (Remote Procedure Call) 是一種通訊協定，設計的目的是讓開發者無需考慮底層網絡通訊的細節，只需像呼叫本地函式一樣調用遠端方法
+
+流程大致如下 :
+
+1. client 呼叫本地的 stub，負責將 client 的請求封裝並且序列化後傳送到 server
+2. server 接收到請求後，將請求反序列化，並呼叫本地的 service
+3. service 執行完畢後，將結果序列化並傳送回 client
+4. client 接收到結果後，將結果反序列化
+
+其中序列化的過程可以使用不同的方式，例如 JSON、XML、Protobuf 等，基於的協議也可能有所不同，常見的有 HTTP、TCP、UDP 等
+
+## GRPC
+
+## Implementation
+
+在實作階段，我們會從頭到尾時做一個簡單的 grpc 通訊，包含一個簡單的 service，並且透過 grpc 來呼叫
+
+### Environment Setup
+
+進入專案目錄，並且 init 一個 go module
+
+```bash
+go mod init grpc
+```
+
+新增 `/pb/student_service.proto` 檔案，內容如下
+
+```proto
+syntax = "proto3"; // 使用 proto3 語法
+
+package pb; // 定義 package 名稱
+
+// 第一個參數是生成的路徑，第二個參數是生成後的名稱
+option go_package = "./pb/proto;student_service";
+
+// 定義 message
+message Student {
+    string name = 1;
+    repeated string locations = 2;
+    map<string, float> scores = 3;
+    bool gender = 4;
+    int32 age = 5;
+    float height = 6;
+}
+
+// 定義 message
+message GetStudentRequest {
+    string studentId = 1;
+}
+
+// 定義 service
+service StudentService {
+    rpc GetStudentInfo (GetStudentRequest) returns (Student);
+}
+```
+
+安裝 protobuffer (windows)，需要去 [官網](https://github.com/protocolbuffers/protobuf/releases) 下載對應的版本，解壓縮到專案目錄並設定環境變數
+
+```bash
+protoc --version
+```
+
+接著安裝 Go 的 protoc plugin
+
+```bash
+go get github.com/golang/protobuf/protoc-gen-go
+go install github.com/golang/protobuf/protoc-gen-go
+go get google.golang.org/grpc/cmd/protoc-gen-go-grpc
+go install google.golang.org/grpc/cmd/protoc-gen-go-grpc
+```
+
+接著使用 protoc 來編譯 proto 檔案
+
+```bash
+protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative pb/student_service.proto
+```
+
+- `--go_out` : 生成 Go 的 proto 檔案路徑
+- `--go_opt` : 設定生成的路徑，相對於 .proto 檔案，如果不指定則會放到 package 指定的路徑下
+- `--go-grpc_out` : 生成 Go 的 grpc 檔案路徑
+- `--go-grpc_opt` : 設定生成的路徑，相對於 .proto 檔案，如果不指定則會放到 package 指定的路徑下
+- `pb/student_service.proto` : 需要編譯的 proto 檔案
+
+之後執行指令來更新 grpc 所需的套件
+
+```bash
+go mod tidy
+```
+
+執行完上面的指令之後，會在專案目錄下生成 `pb/proto/student_service.pb.go` 和 `pb/proto/student_service_grpc.pb.go` 兩個檔案
+
+- `student_service.pb.go` : 包含 proto 檔案生成的 struct
+- `student_service_grpc.pb.go` : 包含 proto 中的 `service` 轉換而成的 Go 程式碼
+
+產生完成程式碼之後就可以來實作 server 了，先創建一個 `server.go` 檔案
+
+我們的目標是實現一個 struct 來滿足 `StudentServiceClient` interface
+
+```go
+type StudentServiceClient interface {
+	GetStudentInfo(ctx context.Context, in *GetStudentRequest, opts ...grpc.CallOption) (*Student, error)
+}
+```
+
+把 `server.go` 的內容寫入如下
+
+```go
+package main
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"net"
+
+	student_service "grpc/pb"
+
+	"google.golang.org/grpc"
+)
+
+type StudentServer struct {
+	student_service.UnimplementedStudentServiceServer
+}
+
+func (s *StudentServer) GetStudentInfo(ctx context.Context, request *student_service.GetStudentRequest) (*student_service.Student, error) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered in GetStudentInfo", r)
+			return
+		}
+	}()
+
+	if len(request.StudentId) == 0 {
+		return nil, errors.New("studentId is required")
+	}
+
+	student := &student_service.Student{
+		Name:      "John Doe",
+		Locations: []string{"New York", "Los Angeles", "San Francisco"},
+		Scores: map[string]float32{
+			"Math":    95.5,
+			"English": 88.0,
+			"Science": 92.3,
+		},
+		Gender: true,
+		Age:    21,
+		Height: 175.5,
+	}
+
+	return student, nil
+}
+
+func main() {
+	lis, err := net.Listen("tcp", "127.0.0.1:8000")
+	if err != nil {
+		panic(err)
+	}
+	server := grpc.NewServer()
+	student_service.RegisterStudentServiceServer(server, new(StudentServer))
+
+	err = server.Serve(lis)
+	if err != nil {
+		panic(err)
+	}
+}
+```
+
+接著執行 `go run server.go`，這樣就啟動了一個 grpc server
+
+最後我們用一個單元測試來測試 server 是否正常運作，創建一個 `grpc_test.go` 檔案
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	student_service "grpc/pb"
+	"testing"
+	"time"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+)
+
+func TestService(t *testing.T) {
+	conn, err := grpc.NewClient("127.0.0.1:8000", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		fmt.Printf("connect failed %v\n", err)
+		t.Fail()
+	}
+	defer conn.Close()
+	client := student_service.NewStudentServiceClient(conn)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	res, err := client.GetStudentInfo(ctx, &student_service.GetStudentRequest{StudentId: "123"})
+	if err != nil {
+		fmt.Printf("get student info failed %v\n", err)
+		t.Fail()
+	}
+	fmt.Printf("Name %s Age %d Height %.1f\n", res.Name, res.Age, res.Height)
+}
+```
+
+執行 `go test -v`，如果沒有錯誤的話，就代表 server 和 client 都正常運作了
