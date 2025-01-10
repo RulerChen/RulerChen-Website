@@ -71,6 +71,8 @@ import (
 
 如果我們要將 package 匯出，則需要將 package 名稱開頭大寫
 
+為引入的 package 取的別名，可以使用 `_` 來忽略，這樣就會執行 package 的 `init` 函數並且避免未引用的錯誤
+
 ## Variables
 
 ### Basic Type
@@ -176,7 +178,7 @@ func main() {
 
 ### Pointer
 
-Go 的指標與 C 類似，差別在於不支援指標運算，可以透過 `&` 取得變數的記憶體位置，透過 `*` 取得指標指向的值
+Go 的指標與 C 類似，可以透過 `&` 取得變數的記憶體位置，透過 `*` 取得指標指向的值，差別在於不支援指標運算
 
 ```go
 func main() {
@@ -229,7 +231,7 @@ func main() {
 
 ### Array & Slice
 
-Go 同樣支持陣列，但陣列的大小是固定的，如果需要動態增加大小，可以使用 slice
+Go 同樣支持陣列，但陣列的大小是固定的，如果需要動態增加大小可以使用 slice
 
 ```go
 func main() {
@@ -522,7 +524,7 @@ func main() {
 }
 ```
 
-除此之外有一個 keyword `fallthrough` 可以用來強制執行下一個 case，但這個 keyword 有點影響可讀性，不建議使用
+除此之外，Go 有一個 keyword `fallthrough` 可以用來強制執行下一個 case，但這個 keyword 會影響可讀性，不建議使用
 
 ```go
 func main() {
@@ -880,9 +882,9 @@ func main() {
 
 ### Channel
 
-channel 的本質是一個環型的 queue，可以用來傳遞和接收資料，主要分成兩種，一種是 unbuffered channel，另一種是 buffered channel
+channel 的本質是一個環型的 queue，可以用來傳遞和接收資料
 
-如果要使用 buffered channel，要在建立 channel 時指定 buffer 的大小，否則就是 unbuffered channel
+主要分成兩種，一種是 unbuffered channel，另一種是 buffered channel，如果要使用 buffered channel，要在建立 channel 時指定 buffer 的大小，否則就是 unbuffered channel
 
 我們可以先透過 `make` 來建立一個 unbuffered channel
 
@@ -1074,7 +1076,7 @@ func (c CustomErr) Error() string {
 }
 ```
 
-我們也可以在函數中設定多個回傳值，其中最後一個回傳值通常是 error
+也可以在函數中設定多個回傳值，其中最後一個回傳值通常是 error
 
 ```go
 func divide(a, b int) (int, error) {
@@ -1091,6 +1093,22 @@ func main() {
         return
     }
     fmt.Println("Result:", result)
+}
+```
+
+在 Go 中也有一些內建的處理方式，像是 `panic` 與 `recover`
+
+panic 會中斷程式，並且執行 defer 的函數，如果沒有 recover 的話，程式就會結束
+
+```go
+func main() {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered:", r)
+		}
+	}()
+
+	panic("panic")
 }
 ```
 
@@ -1122,6 +1140,34 @@ func main() {
 	p := Pair{First: 1, Second: 2}
 	fmt.Println(p)
 }
+```
+
+## Go command
+
+以下會列出 Go 常用的指令
+
+```bash
+go run main.go # 編譯並執行程式
+go build main.go # 編譯程式，並產生 .exe 檔
+go build -o <output_name> main.go # 指定輸出檔名和位置
+
+go get <package_path> # 下載 package
+go get -u <package_path> # 更新 package
+go get -u # 更新所有 package
+go get <package_path>@none # 移除 package
+
+
+go install main.go # 編譯並安裝程式
+
+go mod init <module_name> # 初始化 module，建立 go.mod 來管理 package
+go mod tidy # 移除並新增缺少的 package
+
+go test # 測試程式
+go test -v # 顯示詳細資訊
+go test -run <test_name> # 執行特定的 test
+go test -cover # 顯示 coverage
+
+go fmt # 格式化程式碼
 ```
 
 ## Reference

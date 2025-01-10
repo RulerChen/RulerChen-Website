@@ -1,5 +1,5 @@
 ---
-title: '[Go] GRPC'
+title: '[Go] gRPC'
 sidebar_position: 20
 description: Go Remote Procedure Call
 keywords: [golang, go, grpc, rpc]
@@ -7,22 +7,51 @@ keywords: [golang, go, grpc, rpc]
 
 這篇文章會包含一些 GRPC 的介紹，使用 Golang 作為範例
 
-## RPC 的原理
+## RPC
 
 RPC (Remote Procedure Call) 是一種通訊協定，設計的目的是讓開發者無需考慮底層網絡通訊的細節，只需像呼叫本地函式一樣調用遠端方法
 
-流程大致如下 :
-
-1. client 呼叫本地的 stub，負責將 client 的請求封裝並且序列化後傳送到 server
-2. server 接收到請求後，將請求反序列化，並呼叫本地的 service
-3. service 執行完畢後，將結果序列化並傳送回 client
-4. client 接收到結果後，將結果反序列化
+![](/img/go/1.png)
 
 其中序列化的過程可以使用不同的方式，例如 JSON、XML、Protobuf 等，基於的協議也可能有所不同，常見的有 HTTP、TCP、UDP 等
 
-## GRPC
+## gRPC
 
-## Implementation
+gPRC 是一種高效的 RPC 框架，由 Google 在 2016 年開源
+
+它基於 HTTP/2 協議，使用 Protobuf 作為序列化工具
+
+HTTP/2 的特性如下 :
+
+- 多路複用 : 可以在一個連接上同時進行多個請求
+- Header 壓縮 : 透過 HPACK 壓縮 header，減少傳輸的大小，詳情可以參考 Reference
+- 二進制協議 : HTTP/2 是一個二進制協議，可以更快的解析和傳輸
+
+Protobuf 的特性如下 :
+
+- 可讀性 : Protobuf 的定義是一個文本檔案，可以很容易的閱讀和修改並且添加註釋
+- 節省網路流量 : Protobuf 是一個二進制協議，因此比 JSON 和 XML 更小，節省了網路流量
+- 節省 CPU : ParseJson 需要消耗大量的 CPU，而 Protobuf 由於更接近二進制，因此消耗更少的 CPU
+
+gRPC 總共有四種類型的服務 :
+
+- Unary RPC : 一個請求對應一個回應
+- Server Streaming RPC : 一個請求對應多個回應
+- Client Streaming RPC : 多個請求對應一個回應
+- Bidirectional Streaming RPC : 多個請求對應多個回應
+
+```proto
+service StudentService {
+	rpc GetStudentInfo (GetStudentRequest) returns (Student);
+	rpc GetStudentList (GetStudentListRequest) returns (stream Student);
+	rpc GetStudentInfoList (stream GetStudentRequest) returns (Student);
+	rpc GetStudentInfoList (stream GetStudentRequest) returns (stream Student);
+}
+```
+
+雖然 gRPC 有很多優點，但是也有一些缺點，例如目前主流的瀏覽器還不支援 HTTP/2，因此如果要在瀏覽器中使用 gRPC，可能需要透過 grpc-web 來實現，這也導致了現在 gRPC 主要使用在後端服務之間的通訊
+
+## gRPC Example
 
 在實作階段，我們會從頭到尾時做一個簡單的 grpc 通訊，包含一個簡單的 service，並且透過 grpc 來呼叫
 
@@ -32,37 +61,6 @@ RPC (Remote Procedure Call) 是一種通訊協定，設計的目的是讓開發�
 
 ```bash
 go mod init grpc
-```
-
-新增 `/pb/student_service.proto` 檔案，內容如下
-
-```proto
-syntax = "proto3"; // 使用 proto3 語法
-
-package pb; // 定義 package 名稱
-
-// 第一個參數是生成的路徑，第二個參數是生成後的名稱
-option go_package = "./pb/proto;student_service";
-
-// 定義 message
-message Student {
-    string name = 1;
-    repeated string locations = 2;
-    map<string, float> scores = 3;
-    bool gender = 4;
-    int32 age = 5;
-    float height = 6;
-}
-
-// 定義 message
-message GetStudentRequest {
-    string studentId = 1;
-}
-
-// 定義 service
-service StudentService {
-    rpc GetStudentInfo (GetStudentRequest) returns (Student);
-}
 ```
 
 安裝 protobuffer (windows)，需要去 [官網](https://github.com/protocolbuffers/protobuf/releases) 下載對應的版本，解壓縮到專案目錄並設定環境變數
@@ -79,6 +77,43 @@ go install github.com/golang/protobuf/protoc-gen-go
 go get google.golang.org/grpc/cmd/protoc-gen-go-grpc
 go install google.golang.org/grpc/cmd/protoc-gen-go-grpc
 ```
+
+### Protobuf
+
+新增 `/pb/student_service.proto` 檔案，內容如下
+
+```proto
+syntax = "proto3";
+
+package pb;
+
+option go_package = "./pb;student_service";
+
+message Student {
+    string name = 1;
+    repeated string locations = 2;
+    map<string, float> scores = 3;
+    bool gender = 4;
+    int32 age = 5;
+    float height = 6;
+}
+
+message GetStudentRequest {
+    string studentId = 1;
+}
+
+service StudentService {
+    rpc GetStudentInfo (GetStudentRequest) returns (Student);
+}
+```
+
+- `syntax` : 指定 proto 的版本
+- `package` : 與 Go 類似，需要指定一個 package 名稱來方便將來互相 import，並且避免命名衝突
+- `option go_package` : 指定生成的 Go 程式碼的 package 名稱，`;` 左邊是代表生成的路徑，右邊是轉成 Go 的 package 名稱
+- `message` : 定義一個 message，類似於 Go 的 struct，可以包含多個 field
+- `service` : 定義一個 service，包含多個 rpc 方法
+
+有關於 proto 的更多語法可以參考 Reference
 
 接著使用 protoc 來編譯 proto 檔案
 
@@ -103,17 +138,20 @@ go mod tidy
 - `student_service.pb.go` : 包含 proto 檔案生成的 struct
 - `student_service_grpc.pb.go` : 包含 proto 中的 `service` 轉換而成的 Go 程式碼
 
-產生完成程式碼之後就可以來實作 server 了，先創建一個 `server.go` 檔案
+### Server
 
-我們的目標是實現一個 struct 來滿足 `StudentServiceClient` interface
+產生完成程式碼之後就可以來實作 server 了，先創建一個 `main.go` 檔案
+
+我們的目標是實現一個 struct 來滿足 `StudentServiceServer` interface
 
 ```go
-type StudentServiceClient interface {
-	GetStudentInfo(ctx context.Context, in *GetStudentRequest, opts ...grpc.CallOption) (*Student, error)
+type StudentServiceServer interface {
+	GetStudentInfo(context.Context, *GetStudentRequest) (*Student, error)
+	mustEmbedUnimplementedStudentServiceServer()
 }
 ```
 
-把 `server.go` 的內容寫入如下
+`server.go` 的內容如下，我們需要滿足 `StudentServiceServer` interface，因此我們實作了 `GetStudentInfo` 方法以及繼承了 `UnimplementedStudentServiceServer`，這樣就滿足了 interface
 
 ```go
 package main
@@ -134,13 +172,6 @@ type StudentServer struct {
 }
 
 func (s *StudentServer) GetStudentInfo(ctx context.Context, request *student_service.GetStudentRequest) (*student_service.Student, error) {
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Println("Recovered in GetStudentInfo", r)
-			return
-		}
-	}()
-
 	if len(request.StudentId) == 0 {
 		return nil, errors.New("studentId is required")
 	}
@@ -166,6 +197,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	fmt.Println("Server is running on port 8000")
+
 	server := grpc.NewServer()
 	student_service.RegisterStudentServiceServer(server, new(StudentServer))
 
@@ -176,7 +209,9 @@ func main() {
 }
 ```
 
-接著執行 `go run server.go`，這樣就啟動了一個 grpc server
+接著執行 `go run main.go`，這樣就啟動了一個 grpc server
+
+### Client
 
 最後我們用一個單元測試來測試 server 是否正常運作，創建一個 `grpc_test.go` 檔案
 
@@ -186,9 +221,10 @@ package main
 import (
 	"context"
 	"fmt"
-	student_service "grpc/pb"
 	"testing"
 	"time"
+
+	student_service "grpc/pb"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -215,4 +251,11 @@ func TestService(t *testing.T) {
 }
 ```
 
-執行 `go test -v`，如果沒有錯誤的話，就代表 server 和 client 都正常運作了
+最後開啟一個新的終端機執行 `go test -v`，如果沒有錯誤的話，就代表 server 和 client 都正常運作了
+
+## Reference
+
+- [gRPC](https://grpc.io/)
+- [What is RPC? gRPC Introduction](https://www.youtube.com/watch?v=gnchfOojMk4)
+- [详解 HTTP/2 头压缩算法 —— HPACK](https://halfrost.com/http2-header-compression/)
+- [Protobuf](https://pjchender.dev/internet/note-protocol-buffer/)
