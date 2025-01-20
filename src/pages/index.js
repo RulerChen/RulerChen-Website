@@ -2,11 +2,11 @@ import React from 'react';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Layout from '@theme/Layout';
 
-import Projects from '../components/Projects/Projects';
-import Project from '../data/Projects.json';
+// import Projects from '../components/Projects/Projects';
+// import Project from '../data/Projects.json';
 
-import Experiences from '../data/Experiences.json';
-import Experience from '../components/Experience/Experience';
+// import Experiences from '../data/Experiences.json';
+// import Experience from '../components/Experience/Experience';
 
 import Banner from '../components/Banner/Banner';
 
@@ -34,13 +34,3 @@ export default function Home() {
     </Layout>
   );
 }
-
-const Loading = () => (
-  <div className="loading">
-    <div className="loadingio-spinner-rolling-f1v13ukb9js">
-      <div className="ldio-nawj84fd2cd">
-        <div></div>
-      </div>
-    </div>
-  </div>
-);
