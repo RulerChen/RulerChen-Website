@@ -177,8 +177,3 @@ blocking checkpoint 是一種最簡單的 checkpoint 實作方法，步驟如下
 - 暫停新交易 : 暫停接受新的交易，並等待所有當前活躍的交易完成
 - 刷新緩衝區 : 將當前記憶體中的所有日誌記錄和修改過的緩衝區寫到硬碟中
 - 記錄 checkpoint : 寫入一個 `<CHECKPOINT>` 記錄到日誌檔案中，並將其寫入硬碟
-
-## References
-
-- [CMU 15-445/645: Introduction to Database Systems](https://15445.courses.cs.cmu.edu/fall2023/)
-- [CMU 15-445/645: Introduction to Database Systems Youtube 2023 Fall](https://www.youtube.com/watch?v=-mY8ALcJVTk&list=PLSE8ODhjZXjbj8BMuIrRcacnQh20hmY9g&index=20)

@@ -120,8 +120,3 @@ DBMS 會動態維護一個 wait-for graph，當發現有 cycle 時就會想辦�
 - T1 首先會在表中請求 SIX 鎖，並在需要更新的元組上請求 X 鎖
 - T2 會在表中請求 IS 鎖，並在讀取的元組上請求 S 鎖
 - T3 會在表中請求 S 鎖，並且等待 T1 釋放 SIX 鎖後再讀取
-
-## References
-
-- [CMU 15-445/645: Introduction to Database Systems](https://15445.courses.cs.cmu.edu/fall2023/)
-- [CMU 15-445/645: Introduction to Database Systems Youtube 2023 Fall](https://www.youtube.com/watch?v=9uvn9STdKvA&list=PLSE8ODhjZXjbj8BMuIrRcacnQh20hmY9g&index=17)

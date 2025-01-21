@@ -199,8 +199,3 @@ BEGIN TRANSACTION ISOLATION LEVEL <isolation-level>;
 
 - Cursor Stability : 介於可重複讀和讀已提交之間，避免了丟失更新異常 (Lost Update Anomaly)。
 - Snapshot Isolation : 保證交易在執行過程中讀到的是交易開始時的數據快照。只有當寫入集不與其他同時進行的更新衝突時，交易才能提交，但有可能遇到 Write Skew 問題 (兩個快照對同一個地方進行修改)。
-
-## References
-
-- [CMU 15-445/645: Introduction to Database Systems](https://15445.courses.cs.cmu.edu/fall2023/)
-- [CMU 15-445/645: Introduction to Database Systems Youtube 2023 Fall](https://www.youtube.com/watch?v=319q3W253Dk&list=PLSE8ODhjZXjbj8BMuIrRcacnQh20hmY9g&index=18)

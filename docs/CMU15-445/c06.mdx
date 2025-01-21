@@ -158,9 +158,3 @@ OS 會維護一個 page cache 來存放最近被讀取的 page，但這有可能
 當我們執行 `fsync` 的時候，OS 會強制將 page cache 的資料寫入硬碟，並且會 block 住這個 thread 直到寫入完成，並告訴你已經完成寫入。但如果 fsync 失敗，它依然會將 dirty page 標記為 clean，這樣當下次使用這個 page 時，會導致錯誤。
 
 這是 linux 針對 USB 的一個設計，導致 postgresql 之前有發生過嚴重問題，可以參考 [PostgreSQL Fsync Errors](https://wiki.postgresql.org/wiki/Fsync_Errors)。
-
-## References
-
-- [CMU 15-445/645: Introduction to Database Systems](https://15445.courses.cs.cmu.edu/fall2023/)
-- [CMU 15-445/645: Introduction to Database Systems Youtube 2023 Fall](https://www.youtube.com/watch?v=BS5h8QZHCPk&list=PLSE8ODhjZXjbj8BMuIrRcacnQh20hmY9g&index=7)
-- [Notes 1](https://zhenghe.gitbook.io/open-courses/cmu-15-445-645-database-systems/database-storage)
