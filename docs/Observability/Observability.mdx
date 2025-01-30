@@ -2,7 +2,7 @@
 
 ![Grafana Observability](/img/grafana/image.png)
 
-## 可觀測性
+## Observability
 
 隨著現代軟體系統的發展，應用程式變得越來越複雜，從傳統的單體應用到微服務架構，再到各種雲原生工具和服務，軟體系統的規模和複雜度都正在不斷增加。
 在這樣的情況下，許多傳統的監控方式已經無法滿足我們對系統狀態和性能的需求。因此，可觀測性 (Observability) 這個概念應運而生，成為了現代軟體開發中一個重要的關鍵詞。
@@ -18,8 +18,43 @@ Observability 這個詞起源於控制論 (Cybernetics) 領域，作為衡量系
 - 追蹤 (Traces) : 用於追蹤系統中的請求和事件，通常包含請求的時間線、耗時、調用的服務等，可以幫助我們理解複雜系統中的請求流程，但缺點在於需要額外的程式碼來生成追蹤資料
 - 效能剖析 (Profiling) : 用於分析程式碼的性能問題，通常包含 CPU 使用率、記憶體使用量、函數調用次數等，可以幫助我們找到程式碼中的性能瓶頸
 
+## Observability Strategy
+
+前面所說的日誌、指標、追蹤和效能剖析是可觀測性的基本元素，有了這些元素之後，開發人員可以更準確的了解系統的狀態和性能，並且可以更快地找到問題的根源。
+但是，當系統不斷擴增，複雜度不斷增加的時候，反而有可能因此過多的資訊而導致了我們分散注意力，使可觀測性淪為單純蒐集資料的工具。
+
+因此，我們需要一個明確的可觀測性策略，來幫助我們更好地利用可觀測性工具來監控和診斷系統。
+
+### USE Method
+
+USE 指標是由 Brendan Gregg 在提出的，用於衡量系統的性能和效能。
+
+- Utilization : 使用率，用於衡量系統的負載，如 CPU 使用率、記憶體使用量等
+- Saturation : 飽和度，用於衡量資源是否接近最大負載，可以幫助我們找到系統的瓶頸
+- Errors : 錯誤率，用於衡量系統的穩定性
+
+### RED Method
+
+RED 指標是由 Grafana 的 CTO Tom Wilkie 在 2015 年在 Kausal 公司提出的，與 USE 指標相比，RED 指標更加關注使用者終端的體驗。
+
+- Rate : 每秒處理的請求量，用於衡量系統的負載跟處理能力
+- Errors : 錯誤率，用於衡量系統的穩定性
+- Duration : 請求耗時，用於衡量系統的性能
+
+### Four Golden Signals
+
+Four Golden Signals 是由 Google 在 SRE 一書中提出的，用來監控分佈式系統和微服務架構的整體健康狀況。
+
+- Latency : 請求的耗時，反映響應速度
+- Traffic : 請求的量，用於衡量服務的負載
+- Errors : 錯誤率，用於衡量服務的穩定性
+- Saturation : 飽和度，用於衡量服務的資源使用情況
+
 ## Reference
 
 - [可觀測性宇宙的第四天 - 可觀測性三本柱是什麼？](https://ithelp.ithome.com.tw/articles/10322323)
 - [可觀測性宇宙的第五天 - 第四種可觀測性訊號？ Profile](https://ithelp.ithome.com.tw/articles/10323268)
 - [淺談 Observability](https://ithelp.ithome.com.tw/articles/10287306)
+- [The RED Method: How to Instrument Your Services](https://grafana.com/blog/2018/08/02/the-red-method-how-to-instrument-your-services/)
+- [後 Grafana 時代的第四天 - 探討 Grafana 所實踐的可觀測性策略](https://ithelp.ithome.com.tw/articles/10353850)
+- [後 Grafana 時代的第五天 - 探討 Grafana 大規模中心化架構的演變](https://ithelp.ithome.com.tw/articles/10354224)
