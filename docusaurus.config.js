@@ -126,13 +126,13 @@ module.exports = async function createConfigAsync() {
           ]
         },
         colorMode: {
-          defaultMode: 'dark',
-          disableSwitch: true
+          defaultMode: 'dark'
+          // disableSwitch: true
         },
-        footer: {
-          style: 'dark',
-          copyright: `Copyright © ${new Date().getFullYear()} RulerChen, Inc. Built with Docusaurus.`
-        },
+        // footer: {
+        //   style: 'dark',
+        //   copyright: `Copyright © ${new Date().getFullYear()} RulerChen, Inc. Built with Docusaurus.`
+        // },
         prism: {
           additionalLanguages: ['powershell'],
           theme: lightTheme,
