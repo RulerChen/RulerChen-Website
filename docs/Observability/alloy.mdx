@@ -1,10 +1,35 @@
 ---
-title: '[Grafana] Grafana Alloy'
-sidebar_position: 65
+title: '[Alloy] 神秘鍛造 - Alloy 鍛就數據新神話'
+sidebar_position: 50
 description: Grafana Alloy 基本介紹
 keywords: [grafana, alloy, log]
 ---
 
+import Alloy from '@site/static/img/grafana/image-11.png';
+
+<div style={{ display: 'flex', justifyContent: 'center' }}>
+  <img src={Alloy} alt="Grafana Alloy" style={{ width: '100%' }} />
+</div>
+
+## Background
+
+在還沒有 Alloy 之前，Grafana 為了蒐集各種不同的資料，開發了許多不同的 agent，例如為 Loki 開發了 Promtail，為了 k8s 的特定案例推出了 Grafana Agent 等等，這樣的方式導致使用者很難決定要使用哪一個 agent，也很難管理這些 agent。
+因此，Grafana 開發了 Alloy，將所有的 agent 都整合在一起，讓使用者可以更方便的管理。
+
+## Introduction
+
+Grafana Alloy 是一個在 2024 的 GrafanaCON 發布的開源軟體，是 Grafana Agent 的繼任者。
+
+以下是 Alloy 的一些特點 :
+
+- 組件化設計 : Alloy 包含了許多不同的 components，每個都可以執行自己的特定任務 (例如過濾資料、寫入後端等等)，組件間以 DAG 的方式連接，可以自由的組合並形成可視化的流水線
+- 多種輸入 : Alloy 支援多種不同的輸入方式，包括原生支援 OpenTelemetry 的 OLTP (OpenTelemetry Protocol)、Prometheus 以及 Grafana 自己的產品等等
+- 水平擴展 : Alloy 可以很容易的進行水平擴展
+
 ## Reference
 
 - [Grafana Alloy](https://grafana.com/oss/alloy-opentelemetry-collector/)
+- [Grafana Alloy Docs](https://grafana.com/docs/alloy/latest/)
+- [Introducing an OpenTelemetry Collector distribution with built-in Prometheus pipelines: Grafana Alloy](https://grafana.com/blog/2024/04/09/grafana-alloy-opentelemetry-collector-with-prometheus-pipelines/)
+- [How Grafana Alloy Works: Demo | Grafana](https://www.youtube.com/watch?v=NrnLyDXpfq0)
+- [From Agent to Alloy: Why we transitioned to the Alloy collector and why you should, too](https://grafana.com/blog/2024/04/09/grafana-agent-to-grafana-alloy-opentelemetry-collector-faq/)

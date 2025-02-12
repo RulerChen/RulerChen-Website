@@ -1,5 +1,5 @@
 ---
-title: '[Grafana] Grafana Loki'
+title: '[Loki] 惡作劇之神 - Loki 解密日誌迷宮'
 sidebar_position: 10
 description: Grafana Loki 基本介紹
 keywords: [grafana, loki, log]
@@ -10,8 +10,6 @@ import Loki from '@site/static/img/grafana/loki.svg';
 <div style={{ display: 'flex', justifyContent: 'center' }}>
   <Loki style={{ width: '200px', height: '200px' }} />
 </div>
-
-這篇文章會針對 Grafana Loki 這個開源的日誌蒐集工具的架構進行簡單介紹。
 
 ## Background
 
@@ -29,7 +27,7 @@ import Loki from '@site/static/img/grafana/loki.svg';
 
 ![Observability Cloud](/img/grafana/image-2.png)
 
-## What is Loki?
+## Introduction
 
 :::info
 
@@ -39,7 +37,7 @@ import Loki from '@site/static/img/grafana/loki.svg';
 
 Loki 是在 2018 年的 KubeCon 中由 Grafana Labs 發布的開源軟體，是一個受到 Prometheus 啟發的水平可擴展、高可用、多租戶的日誌聚合系統，與 Prometheus 的不同之處在於它專注於日誌而不是指標，並透過 push 模型來收集日誌。
 
-從整體的架構來看，Loki 由以下三個主要組件組成 :
+從整體的架構來看，主要可以分為三個部分 :
 
 ![Loki](/img/grafana/image-3.png)
 
