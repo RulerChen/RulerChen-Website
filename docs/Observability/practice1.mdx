@@ -1,0 +1,413 @@
+---
+title: '[Loki 實戰] Express.js 打造本地日誌監控系統'
+sidebar_position: 1000
+description: Grafana 實戰教學，使用 Express.js 打造完整的監控系統
+keywords: [grafana, express, log, monitoring]
+---
+
+在這篇文章中，我會使用 Node.js (Express.js) 實作一個簡單的 api，並且使用 grafana + alloy + loki 搭配 docker compose 來在本地打造一套日誌蒐集系統
+
+## Express.js Setup
+
+這次 demo 的檔案結構如下 :
+
+```txt
+├─ config
+│  ├─ alloy
+│  │  └─ config.alloy
+│  ├─ grafana
+│  │  ├─ dashboards
+│  │  └─ provisioning
+│  │     └─ datasources
+│  │        └─ datasources.yaml
+│  └─ loki
+│     └─ loki.config.yaml
+├─ docker-compose.yaml
+├─ Dockerfile
+├─ index.mjs
+├─ logger.mjs
+├─ package-lock.json
+└─ package.json
+```
+
+首先我們需要建立一個簡單的 api，這裡我使用 Express.js
+
+```bash
+npm i express axios
+```
+
+接著在 `index.js` 中建立一些非常簡單的 api，並加上一個 middleware 來記錄每一次的 request 的資訊
+
+```javascript title="index.mjs"
+import express from 'express';
+import logger from './logger.mjs';
+
+const app = express();
+
+app.use((req, res, next) => {
+  res.on('finish', () => {
+    if (res.statusCode >= 400) {
+      logger.error({
+        message: `msg="Received response" method=${req.method} path=${req.url} ip=${req.ip} status=${res.statusCode}`
+      });
+    } else {
+      logger.info({
+        message: `msg="Received response" method=${req.method} path=${req.url} ip=${req.ip} status=${res.statusCode}`
+      });
+    }
+  });
+  next();
+});
+
+app.get('/api', (req, res) => {
+  if (Math.random() < 0.1) {
+    return res.status(500).send('Internal server error');
+  }
+  res.status(200).send('Hello, world!');
+});
+
+app.get('/api/random', (req, res) => {
+  if (Math.random() < 0.1) {
+    return res.status(400).send('Bad request');
+  }
+  res.status(200).send(Math.random().toString());
+});
+
+app.get('/api/book/:bookId', (req, res) => {
+  if (Math.random() < 0.1) {
+    return res.status(404).send('Book not found');
+  }
+  res.status(200).send(`Book ID: ${req.params.bookId}`);
+});
+
+app.post('/api/book', (req, res) => {
+  if (Math.random() < 0.1) {
+    return res.status(500).send('Internal server error');
+  }
+  res.status(201).send('Book created');
+});
+
+app.put('/api/book/:bookId', (req, res) => {
+  if (Math.random() < 0.1) {
+    return res.status(500).send('Internal server error');
+  }
+  res.status(200).send(`Book ID: ${req.params.bookId} updated`);
+});
+
+app.delete('/api/book/:bookId', (req, res) => {
+  if (Math.random() < 0.1) {
+    return res.status(500).send('Internal server error');
+  }
+  res.status(204).send();
+});
+
+app.listen(8000, () => {
+  console.log('Server is running on http://localhost:8000');
+});
+```
+
+接著建立 `logger.mjs`，這個檔案是用來將 log 記錄到 alloy 中
+
+需要特別注意的是傳輸的格式必須符合 loki 的格式，可以參考 [Loki Push API](https://grafana.com/docs/loki/latest/reference/loki-http-api/#ingest-logs)
+
+```json
+{
+  "streams": [
+    {
+      "stream": {
+        "label": "value"
+      },
+      "values": [
+        ["<unix epoch in nanoseconds>", "<log line>", { "metadata": "value" }],
+        ["<unix epoch in nanoseconds>", "<log line>", { "metadata": "value" }]
+      ]
+    }
+  ]
+}
+```
+
+使用的方法可以參考前面的 api，大體上來說會使用類似 `logger.info` 的方式傳入 log level。
+參數是一個物件，包含了 `message` 和 `metadata`，`metadata` 用來表示 loki 中的 structured metadata，可以用來加速查詢，通常會儲存 pod id 或 trace id 等資訊
+
+```javascript title="logger.mjs"
+import axios from 'axios';
+
+class LoggerService {
+  async log(level, message, metadata) {
+    metadata.pod = 'loki-123';
+
+    const lokiLogEntry = {
+      streams: [
+        {
+          stream: {
+            level,
+            service_name: 'loki-demo'
+          },
+          values: [[`${Date.now() * 1000000}`, message, metadata]]
+        }
+      ]
+    };
+
+    try {
+      await axios.post(`http://alloy:3100/loki/api/v1/push`, lokiLogEntry);
+      console.log(`[${level.toUpperCase()}] ${message}`);
+    } catch (error) {
+      console.error('Error logging to Loki: ', error);
+    }
+  }
+
+  fatal(payload) {
+    const { message, ...metadata } = payload;
+    this.log('fatal', message, metadata);
+  }
+
+  error(payload) {
+    const { message, ...metadata } = payload;
+    this.log('error', message, metadata);
+  }
+
+  warn(payload) {
+    const { message, ...metadata } = payload;
+    this.log('warn', message, metadata);
+  }
+
+  info(payload) {
+    const { message, ...metadata } = payload;
+    this.log('info', message, metadata);
+  }
+
+  debug(payload) {
+    const { message, ...metadata } = payload;
+    this.log('debug', message, metadata);
+  }
+}
+
+export default new LoggerService();
+```
+
+最後使用簡單的 docker image 來包裝我們的 api
+
+```dockerfile title="Dockerfile"
+FROM node:20-alpine3.18
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci --production
+COPY . .
+
+EXPOSE 8000
+
+CMD ["node", "index.mjs"]
+```
+
+## Docker Compose
+
+接下來讓我們來設定 docker-compose 以及各個服務的 config file
+
+```bash
+docker compose up -d
+```
+
+```yaml title="docker-compose.yaml"
+name: loki-demo
+
+services:
+  alloy:
+    container_name: alloy
+    image: grafana/alloy:v1.6.1
+    restart: always
+    command: ['run', '--server.http.listen-addr=0.0.0.0:12345', '/etc/alloy/config.alloy']
+    healthcheck:
+      test:
+        [
+          'CMD',
+          '/bin/bash',
+          '-c',
+          "echo -e 'GET /-/ready HTTP/1.1\\nHost: localhost\\nConnection: close\\n\\n' > /dev/tcp/localhost/12345"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    volumes:
+      - ./config/alloy/config.alloy:/etc/alloy/config.alloy
+    ports:
+      - '12345:12345'
+
+  loki:
+    container_name: loki
+    image: grafana/loki:3.4.2
+    restart: always
+    command: ['--pattern-ingester.enabled=true', '-config.file=/etc/loki/loki.config.yaml']
+    healthcheck:
+      test: wget --quiet --tries=1 --output-document=- http://localhost:3100/ready | grep -q -w ready || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    volumes:
+      - ./config/loki/loki.config.yaml:/etc/loki/loki.config.yaml
+    ports:
+      - '3100:3100'
+
+  grafana:
+    container_name: grafana
+    image: grafana/grafana:11.5.1
+    restart: always
+    environment:
+      - GF_INSTALL_PLUGINS=grafana-lokiexplore-app
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3000/api/health']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    volumes:
+      - ./config/grafana/provisioning:/etc/grafana/provisioning
+      - ./config/grafana/dashboards:/var/lib/grafana/dashboards
+    ports:
+      - '3000:3000'
+
+  server:
+    container_name: server
+    build:
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - '8000:8000'
+    depends_on:
+      alloy:
+        condition: service_healthy
+        restart: true
+
+  request:
+    container_name: request
+    image: curlimages/curl:8.12.1
+    restart: always
+    command: |
+      sh -c 'while true; do
+        method=$$(echo "GET POST PUT DELETE" | tr " " "\n" | shuf -n1)
+        bookId=$$(shuf -i 1-100 -n1)
+        case $$method in
+          GET)
+            ep=$$(echo "/api /api/random /api/book/$$bookId" | tr " " "\n" | shuf -n1)
+            curl -s -X GET http://server:8000$$ep
+            ;;
+          POST)
+            curl -s -X POST -H "Content-Type: application/json" http://server:8000/api/book
+            ;;
+          PUT)
+            curl -s -X PUT -H "Content-Type: application/json" http://server:8000/api/book/$$bookId
+            ;;
+          DELETE)
+            curl -s -X DELETE http://server:8000/api/book/$$bookId
+            ;;
+        esac
+        sleep 1
+      done'
+```
+
+### Alloy
+
+Alloy 的 config file 格式有點類似 terraform 的 HCL，我們可以在 `localhost:12345` 中查看 alloy 的流程圖
+
+config file 的設定非常簡易，監聽一個 loki 格式的 endpoint，並將 log 轉送到 loki
+
+```txt title="config/alloy/config.alloy"
+loki.source.api "endpoint" {
+    http {
+        listen_address = "0.0.0.0"
+        listen_port = "3100"
+    }
+
+    forward_to = [loki.write.loki_server.receiver]
+}
+
+loki.write "loki_server" {
+    endpoint {
+        url = "http://loki:3100/loki/api/v1/push"
+
+        basic_auth {
+            username = ""
+            password = ""
+        }
+    }
+}
+```
+
+### Loki
+
+在 loki 的設定也是使用最基本的方式，監聽 3100 port，並且將 log 存放在 `/tmp/loki` 中，比較特別的地方是啟用了新版本才支援的 structured metadata
+
+```yaml title="config/loki/loki.config.yaml"
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+  log_level: info
+
+limits_config:
+  allow_structured_metadata: true
+  discover_log_levels: true
+  volume_enabled: true
+
+common:
+  storage:
+    filesystem:
+      chunks_directory: /tmp/loki/chunks
+      rules_directory: /tmp/loki/rules
+  ring:
+    instance_addr: 127.0.0.1
+    kvstore:
+      store: inmemory
+  replication_factor: 1
+  path_prefix: /tmp/loki
+
+schema_config:
+  configs:
+    - from: 2025-01-01
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+```
+
+### Grafana
+
+在 docker-compose 中，安裝了一個跟 loki 有關的 plugin，並且設定了匿名登入以及資料來源，這樣我們就可以直接在 localhost:3000 中看到 loki 的 log 了
+
+```yaml title="config/grafana/provisioning/datasources/datasources.yaml"
+apiVersion: 1
+
+datasources:
+  - name: Loki
+    type: loki
+    access: proxy
+    uid: loki
+    url: http://loki:3100
+```
+
+完成之後，可以打開 [Grafana](http://localhost:3000)，並在左邊的 Explore 中選擇 Log，就能開始看到 log 了
+
+![dashboards](/img/grafana-practice/image.png)
+
+### Server
+
+剛剛建立的 api server，會接收請求並把 log 傳送到 alloy
+
+### Request
+
+使用 curl 指令每秒隨機對 server 一個 api 發送一次 request
+
+## Reference
+
+- [How to configure Grafana Loki with a Node.js e-commerce app](https://grafana.com/blog/2022/07/07/how-to-configure-grafana-loki-with-a-node.js-e-commerce-app/)
+- [Nodejs logging using winston](https://community.grafana.com/t/nodejs-logging-using-winston/76990)
+- [Grafana Loki 系列文章(I) -- 使用金絲雀部署升級 Loki：提升效能同時節省成本的實踐經驗](https://techblog.lycorp.co.jp/zh-hant/grafana-loki-upgrade-1)
+- [6 Easy Ways to Improve your Log Dashboards with Grafana and Loki](https://www.youtube.com/watch?v=EPLvB1eVJJk)
