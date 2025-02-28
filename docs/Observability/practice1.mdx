@@ -48,11 +48,11 @@ app.use((req, res, next) => {
   res.on('finish', () => {
     if (res.statusCode >= 400) {
       logger.error({
-        message: `msg="Received response" method=${req.method} path=${req.url} ip=${req.ip} status=${res.statusCode}`
+        message: `msg="Received response" method=${req.method} path=${req.route.path} ip=${req.ip} status=${res.statusCode} url=${req.originalUrl}`
       });
     } else {
       logger.info({
-        message: `msg="Received response" method=${req.method} path=${req.url} ip=${req.ip} status=${res.statusCode}`
+        message: `msg="Received response" method=${req.method} path=${req.route.path} ip=${req.ip} status=${res.statusCode} url=${req.originalUrl}`
       });
     }
   });
