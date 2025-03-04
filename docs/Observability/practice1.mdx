@@ -5,11 +5,18 @@ description: Grafana 實戰教學，使用 Express.js 打造完整的監控系�
 keywords: [grafana, express, log, monitoring]
 ---
 
-在這篇文章中，我會使用 Node.js (Express.js) 實作一個簡單的 api，並且使用 grafana + alloy + loki 搭配 docker compose 來在本地打造一套日誌蒐集系統
+[Github Repo Link](https://github.com/RulerChen/grafana-demo/tree/main/express-loki-local)
 
-## Express.js Setup
+這篇文章中的目標是在本地端使用 docker-compose 打造日誌蒐集系統，所使用的 tech stack 如下 :
 
-這次 demo 的檔案結構如下 :
+- Node.js (Express.js) : 用於建立 api server
+- PostgreSQL : 用於儲存資料
+- Alloy : 用於將 log 處理後轉送到 loki
+- Loki : 用於儲存 log
+- Grafana : 用於視覺化儀表板
+- Curl : 用於模擬 request
+
+Demo 的檔案結構如下 :
 
 ```txt
 ├─ config
@@ -27,22 +34,36 @@ keywords: [grafana, express, log, monitoring]
 ├─ index.mjs
 ├─ logger.mjs
 ├─ package-lock.json
-└─ package.json
+├─ package.json
+└─ README.md
 ```
 
-首先我們需要建立一個簡單的 api，這裡我使用 Express.js
+## API Setup
+
+首先需要建立一些簡單的 api，這裡我使用 Express.js 這個框架，並且使用 axios 來將 log 傳送到 alloy
 
 ```bash
 npm i express axios
 ```
 
-接著在 `index.js` 中建立一些非常簡單的 api，並加上一個 middleware 來記錄每一次的 request 的資訊
+接著在 `index.js` 中建立一些非常簡單的 api，並加上一個 middleware 來記錄 log
 
 ```javascript title="index.mjs"
 import express from 'express';
+import pg from 'pg';
 import logger from './logger.mjs';
 
 const app = express();
+
+app.use(express.json());
+
+const pool = new pg.Pool({
+  host: 'postgres',
+  port: 5432,
+  user: 'postgres',
+  password: 'postgres',
+  database: 'postgres'
+});
 
 app.use((req, res, next) => {
   res.on('finish', () => {
@@ -66,47 +87,75 @@ app.get('/api', (req, res) => {
   res.status(200).send('Hello, world!');
 });
 
-app.get('/api/random', (req, res) => {
-  if (Math.random() < 0.1) {
-    return res.status(400).send('Bad request');
-  }
-  res.status(200).send(Math.random().toString());
-});
-
-app.get('/api/book/:bookId', (req, res) => {
+app.get('/api/book/:bookId', async (req, res) => {
   if (Math.random() < 0.1) {
     return res.status(404).send('Book not found');
   }
-  res.status(200).send(`Book ID: ${req.params.bookId}`);
+
+  try {
+    const result = await pool.query('SELECT id, title FROM books WHERE id = $1', [
+      req.params.bookId
+    ]);
+    if (result.rowCount === 0) {
+      return res.status(404).send('Book not found');
+    }
+    res.status(200).send(result.rows[0]);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Internal server error');
+  }
 });
 
-app.post('/api/book', (req, res) => {
+app.post('/api/book', async (req, res) => {
   if (Math.random() < 0.1) {
     return res.status(500).send('Internal server error');
   }
-  res.status(201).send('Book created');
+
+  try {
+    const { title } = req.body;
+    if (!title) {
+      return res.status(400).send('Title is required');
+    }
+    await pool.query('INSERT INTO books (title) VALUES ($1)', [title]);
+    res.status(201).send();
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Internal server error');
+  }
 });
 
-app.put('/api/book/:bookId', (req, res) => {
+app.delete('/api/book/:bookId', async (req, res) => {
   if (Math.random() < 0.1) {
     return res.status(500).send('Internal server error');
   }
-  res.status(200).send(`Book ID: ${req.params.bookId} updated`);
-});
 
-app.delete('/api/book/:bookId', (req, res) => {
-  if (Math.random() < 0.1) {
-    return res.status(500).send('Internal server error');
+  try {
+    await pool.query('DELETE FROM books WHERE id = $1', [req.params.bookId]);
+    res.status(204).send();
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Internal server error');
   }
-  res.status(204).send();
 });
 
-app.listen(8000, () => {
+app.listen(8000, async () => {
+  try {
+    await pool.connect();
+    await pool.query(`
+    CREATE TABLE IF NOT EXISTS books (
+        id SERIAL PRIMARY KEY,
+        title TEXT NOT NULL
+        )
+    `);
+  } catch (error) {
+    console.error(error);
+    process.exit(1);
+  }
   console.log('Server is running on http://localhost:8000');
 });
 ```
 
-接著建立 `logger.mjs`，這個檔案是用來將 log 記錄到 alloy 中
+接著建立一個 logger service 來處理 log，這裡使用 axios 來發送 log 到 alloy
 
 需要特別注意的是傳輸的格式必須符合 loki 的格式，可以參考 [Loki Push API](https://grafana.com/docs/loki/latest/reference/loki-http-api/#ingest-logs)
 
@@ -126,8 +175,7 @@ app.listen(8000, () => {
 }
 ```
 
-使用的方法可以參考前面的 api，大體上來說會使用類似 `logger.info` 的方式傳入 log level。
-參數是一個物件，包含了 `message` 和 `metadata`，`metadata` 用來表示 loki 中的 structured metadata，可以用來加速查詢，通常會儲存 pod id 或 trace id 等資訊
+呼叫的方式是 `logger.<level>({ message, ...metadata })`
 
 ```javascript title="logger.mjs"
 import axios from 'axios';
@@ -140,7 +188,7 @@ class LoggerService {
       streams: [
         {
           stream: {
-            level,
+            level: level,
             service_name: 'loki-demo'
           },
           values: [[`${Date.now() * 1000000}`, message, metadata]]
@@ -185,7 +233,7 @@ class LoggerService {
 export default new LoggerService();
 ```
 
-最後使用簡單的 docker image 來包裝我們的 api
+最後使用簡單的 Dockerfile 來包裝我們的 server
 
 ```dockerfile title="Dockerfile"
 FROM node:20-alpine3.18
@@ -215,7 +263,7 @@ name: loki-demo
 services:
   alloy:
     container_name: alloy
-    image: grafana/alloy:v1.6.1
+    image: grafana/alloy:v1.7.1
     restart: always
     command: ['run', '--server.http.listen-addr=0.0.0.0:12345', '/etc/alloy/config.alloy']
     healthcheck:
@@ -232,6 +280,7 @@ services:
       start_period: 5s
     volumes:
       - ./config/alloy/config.alloy:/etc/alloy/config.alloy
+      - ./data/postgres/logs:/var/log/
     ports:
       - '12345:12345'
 
@@ -272,6 +321,43 @@ services:
     ports:
       - '3000:3000'
 
+  postgres:
+    container_name: postgres
+    image: postgres:16.8
+    restart: always
+    command:
+      [
+        'postgres',
+        '-c',
+        'logging_collector=on',
+        '-c',
+        'log_destination=jsonlog',
+        '-c',
+        'log_directory=/logs',
+        '-c',
+        'log_filename=log-%M.log',
+        '-c',
+        'log_rotation_age=1min',
+        '-c',
+        'log_truncate_on_rotation=on',
+        '-c',
+        'log_statement=all'
+      ]
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-U', 'postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    volumes:
+      - ./data/postgres/logs:/logs
+    ports:
+      - '5432:5432'
+
   server:
     container_name: server
     build:
@@ -281,6 +367,9 @@ services:
       - '8000:8000'
     depends_on:
       alloy:
+        condition: service_healthy
+        restart: true
+      postgres:
         condition: service_healthy
         restart: true
 
@@ -294,34 +383,86 @@ services:
         bookId=$$(shuf -i 1-100 -n1)
         case $$method in
           GET)
-            ep=$$(echo "/api /api/random /api/book/$$bookId" | tr " " "\n" | shuf -n1)
+            ep=$$(echo "/api /api/book/$$bookId" | tr " " "\n" | shuf -n1)
             curl -s -X GET http://server:8000$$ep
             ;;
           POST)
-            curl -s -X POST -H "Content-Type: application/json" http://server:8000/api/book
-            ;;
-          PUT)
-            curl -s -X PUT -H "Content-Type: application/json" http://server:8000/api/book/$$bookId
+            curl -s -X POST -H "Content-Type: application/json" http://server:8000/api/book -d "{\"title\": \"Book $$bookId\"}"
             ;;
           DELETE)
             curl -s -X DELETE http://server:8000/api/book/$$bookId
             ;;
         esac
-        sleep 1
+        sleep 0.5
       done'
 ```
 
 ### Alloy
 
-Alloy 的 config file 格式有點類似 terraform 的 HCL，我們可以在 `localhost:12345` 中查看 alloy 的流程圖
+可以在 `localhost:12345` 中查看 alloy 的流程圖
 
-config file 的設定非常簡易，監聽一個 loki 格式的 endpoint，並將 log 轉送到 loki
+![alloy](/img/grafana-practice/image-1.png)
+
+config file 的設定包含兩個部分，一個是處理應用程式傳過來的資料，另一個是處理 PostgreSQL 的 log
+
+應用程式的資料會直接在 server 中用 axios 傳到 `alloy:3100` 再送到 loki 儲存
+
+PostgreSQL 的 log 則是透過 `local.file_match` 來監聽 `/var/log/*.json` 這個目錄，接著處理好 timestamp 並加上兩個 label，最後加上 service_name 並送到 loki 儲存
 
 ```txt title="config/alloy/config.alloy"
 loki.source.api "endpoint" {
     http {
         listen_address = "0.0.0.0"
         listen_port = "3100"
+    }
+
+    forward_to = [loki.write.loki_server.receiver]
+}
+
+local.file_match "pg_local_files" {
+    path_targets = [{"__path__" = "/var/log/*.json"}]
+
+    sync_period = "5s"
+}
+
+loki.source.file "pg_log_scrape" {
+    targets    = local.file_match.pg_local_files.targets
+
+    tail_from_end = true
+
+    forward_to = [loki.process.pg_filter_logs.receiver]
+}
+
+loki.process "pg_filter_logs" {
+    stage.json {
+        expressions = {ts = "timestamp", level = "error_severity", dbname = "dbname"}
+    }
+
+    stage.timestamp {
+        source = "ts"
+        format = "2006-01-02 15:04:05.000 MST"
+    }
+
+    stage.labels {
+        values = {
+            level = "level",
+            dbname = "dbname",
+        }
+    }
+
+    forward_to = [loki.relabel.pg_relabel.receiver]
+}
+
+loki.relabel "pg_relabel" {
+    rule {
+        regex  = "^filename$"
+        action = "labeldrop"
+    }
+
+    rule {
+        target_label = "service_name"
+        replacement  = "postgres"
+        action       = "replace"
     }
 
     forward_to = [loki.write.loki_server.receiver]
@@ -397,13 +538,17 @@ datasources:
 
 ![dashboards](/img/grafana-practice/image.png)
 
+### PostgreSQL
+
+在 docker-compose 中，我們啟用了 PostgreSQL 的 log，並且將 log 存放在 `/logs` 中，依照分鐘數來保存 log，因此只會儲存最近 60 分鐘的 log，會以 json 的格式儲存
+
 ### Server
 
 剛剛建立的 api server，會接收請求並把 log 傳送到 alloy
 
 ### Request
 
-使用 curl 指令每秒隨機對 server 一個 api 發送一次 request
+使用 curl 指令隨機對 server 的其中一個 api 發送 request
 
 ## Reference
 
