@@ -1,6 +1,6 @@
 ---
-title: '[Loki 實戰] Express.js 打造本地日誌監控系統'
-sidebar_position: 1000
+title: '[Loki 實戰] 打造本地日誌蒐集系統'
+sidebar_position: 12
 description: Grafana 實戰教學，使用 Express.js 打造完整的監控系統
 keywords: [grafana, express, log, monitoring]
 ---
@@ -40,13 +40,13 @@ Demo 的檔案結構如下 :
 
 ## API Setup
 
-首先需要建立一些簡單的 api，這裡我使用 Express.js 這個框架，並且使用 axios 來將 log 傳送到 alloy
+首先需要建立一些簡單的 api，這裡我使用 Express.js 這個框架，並且使用 axios 來將 log 傳送到 alloy。
 
 ```bash
-npm i express axios
+npm i express axios pg
 ```
 
-接著在 `index.js` 中建立一些非常簡單的 api，並加上一個 middleware 來記錄 log
+接著在 `index.js` 中建立一些簡單的 api，並加上一個 middleware 來記錄 log :
 
 ```javascript title="index.mjs"
 import express from 'express';
@@ -155,9 +155,9 @@ app.listen(8000, async () => {
 });
 ```
 
-接著建立一個 logger service 來處理 log，這裡使用 axios 來發送 log 到 alloy
+接著建立一個 logger service 來處理 log，這裡使用 axios 來發送 log 到 alloy。
 
-需要特別注意的是傳輸的格式必須符合 loki 的格式，可以參考 [Loki Push API](https://grafana.com/docs/loki/latest/reference/loki-http-api/#ingest-logs)
+需要特別注意的是傳輸的格式必須符合 loki 的格式，可以參考 [Loki Push API](https://grafana.com/docs/loki/latest/reference/loki-http-api/#ingest-logs)。
 
 ```json
 {
@@ -175,7 +175,7 @@ app.listen(8000, async () => {
 }
 ```
 
-呼叫的方式是 `logger.<level>({ message, ...metadata })`
+呼叫的方式是 `logger.<level>({ message, ...metadata })`。
 
 ```javascript title="logger.mjs"
 import axios from 'axios';
@@ -233,7 +233,7 @@ class LoggerService {
 export default new LoggerService();
 ```
 
-最後使用簡單的 Dockerfile 來包裝我們的 server
+最後使用簡單的 Dockerfile 來包裝我們的 server :
 
 ```dockerfile title="Dockerfile"
 FROM node:20-alpine3.18
@@ -251,7 +251,7 @@ CMD ["node", "index.mjs"]
 
 ## Docker Compose
 
-接下來讓我們來設定 docker-compose 以及各個服務的 config file
+接下來設定 docker-compose 以及各個服務的 config file :
 
 ```bash
 docker compose up -d
@@ -399,15 +399,15 @@ services:
 
 ### Alloy
 
-可以在 `localhost:12345` 中查看 alloy 的流程圖
+可以在 `localhost:12345` 中查看 alloy 的流程圖 :
 
 ![alloy](/img/grafana-practice/image-1.png)
 
-config file 的設定包含兩個部分，一個是處理應用程式傳過來的資料，另一個是處理 PostgreSQL 的 log
+config file 的設定包含兩個部分，一個是處理應用程式傳過來的資料，另一個是處理 PostgreSQL 的 log。
 
-應用程式的資料會直接在 server 中用 axios 傳到 `alloy:3100` 再送到 loki 儲存
+應用程式的資料會直接在 server 中用 axios 傳到 `alloy:3100` 再送到 loki 儲存。
 
-PostgreSQL 的 log 則是透過 `local.file_match` 來監聽 `/var/log/*.json` 這個目錄，接著處理好 timestamp 並加上兩個 label，最後加上 service_name 並送到 loki 儲存
+postgres 的 log 則是透過 `local.file_match` 來監聽 `/var/log/*.json` 這個目錄，接著處理好 timestamp 並加上兩個 label，最後加上 service_name 並送到 loki 儲存。
 
 ```txt title="config/alloy/config.alloy"
 loki.source.api "endpoint" {
@@ -482,46 +482,86 @@ loki.write "loki_server" {
 
 ### Loki
 
-在 loki 的設定也是使用最基本的方式，監聽 3100 port，並且將 log 存放在 `/tmp/loki` 中，比較特別的地方是啟用了新版本才支援的 structured metadata
+在 loki 的設定也是使用最基本的方式，監聽 3100 port，並且將 log 存放在 `/tmp/loki` 中，比較特別的地方是啟用了新版本才支援的 structured metadata :
 
 ```yaml title="config/loki/loki.config.yaml"
+# Disable multi-tenancy, ensuring a single tenant for all log streams.
 auth_enabled: false
 
+# Configuration block for the Loki server.
 server:
-  http_listen_port: 3100
-  log_level: info
+  http_listen_port: 3100 # Listen on port 3100 for all incoming traffic.
+  log_level: info # Set the log level to info.
 
+# The limits configuration block allows default global and per-tenant limits to be set (which can be altered in an
+# overrides block). In this case, volume usage is be enabled globally (as there is one tenant).
+# This is used by the Logs Explorer app in Grafana.
 limits_config:
+  volume_enabled: true
   allow_structured_metadata: true
   discover_log_levels: true
-  volume_enabled: true
 
+# The common block is used to set options for all of the components that make up Loki. These can be overridden using
+# the specific configuration blocks for each component.
 common:
+  instance_addr:
+    127.0.0.1 # The address at which this Loki instance can be reached on the local hash ring.
+    # Loki is running as a single binary, so it's the localhost address.
+  path_prefix: /loki # Prefix for all HTTP endpoints.
+  # Configuration of the underlying Loki storage system.
   storage:
+    # Use the local filesystem. In a production environment, you'd use an object store like S3 or GCS.
     filesystem:
-      chunks_directory: /tmp/loki/chunks
-      rules_directory: /tmp/loki/rules
+      chunks_directory: /loki/chunks # The FS directory to store the Loki chunks in.
+      rules_directory: /loki/rules # The FS directory to store the Loki rules in.
+  replication_factor:
+    1 # The replication factor (RF) determines how many ingesters will store each chunk.
+    # In this case, we have one ingester, so the RF is 1, but in a production system
+    # you'd have multiple ingesters and set the RF to a higher value for resilience.
+  # The ring configuration block is used to configure the hash ring that all components use to communicate with each other.
   ring:
-    instance_addr: 127.0.0.1
+    # Use an in-memory ring. In a production environment, you'd use a distributed ring like memberlist, Consul or etcd.
     kvstore:
       store: inmemory
-  replication_factor: 1
-  path_prefix: /tmp/loki
 
+# The schema_config block is used to configure the schema that Loki uses to store log data. Loki allows the use of
+# multiple schemas based on specific time periods. This allows backwards compatibility on schema changes.
 schema_config:
+  # Only one config is specified here.
   configs:
-    - from: 2025-01-01
-      store: tsdb
-      object_store: filesystem
-      schema: v13
+    - from: 2020-10-24 # When the schema applies from.
+      store: tsdb # Where the schema is stored, in this case using the TSDB store.
+      object_store: filesystem # As configured in the common block above, the object store is the local filesystem.
+      schema: v13 # Specify the schema version to use, in this case the latest version (v13).
+      # The index configuration block is used to configure how indexing tables are created and stored. Index tables
+      # are the directory that allows Loki to determine which chunks to read when querying for logs.
       index:
-        prefix: index_
-        period: 24h
+        prefix: index_ # Prefix for all index tables.
+        period: 24h # The period for which each index table covers. In this case, 24 hours.
+
+# The ruler configuration block to configure the ruler (for recording rules and alerts) in Loki.
+# ruler:
+#   alertmanager_url:
+#     http://localhost:9093
+#     # The URL of the Alertmanager to send alerts to. Again, this is a single
+#     # binary instance running on the same host, so it's localhost.
+# By default, Loki will send anonymous, but uniquely-identifiable usage and configuration
+# analytics to Grafana Labs. These statistics are sent to https://stats.grafana.org/
+#
+# Statistics help us better understand how Loki is used, and they show us performance
+# levels for most users. This helps us prioritize features and documentation.
+# For more information on what's sent, look at
+# https://github.com/grafana/loki/blob/main/pkg/usagestats/stats.go
+# Refer to the buildReport method to see what goes into a report.
+#
+# If you would like to disable reporting, uncomment the following lines:
+#analytics:
+#  reporting_enabled: false
 ```
 
 ### Grafana
 
-在 docker-compose 中，安裝了一個跟 loki 有關的 plugin，並且設定了匿名登入以及資料來源，這樣我們就可以直接在 localhost:3000 中看到 loki 的 log 了
+在 docker-compose 中，安裝了一個跟 loki 有關的 plugin，並且設定了匿名登入以及資料來源。
 
 ```yaml title="config/grafana/provisioning/datasources/datasources.yaml"
 apiVersion: 1
@@ -540,15 +580,15 @@ datasources:
 
 ### PostgreSQL
 
-在 docker-compose 中，我們啟用了 PostgreSQL 的 log，並且將 log 存放在 `/logs` 中，依照分鐘數來保存 log，因此只會儲存最近 60 分鐘的 log，會以 json 的格式儲存
+在 docker-compose 中，我們啟用了 postgres 的 log，並且將 log 存放在 `/logs` 中，會以 json 的格式儲存來方便解析。
 
 ### Server
 
-剛剛建立的 api server，會接收請求並把 log 傳送到 alloy
+剛剛建立的 api server，會接收請求並把 log 傳送到 alloy。
 
 ### Request
 
-使用 curl 指令隨機對 server 的其中一個 api 發送 request
+使用 curl 指令隨機對 server 的其中一個 api 發送 request。
 
 ## Reference
 
