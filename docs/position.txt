@@ -22,7 +22,8 @@ Frontend Technology : 400-600
 Backend Technology : 600-1000
 
 1. PostgreSQL : 600
-2. Grafana : 650
+2. Obserbalitiy : 650
+3. Docker : 660
 
 Security : 1000-1100
 
