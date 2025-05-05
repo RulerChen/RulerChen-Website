@@ -1,0 +1,235 @@
+---
+title: "Basic Shell Introduction"
+sidebar_position: 1
+description: "An introduction to basic shell commands."
+keywords: []
+---
+
+在開始學習程式開發的過程中，我們多半仰賴 GUI 來操作系統，例如拖拉檔案、點擊按鈕等。
+然而，當我們進一步接觸像是 Linux 這樣的開發環境時，會發現 CLI 成為更有效率、彈性也更高的操作方式。
+
+這篇文章會介紹了解常見的 Shell 指令與基本語法，並分享我如何安裝與設定 Shell 環境。
+
+## WSL shell Installation
+
+接下來會示範如何在 WSL 中啟用 zsh，並且介紹一些我自己常用的套件及設定。
+
+1. 安裝 zsh
+
+```bash
+sudo apt update && sudo apt install -y zsh
+
+zsh --version
+```
+
+2. 將 zsh 設定為預設 shell
+
+```bash
+chsh -s $(which zsh)
+```
+
+3. 安裝 Oh My Zsh 框架來管理 zsh 的設定
+
+```bash
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+```
+
+4. 改變主題，我使用 [Powerlevel10k](https://github.com/romkatv/powerlevel10k) 主題，這需要額外安裝，設定完之後需要重新開啟 terminal 進行設定
+
+```bash
+git clone --depth=1 https://github.com/romkatv/powerlevel10k.git \
+  ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/themes/powerlevel10k
+```
+
+```bash title="~/.zshrc"
+ZSH_THEME="powerlevel10k/powerlevel10k"
+```
+
+5. 安裝 zsh-syntax-highlighting，用來高亮顯示指令語法
+
+```bash
+git clone https://github.com/zsh-users/zsh-syntax-highlighting.git \
+    ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
+```
+
+```bash title="~/.zshrc"
+plugins=(git zsh-syntax-highlighting)
+```
+
+6. 安裝 zsh-autosuggestions，提供指令自動建議
+
+```bash
+git clone https://github.com/zsh-users/zsh-autosuggestions \
+  ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
+```
+
+```bash title="~/.zshrc"
+plugins=(git zsh-syntax-highlighting zsh-autosuggestions)
+```
+
+7. 安裝 jsonpp，用來格式化 JSON 資料
+
+```bash
+plugins=(git zsh-syntax-highlighting zsh-autosuggestions jsontools)
+```
+
+可以用以下指令測試一下
+
+```bash
+curl https://coderwall.com/bobwilliams.json | pp_json
+```
+
+8. 安裝 eza (exa)，可以提供更好看的 ls 指令
+
+```bash
+sudo apt install eza -y
+```
+
+修改 `~/.zshrc` 的 alias 設定，讓 ls 指令使用 eza
+
+```bash title="~/.zshrc"
+alias ls='eza'
+alias ll='eza --git -T'
+```
+
+9. 安裝 bat，提供更好看的 cat 指令
+
+```bash
+sudo apt install bat -y
+```
+
+```bash title="~/.zshrc"
+alias bat='batcat'
+```
+
+10. 安裝 tldr，提供簡單的指令說明
+
+```bash
+sudo apt install tldr -y
+```
+
+接著測試一下
+
+```bash
+tldr ls
+```
+
+11. 安裝 fzf，提供 fuzzy search 以及歷史紀錄搜尋功能
+
+```bash
+git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
+~/.fzf/install
+```
+
+設定好之後可以按下 `Ctrl + R` 來搜尋歷史紀錄，或是 `Ctrl + T` 來搜尋檔案，還有許多進階功能待補充 ...
+
+可以預覽檔案內容
+
+```bash
+fzf --preview 'cat {}'
+```
+
+結合 `batcat` 可以提供更好看的預覽
+
+```bash
+fzf --preview 'batcat --style=numbers --color=always {}'
+```
+
+## MacOS shell Installation
+
+以下是在 MacOS 上安裝常見套件的指令
+
+1. 安裝 Homebrew
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+2. 安裝 zsh 以及 [iterm2](https://iterm2.com/)
+
+```bash
+brew install zsh
+```
+
+並設定為預設 shell
+
+```bash
+sudo sh -c 'echo $(which zsh) >> /etc/shells'
+chsh -s $(which zsh)
+```
+
+3. 安裝 Oh My Zsh
+
+```bash
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+```
+
+4. 安裝 Powerlevel10k
+
+```bash
+brew install rpowerlevel10k
+```
+
+在 `~/.zshrc` 中設定主題
+
+```bash title="~/.zshrc"
+ZSH_THEME=""
+source $(brew --prefix)/share/powerlevel10k/powerlevel10k.zsh-theme
+```
+
+並重啟 terminal 依據提示進行設定
+
+5. 安裝 zsh-syntax-highlighting zsh-autosuggestions 跟 jsontools
+
+```bash
+brew install zsh-syntax-highlighting
+brew install zsh-autosuggestions
+```
+
+```bash title="~/.zshrc"
+source $(brew --prefix)/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+source $(brew --prefix)/share/zsh-autosuggestions/zsh-autosuggestions.zsh
+plugins=(git jsontools)
+```
+
+6. 安裝 eza
+
+```bash
+brew install eza
+```
+
+```bash title="~/.zshrc"
+alias ls='eza'
+alias ll='eza --git -T'
+```
+
+7. 安裝 bat
+
+```bash
+brew install bat
+```
+
+8. 安裝 tldr，由於這個已經不再維護了，所以我們可以使用 tlrc 來取代
+
+```bash
+brew install tlrc
+```
+
+```bash
+tldr ls
+```
+
+9. 安裝 fzf
+
+```bash
+brew install fzf
+$(brew --prefix)/opt/fzf/install
+```
+
+```bash
+fzf --preview 'batcat --style=numbers --color=always {}'
+```
+
+用法跟 WSL 一樣
+
+## Basic Shell Commands
