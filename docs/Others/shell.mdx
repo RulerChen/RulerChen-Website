@@ -12,7 +12,7 @@ keywords: ["shell", "command line", "terminal", "zsh", "bash"]
 
 ## WSL ZSH Installation
 
-接下來會示範如何在 WSL 中啟用 zsh，並且介紹一些我自己常用的套件及設定。
+首先示範如何在 WSL 中啟用 zsh，並且介紹一些常用的套件及設定。
 
 1. 安裝 zsh
 
@@ -137,7 +137,7 @@ fzf --preview 'batcat --style=numbers --color=always {}'
 
 ## MacOS ZSH Installation
 
-以下是在 MacOS 上安裝常見套件的指令
+接著是在 MacOS 上安裝同樣的套件
 
 1. 安裝 Homebrew
 
@@ -266,7 +266,7 @@ fzf --preview 'batcat --style=numbers --color=always {}'
 
 在 Linux 中，檔案的權限分為三種：擁有者、群組與其他人。每種權限又分為三種：讀取、寫入與執行，分別代表數字 4、2 與 1，因此 `755` 代表擁有者有讀取 (4+2+1)，群組跟其他人有讀取 (4)，執行 (1)，而沒有寫入的權限。
 
-可以透過 `ls -l` 來查看檔案的權限，會顯示成 `-rwxr-xr--` 的格式，第一個字母代表檔案類型，接下來的三個字母代表擁有者的權限，接下來的三個字母代表群組的權限，最後三個字母代表其他人的權限。
+可以透過 `ls -l` 來查看檔案的權限，會顯示成 `-rwxr-xr--` 的格式，第一個字母代表檔案類型，接下來的三個字母代表擁有者的權限，再來的三個字母代表群組的權限，最後三個字母代表其他人的權限。
 
 - `chmod`：改變檔案的權限，`chmod 755 filename`
 - `chown`：改變檔案的擁有者，`chown user:group filename`
