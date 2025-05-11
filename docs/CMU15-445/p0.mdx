@@ -102,12 +102,17 @@ sudo build_support/packages.sh
 
 ```bash
 cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=/usr/bin/clang-14 -DCMAKE_CXX_COMPILER=/usr/bin/clang++-14 -B build
+```
 
+```bash
 cd build
+```
+
+```bash
 make -j`nproc`
 ```
 
-8. 設定 formatter，這樣就可以在 save 的時候自動格式化 :
+7. 設定 formatter 以及 cmake、clangd 等等
 
 ```json title=".vscode/settings.json"
 {
@@ -122,7 +127,7 @@ make -j`nproc`
 }
 ```
 
-9. 接著設定 debugger，我使用的 debugger 是 `GDB`
+8. 接著設定 debugger，我使用的 debugger 是 `GDB`
 
 ```bash
 sudo apt install gdb
@@ -161,6 +166,8 @@ sudo apt install gdb
 }
 ```
 
+之後如果要執行 debug，設定好斷點對著 test file 按 `F5` 即可。
+
 ## Solution
 
 P0 主要有兩個 task，第一個是實作基本的 Hyperloglog，第二個是實作 Presto 的 Hyperloglog，`.h` 和 `.cpp` 的檔案分別在 `src/include/primer` 和 `src/primer` 裡面。
@@ -182,7 +189,7 @@ P0 主要有兩個 task，第一個是實作基本的 Hyperloglog，第二個是
 
 ### Task 2: Presto Hyperloglog
 
-這個 task 主要是要實作 Presto 的 Hyperloglog，是一種基於 Hyperloglog 的修改版。
+這個 task 主要是要實作 Presto 的 Hyperloglog，是一種 Hyperloglog 的修改版。
 
 在這個修改版中，`leading zeros` 的儲存和計算方式都有所改變。
 儲存會分成兩個部分，分別是 4 bits 的 `dense_bucket_` 跟 3 bits 的 `overflow_bucket_`。
@@ -198,7 +205,41 @@ P0 主要有兩個 task，第一個是實作基本的 Hyperloglog，第二個是
 
 如果要註冊 GradeScope，可以參考 [這個網站](https://blog.csdn.net/qq_40878302/article/details/136005292) 跟 [官網](https://15445.courses.cs.cmu.edu/fall2024/faq.html)。
 
-1. 首先修改 `CMakeLists.txt`，將 `P0_FILES` 設定為以下 (需要重新執行 `cmake` 指令來更新 makefile):
+1. 將 `/test/primer/hyperloglog_test.cpp` 的所有 test case 中的 `DISABLE_` 都移除，舉例來說 :
+
+```cpp title="test/primer/hyperloglog_test.cpp"
+TEST(HyperLogLogTest, DISABLE_BasicTest1) {}
+```
+
+改成
+
+```cpp title="test/primer/hyperloglog_test.cpp"
+TEST(HyperLogLogTest, BasicTest1) {}
+```
+
+這樣就可以執行所有的 test case 了。
+
+2. 重新編譯並測試所有的 test case
+
+```bash
+cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=/usr/bin/clang-14 -DCMAKE_CXX_COMPILER=/usr/bin/clang++-14 -B build
+```
+
+```bash
+cd build
+```
+
+```bash
+make -j$(nproc) hyperloglog_test
+```
+
+```bash
+./test/hyperloglog_test
+```
+
+並確認所有的 test case 都能通過，代表成功完成了這個作業。
+
+3. 修改 `CMakeLists.txt`，將 `P0_FILES` 設定為以下 (需要重新執行 `cmake` 指令來更新 makefile) :
 
 ```CMake title="CMakeLists.txt" showLineNumbers {6}
 set(P0_FILES
@@ -210,7 +251,7 @@ set(P0_FILES
 )
 ```
 
-2. 進行排版，確定消除所有 error 和 warning (特別是 check-clang-tidy-p0):
+4. 進行排版，確定消除所有 error 和 warning (特別是 check-clang-tidy-p0) :
 
 ```bash
 make format
@@ -218,16 +259,16 @@ make check-lint
 make check-clang-tidy-p0
 ```
 
-3. 簽名，會產生一個 `GRADESCOPE.md` :
+5. 簽名，會產生一個 `GRADESCOPE.md` :
 
 ```bash
 python3 gradescope_sign.py
 ```
 
-4. 繳交作業，可能需要先執行 `sudo apt-get install zip` 來安裝 `zip`，然後執行以下指令 :
+6. 繳交作業，可能需要先執行 `sudo apt-get install zip` 來安裝 `zip`，然後執行以下指令 :
 
 ```bash
 make submit-p0
 ```
 
-5. 上傳 `.zip` 檔到 GradeScope
+7. 上傳 `.zip` 檔到 GradeScope
