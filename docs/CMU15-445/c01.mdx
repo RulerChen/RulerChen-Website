@@ -1,6 +1,6 @@
 ---
-title: 'Relational Model & Algebra'
-sidebar_position: '1'
+title: "Relational Model & Algebra"
+sidebar_position: "1"
 description: CMU15-445/645 Relational Model & Algebra
 keywords: [CMU15-445/645, Relational Model & Algebra, CMU15-445/645 筆記]
 ---
@@ -11,9 +11,9 @@ keywords: [CMU15-445/645, Relational Model & Algebra, CMU15-445/645 筆記]
 
 ## Database System
 
-資料庫是一個有組織的、相互關聯的資料集合，用於對現實世界的某些部分進行建模，而資料庫管理系統 (DBMS) 則是管理資料庫的軟體系統。
+資料庫是一個有組織的、相互關聯的資料集合，用於對現實世界進行建模，而資料庫管理系統 (DBMS) 則是管理資料庫的軟體系統。
 
-假設我們今天是 Spotify 的工程師，我們需要儲存作家和專輯的訊息，我們可能會將資料儲存下面這兩個檔案 :
+假設有一個 Spotify 的工程師需要儲存作家和專輯的訊息，他可能會將資料儲存下面這兩個檔案 :
 
 ```csv title="artists.csv"
 "Wu-Tang Clan",1992,"USA"
@@ -27,7 +27,7 @@ keywords: [CMU15-445/645, Relational Model & Algebra, CMU15-445/645 筆記]
 "Liquid Swords","GZA",1990
 ```
 
-如果我們想要查詢 `GZA` 在哪一年首發了專輯，我們可以這樣做
+如果他想要查詢 `GZA` 在哪一年首發了專輯，可以這樣做 :
 
 ```python
 for line in file.readlines():
@@ -45,30 +45,25 @@ for line in file.readlines():
 - Concurrency： 無法處理兩個 thread 同時寫入資料的問題
 - Abstraction: 程式與物理存儲緊密結合
 
-以上的問題迫使我們放棄使用 CSV 檔案來儲存資料，轉而使用資料庫系統。
+以上的問題迫使大家放棄使用 CSV 檔案來儲存資料，轉而使用資料庫系統。
 
 ## DBMS
 
-DBMS 是一種可以讓應用程式與資料庫進行互動的軟體系統，
-可以讓使用者按照某些模型來對資料庫進行創建、修改、查詢、刪除等操作。
+DBMS 是一種可以讓應用程式與資料庫進行互動的軟體系統，可以讓使用者按照某些模型來對資料庫進行創建、修改、查詢、刪除等操作。
 
-而資料模型 (Data Model) 是 DBMS 中用來描述資料的結構，
-主要包含以下幾種 :
+而資料模型 (Data Model) 是 DBMS 中用來描述資料的結構，主要包含以下幾種 :
 
-- relational (本課程的主要資料模型)
+- Relational (本課程的主要資料模型)
 - NoSQL (key/value、graph、document、column)
-- array/matrix/vector (for machine learning)
-- hierarchical/network/multi-value (old)
-
-在早期的 DBMS 中，資料庫的物理層和邏輯層是緊密結合的，
-物理層描述資料在硬碟上的實際儲存方式，而邏輯層描述資料的結構和行為。
-
-在以往的應用程式中，物理層通常會在應用程式中實現，這就導致了一但需要修改物理層，就需要修改所有應用程式中的程式碼。
+- Array / Matrix / Vector (machine learning)
+- Hierarchical / Network / Multi-Value (old)
 
 ### Relational Model
 
-Ted Codd 在 1969 年發現了以上這個問題後，
-提出了關係模型 (Relational Model)，主要包含三個關鍵概念 :
+在早期的 DBMS 中，資料庫的物理層和邏輯層是緊密結合的，物理層描述資料在硬碟上的實際儲存方式，而邏輯層描述資料的結構和行為。
+在以往的應用程式中，物理層通常會在應用程式中實現，這就導致了一旦需要修改物理層，就需要修改所有應用程式中的程式碼。
+
+Ted Codd 在 1969 年發現了以上這個問題後，提出了關係模型 (Relational Model)，主要包含三個概念 :
 
 - 用簡單且統一的儲存方式來儲存資料
 - 用高級語言 (SQL) 來操作資料，而 DBMS 負責將其轉換成最佳的執行計劃
@@ -85,8 +80,7 @@ Ted Codd 在 1969 年發現了以上這個問題後，
 ### Document Model
 
 Document Model 的資料庫會將資料儲存為文件形式，並以 hierarchical 的 key-value pair 來表示資料。
-文件的欄位值可以是數字、字串、陣列，或者是嵌套的文件。
-這種類型的資料庫最常使用的方式是 JSON 格式，而舊系統則可能使用 XML 或自訂的物件表示。
+文件的欄位值可以是數字、字串、陣列，或者是嵌套的文件，這種類型的資料庫最常使用的方式是 JSON 格式，而舊系統則可能使用 XML 或自訂的物件表示。
 
 範例如下圖所示 :
 
@@ -96,8 +90,7 @@ Document Model 的資料庫會將資料儲存為文件形式，並以 hierarchic
 
 ### Vector Model
 
-Vector Model 的資料庫是一種專門處理高維度向量 (如由機器學習模型生成的嵌入向量) 而設計的資料庫系統。
-可以有效執行 Nearest Neighbor 搜尋，適合用於如近似語義搜尋、推薦系統等應用。
+Vector Model 的資料庫是一種專門處理高維度向量 (如由機器學習模型生成的嵌入向量) 而設計的資料庫系統，可以有效執行 Nearest Neighbor 搜尋，適合用於如近似語義搜尋、推薦系統等應用。
 
 處理的流程如下圖所示 :
 
@@ -107,14 +100,14 @@ Vector Model 的資料庫是一種專門處理高維度向量 (如由機器學�
 
 ## DML (Data Manipulation Language)
 
-主要分為兩種
+主要分為兩種 :
 
 - Procedural: 指定 DBMS 如何找到資料，例如 Relational Algebra
 - Non-Procedural: 指定資料的結果，而 DBMS 負責找到資料，例如 SQL
 
 ## Relational Algebra
 
-Relational Algebra 是一種用來描述關係模型的操作的數學表達式，常見的操作包括以下幾種
+Relational Algebra 是一種用來描述關係模型的操作的數學表達式，常見的操作包括以下幾種 :
 
 - select
 

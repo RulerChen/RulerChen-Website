@@ -1,65 +1,128 @@
 ---
-title: 'P0 - C++ Primer'
-sidebar_position: '30'
+title: "P0 - C++ Primer"
+sidebar_position: "30"
 description: C++ Primer
 keywords: [CMU15-445/645, C++ Primer, CMU15-445/645 筆記]
 ---
 
 <head>
-  <title>CMU 15-445/645 Project#0 C++ Primer</title>
+  <title>CMU 15-445 2024Fall Project#0 C++ Primer</title>
 </head>
 
 ## Problem Description
 
-在這個 project 中，我們需要實現一個 key-value store 的 copy-on-write 的 trie 並練習使用 debugger，總共有 4 個 Task :
+這個版本是 2024 Fall 的版本，目標是實現一個常見的資料結構 Hyperloglog，並熟悉 C++ 的語法。
 
-- Copy-On-Write Trie : 修改 `/src/primer/trie.cpp` 來實現一個 copy-on-write trie，有 `GET`、`PUT`、`DELETE` 三個操作。
-- Concurrent Key-Value Store : 修改 `/src/primer/trie_store.cpp` 來將原本 single-thread 的 trie 改成 concurrent 的版本，一樣有 `GET`、`PUT`、`DELETE` 三個操作。
-- Debugging : 在 `/test/primer/trie_debug_test.cpp` 中練習使用 debugger 來 debug，並在 `/src/include/primer/trie_answer.h` 中填入答案。
-- SQL String Functions : 在 ` src/execution/expressions/string_expression.h` 和 `src/planner/plan_func_call` 中實現 `lower` 和 `upper` 兩個 SQL function。
+如果想要快速上手專案架構，可以使用 AI，譬如 [deepwiki](https://deepwiki.com/cmu-db/bustub/1-overview)。
 
 ## Learning Resource
 
-- [15-445 Bootcamp](https://github.com/cmu-db/15445-bootcamp) : 課程提供的一個簡單 bootcamp，裡面有一些範例程式碼
-- [Debug a C++ project in VS Code](https://www.youtube.com/watch?v=G9gnSGKYIg4) : 在 VSCode 中 debug 的教學
-- [CMake](https://www.youtube.com/watch?v=dIs7TFBDbIw) : CMake 的簡易教學
-- [智慧指標](https://rulerchen.github.io/RulerChen-Website/docs/C++/smartpointer/)、[移動語意](https://rulerchen.github.io/RulerChen-Website/docs/C++/move/)、[同步原語](https://rulerchen.github.io/RulerChen-Website/docs/C++/synchronize/) : 自己寫的 C++ 筆記
+- [15-445 C++ Bootcamp](https://github.com/cmu-db/15445-bootcamp)
+- [Debug a C++ project in VS Code](https://www.youtube.com/watch?v=G9gnSGKYIg4)
+- [Makefile](https://seisman.github.io/how-to-write-makefile/overview.html)
+- [CMake](https://www.bilibili.com/video/BV14h41187FZ/?vd_source=0b8d45cc2260b9a7a9d948d819ac16f3)
 
 ## Environment Setup
 
-1. 我使用的環境是 WSL (Ubuntu 22.04) 和 VSCode
-2. 安裝 VSCode 套件 `C/C++ Extension Pack` 跟 `clangd`
-3. 將 bustub clone 下來，並且回退到 2023 Fall 的 commit，建議至少回退到 2023 12/27 的 `add request signature script (#674)`
-4. 安裝 package 並編譯 :
+1. 我使用的環境是 WSL (Ubuntu 24.04) 和 VSCode
+2. 安裝 VSCode 套件 `C/C++ Extension Pack`、`clangd`、`CMake Tools`、`Clang-Format`
+3. 將 bustub clone 下來，並且回退到 2024 Fall 的 commit，這樣可以避免一些不必要的問題
+
+```bash
+git clone https://github.com/cmu-db/bustub.git
+cd bustub
+git checkout f97256b88b20468c01023928b63f5693d697674c
+```
+
+接著可以把 `.git` 檔案移除並接上自己的 git repo (注意不要公開 repo 在 github 上並且把 github action 關掉)
+
+```bash
+rm -rf .git
+
+git init
+git add .
+git commit -m "init"
+git remote add origin <your-git-repo>
+git push -u origin main
+```
+
+4. 由於我使用的是 24.04，所以需要修改一下 `packages.sh` 的內容，並順便安裝 `clangd` 的套件。
+
+```bash title="build_support/packages.sh" showLineNumbers {10,33-34}
+install_linux() {
+  # Update apt-get.
+  apt-get -y update
+  # Install packages.
+  apt-get -y install \
+      build-essential \
+      clang-14 \
+      clang-format-14 \
+      clang-tidy-14 \
+      clangd-14 \
+      cmake \
+      doxygen \
+      git \
+      pkg-config \
+      zlib1g-dev \
+      libelf-dev \
+      libdwarf-dev
+}
+
+install() {
+  set -x
+  UNAME=$(uname | tr "[:lower:]" "[:upper:]" )
+
+  case $UNAME in
+    DARWIN) install_mac ;;
+
+    LINUX)
+      version=$(cat /etc/os-release | grep VERSION_ID | cut -d '"' -f 2)
+      case $version in
+        18.04) install_linux ;;
+        20.04) install_linux ;;
+        22.04) install_linux ;;
+        # add this line
+        24.04) install_linux ;;
+        *) give_up ;;
+      esac
+      ;;
+
+    *) give_up ;;
+  esac
+}
+```
+
+5. 安裝套件
 
 ```bash
 sudo build_support/packages.sh
+```
 
-mkdir build
+6. 嘗試編譯一下，看看有沒有問題
+
+```bash
+cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=/usr/bin/clang-14 -DCMAKE_CXX_COMPILER=/usr/bin/clang++-14 -B build
+
 cd build
-cmake -DCMAKE_BUILD_TYPE=Debug ..
 make -j`nproc`
 ```
 
-如果出現 compiler 的版本警告，可以將 cmake 改成以下指令 :
-
-```bash
-cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=/usr/bin/clang-14 -DCMAKE_CXX_COMPILER=/usr/bin/clang++-14 ..
-```
-
-5. 安裝 clangd (通常 VSCode 會提示安裝)
-6. 設定 formatter，這樣就可以在 save 的時候自動格式化 :
+8. 設定 formatter，這樣就可以在 save 的時候自動格式化 :
 
 ```json title=".vscode/settings.json"
 {
   "C_Cpp.clang_format_path": "/usr/bin/clang-format-14",
   "C_Cpp.formatting": "clangFormat",
   "C_Cpp.clang_format_style": "file",
-  "editor.formatOnSave": true
+  "clangd.path": "/usr/bin/clangd-14",
+  "cmake.configureSettings": {
+    "CMAKE_C_COMPILER": "/usr/bin/clang-14",
+    "CMAKE_CXX_COMPILER": "/usr/bin/clang++-14"
+  }
 }
 ```
 
-7. 接著設定 debugger，我使用的 debugger 是 `GDB`
+9. 接著設定 debugger，我使用的 debugger 是 `GDB`
 
 ```bash
 sudo apt install gdb
@@ -78,7 +141,7 @@ sudo apt install gdb
       "program": "${workspaceFolder}/build/test/${fileBasenameNoExtension}",
       "args": [],
       "cwd": "${workspaceFolder}",
-      "stopAtEntry": false,
+      "stopAtEntry": true,
       "MIMode": "gdb",
       "miDebuggerPath": "/usr/bin/gdb",
       "setupCommands": [
@@ -100,95 +163,49 @@ sudo apt install gdb
 
 ## Solution
 
-### Copy-On-Write Trie
+P0 主要有兩個 task，第一個是實作基本的 Hyperloglog，第二個是實作 Presto 的 Hyperloglog，`.h` 和 `.cpp` 的檔案分別在 `src/include/primer` 和 `src/primer` 裡面。
 
-- `GET` : 需要處理 root 是 nullptr 的情況，其餘的情況就是從 root 開始往下找，最後用 `dynamic_cast` 來轉型。
-- `PUT` : 需要處理 key 是空的情況 (在 root 上直接插入)，其餘的情況就是從 root 開始往下找，並新增一個 `TrieNodeWithValue`。
-- `DELETE` : 需要先遍歷到要刪除的 node，並記錄中途經過的 node，最後再沿途刪除沒有 value 的 node，我的方法是使用 `std::stack` 來記錄。
+我認為比較需要注意的是 C++ 中 `std::bitset` 的使用，這個資料結構可以用來儲存二進位的數字，並且可以用 `<<` 和 `>>` 來做位移運算，也需要特別注意 `std::bitset` 的 `[0]` 指的是最右邊的 bit，而不是最左邊的 bit。
 
-接著在本地進行 `trie_test` 的單元測試 :
+### Task 1: Hyperloglog
 
-```bash
-cd build
-make trie_test trie_noncopy_test -j$(nproc)
+大致說明一下 Hyperloglog 的實作，這個資料結構主要是用來估計不重複的元素的數量，並且可以在 O(1) 的時間和固定的空間內完成。
 
-./test/trie_test
-./test/trie_noncopy_test
-```
+首先我們會將所有的元素 hash 成一個 64 bits 的整數，然後將這個整數分成兩個部分，前面的 `n_bits` 代表桶的 index (總共有 $2^{nbits}$ 個桶)，在這些數字之後，我們就要開始數 `leading zeros` 的數量直到遇到第一個 `1` 為止 (包含 `1`)，再把 `leading zeros` 取最大值之後放進桶裡面，最後再用這些桶來估計不重複的元素的數量。
 
-### Concurrent Key-Value Store
+這個 task 有四個 function 需要實作，分別是 `HyperLogLog(inital_bits)`, `PositionOfLeftmostOne()`, `AddElem(val)`, 和 `ComputeCardinality()`，並且有兩個寫好的 function，分別是 `ComputeBinary(hash_t hash)` 和 `CalculateHash(...)`，這兩個 function 分別是用來將 hash 值轉成二進位的數字和計算 hash 值的。
 
-- `GET` : 使用 `lock_guard` 來獲取 `root_lock_`，並依據是否有這個 key 來決定要回傳 `nullptr` 或是 `ValueGuard`。
-- `PUT` : 使用 `lock_guard` 來獲取全局的 `write_lock`，並獲取 `root_lock` 來讀取 root 和寫入。
-- `DELETE` : 與 `PUT` 類似，也是使用 `lock_guard` 來獲取全局的 `write_lock`，並獲取 `root_lock` 來讀取 root 和刪除。
+- `HyperLogLog(int initial_bits)` : 這個 constructor 會初始化桶的數量，並且將所有的桶的值設成 0，需要注意的是需要處理傳進來的 `n_bits` 有可能會是負數的情況
+- `PositionOfLeftmostOne()` : 這個 function 會計算二進位表示法中從 bucket_index 結束後的下一個 bit 開始到第一個 `1` 的位置，要特別注意的是 `1` 的位置也需要計算，並且如果 `n_bits` 為 0，也需要保留第一個 bit 當作 index
+- `AddElem(val)` : 這個 function 會將傳進來的 `val` 做 hash，然後將這個 hash 值轉成二進位的數字，接著計算桶的 index 和 `leading zeros` 的數量，最後取最大值放進桶裡面
+- `ComputeCardinality()` : 這個 function 會回傳計算後的 cardinality，依照公式來寫即可，最後記得用 `std::floor` 來取整數，並且要注意 `n_bits` 為 0 的情況
 
-接著在本地進行 `trie_store_test` 的單元測試 :
+### Task 2: Presto Hyperloglog
 
-```bash
-cd build
-make trie_store_test trie_store_noncopy_test -j$(nproc)
+這個 task 主要是要實作 Presto 的 Hyperloglog，是一種基於 Hyperloglog 的修改版。
 
-./test/trie_store_test
-./test/trie_store_noncopy_test
-```
+在這個修改版中，`leading zeros` 的儲存和計算方式都有所改變。
+儲存會分成兩個部分，分別是 4 bits 的 `dense_bucket_` 跟 3 bits 的 `overflow_bucket_`。
+計算方式是將 `leading zeros` 改成從最右邊開始取值到第一個 `1` 的位置 (不包含 `1`)，然後將這個值放進 `dense_bucket_` 裡面，如果這個值超過 4 bits，再把多餘的部分放到 `overflow_bucket_` 裡面。
 
-### Debugging
+這個 task 主要有三個 function 需要實作，分別是 `PrestoHyperLogLog(initial_bits)`、`AddElem(val)` 和 `ComputeCardinality()`，這三個 function 的邏輯和 Hyperloglog 的差不多，只是要注意 `dense_bucket_` 和 `overflow_bucket_` 的處理。
 
-可以直接在 debugger 中看出答案，如下 :
-
-1. 10
-2. 1
-3. 25
-
-### SQL String Functions
-
-在 `string_expression.h` 中依據 `expr_type` 來判斷要執行哪個 function，並使用 `std::transform` 來將字串轉換成大寫或小寫。
-
-在 `plan_func_call.cpp` 中依據 `func_name` 和參數數量來判斷要執行哪個 function。
-
-可以直接使用 shell 來測試，會顯示錯誤是正常的 :
-
-```bash
-cd build
-make -j`nproc` shell
-
-./bin/bustub-shell
-```
-
-```sql
-select upper('AbCd'), lower('AbCd');
-+-------------+-------------+
-| __unnamed#0 | __unnamed#1 |
-+-------------+-------------+
-| ABCD        | abcd        |
-+-------------+-------------+
-```
-
-同樣可以進行單元測試 :
-
-```bash
-make -j`nproc` sqllogictest
-
-./bin/bustub-sqllogictest ../test/sql/p0.01-lower-upper.slt --verbose
-./bin/bustub-sqllogictest ../test/sql/p0.02-function-error.slt --verbose
-./bin/bustub-sqllogictest ../test/sql/p0.03-string-scan.slt --verbose
-```
+- `PrestoHyperLogLog(int initial_bits)` : 與 task 1 類似，只是改成要初始化 `dense_bucket_`
+- `AddElem(val)` : 與 task 1 類似，只是要注意將 `leading zeros` 的計算方式改成從最右邊開始取值到第一個 `1` 的位置 (不包含 `1`)
+- `ComputeCardinality()` : 與 task 1 類似，只是將 `overflow_bucket_` 左移 4 bits 再相加
 
 ## Submit
 
-如果要註冊 GradeScope，可以參考 [這個網站](https://blog.csdn.net/qq_40878302/article/details/136005292)
+如果要註冊 GradeScope，可以參考 [這個網站](https://blog.csdn.net/qq_40878302/article/details/136005292) 跟 [官網](https://15445.courses.cs.cmu.edu/fall2024/faq.html)。
 
 1. 首先修改 `CMakeLists.txt`，將 `P0_FILES` 設定為以下 (需要重新執行 `cmake` 指令來更新 makefile):
 
-```CMake title="CMakeLists.txt"
+```CMake title="CMakeLists.txt" showLineNumbers {6}
 set(P0_FILES
-        "src/include/primer/trie_answer.h"
-        "src/include/primer/trie_store.h"
-        "src/include/primer/trie.h"
-        "src/primer/trie_store.cpp"
-        "src/primer/trie.cpp"
-        "src/planner/plan_func_call.cpp"
-        "src/include/execution/expressions/string_expression.h"
+        "src/include/primer/hyperloglog.h"
+        "src/include/primer/hyperloglog_presto.h"
+        "src/primer/hyperloglog.cpp"
+        "src/primer/hyperloglog_presto.cpp"
         "GRADESCOPE.md"
 )
 ```

@@ -11,9 +11,7 @@ keywords: [CMU15-445/645, Modern SQL, CMU15-445/645 筆記]
 
 ## SQL History
 
-1971 年，IBM 發明了第一個查詢語言叫做 SEQUEL (Structured English Query Language)，
-接著又在 1983 年推出了採用了其語法的 DB2，SEQUEL 也隨之改名為 SQL (Structured Query Language)，
-並加入了 ANSI (1986) 和 ISO (1987) 的標準。
+1971 年，IBM 發明了第一個查詢語言叫做 SEQUEL (Structured English Query Language)，接著又在 1983 年推出了採用了其語法的 DB2，SEQUEL 也隨之改名為 SQL (Structured Query Language)，並加入了 ANSI (1986) 和 ISO (1987) 的標準。
 
 - SQL:1999 Regular expressions, Triggers
 - SQL:2003 XML, Windows, Sequences
@@ -29,10 +27,12 @@ keywords: [CMU15-445/645, Modern SQL, CMU15-445/645 筆記]
 SQL 語法可以被分為三類 :
 
 - DML (Data Manipulation Language) : 查詢、插入、更新、刪除資料
-- DDL (Data Definition Language) : 定義 table、view、index 等等
+- DDL (Data Definition Language) : 定義 table, view, index 等等
 - DCL (Data Control Language) : 定義權限 (資安相關)
 
-接下來會介紹常用語法，使用的資料表如下 :
+## SQL Syntax
+
+接下來會介紹 SQL 的常用語法，使用的資料表如下 :
 
 ![sample table](/img/cmu15-445/c02/image.png)
 
@@ -77,12 +77,12 @@ INSERT INTO enrolled (sid, cid, grade) VALUES
 
 ### Joins
 
-可以用於連接兩張 table，並且可以依據不同的條件來連接。
+可以用於連接兩張 table，並且可以依據不同的條件來連接，主要有以下幾種 join 方法 :
 
-- Inner Join
-- Left Join
-- Right Join
-- Cross Join
+- Inner Join : 預設的 join，會取出兩張 table 中符合條件的資料列
+- Left Join : 會取出左邊 table 中的所有資料列，並且將右邊 table 中符合條件的資料列連接上去
+- Right Join : 會取出右邊 table 中的所有資料列，並且將左邊 table 中符合條件的資料列連接上去
+- Cross Join : 會取出兩張 table 中的所有資料列的笛卡兒積
 
 ```SQL
 SELECT *
@@ -157,8 +157,7 @@ HAVING AVG(s.gpa) > 3.8;
 
 ![string operations](/img/cmu15-445/c02/image-1.png)
 
-也可以在 `LIKE` 中使用 `%` 或 `_` 來進行字串比較，
-`%` 代表任意長度的字串 (包括空字串)，`_` 代表任意單一字元。
+也可以在 `LIKE` 中使用 `%` 或 `_` 來進行字串比較，`%` 代表任意長度的字串 (包括空字串)，`_` 代表任意單一字元。
 
 ```SQL
 SELECT *
@@ -211,7 +210,7 @@ SELECT CAST('2023-08-01' AS DATE) - CAST('2023-01-02' AS DATE) AS diff;
 
 ### Output Redirection
 
-可以將查詢結果儲存到另一張已經存在且有相同欄位結構的 table 中，
+可以將查詢結果儲存到另一張已經存在且有相同欄位結構的 table 中。
 
 ```SQL
 -- MySQL
@@ -235,9 +234,7 @@ INSERT INTO CourseIds (cid)
 
 ### Output Control
 
-可以使用 `ORDER BY` 子句來排序查詢結果，
-語法為 `ORDER BY <column*> [ASC|DESC]`，
-預設為 ASC，可以依據多個欄位進行排序。
+可以使用 `ORDER BY` 子句來排序查詢結果，語法為 `ORDER BY <column*> [ASC|DESC]`，預設為 ASC，可以依據多個欄位進行排序。
 
 ```SQL
 SELECT sid, grade FROM enrolled
@@ -249,8 +246,7 @@ WHERE cid = '15-721'
 ORDER BY grade DESC, sid ASC;
 ```
 
-也可以使用 `LIMIT` 子句來限制查詢結果的數量，
-語法為 `LIMIT <number> [OFFSET <number>]`，
+也可以使用 `LIMIT` 子句來限制查詢結果的數量，語法為 `LIMIT <number> [OFFSET <number>]`，
 
 ```SQL
 SELECT * FROM student
@@ -329,8 +325,7 @@ WHERE sid IN (
 );
 ```
 
-除此之外也可以使用 `LATERAL` 子句來進行查詢，
-`LATERAL` 子句可以將一個查詢的結果作為另一個查詢的輸入。
+除此之外也可以使用 `LATERAL` 子句來進行查詢，`LATERAL` 子句可以將一個查詢的結果作為另一個查詢的輸入。
 
 ```SQL
 SELECT *
@@ -359,8 +354,7 @@ LATERAL (
 
 ### Common Table Expressions
 
-ctes 可以幫助我們將複雜的查詢分解成更小的部分，
-並且重複使用。
+ctes 可以幫助我們將複雜的查詢分解成更小的部分並且重複使用。
 
 ```SQL
 WITH cteName AS (
@@ -378,7 +372,3 @@ SELECT name
 FROM student, cteSource
 WHERE student.sid = cteSource.maxId;
 ```
-
-## References
-
-- [Join 方法](https://akebee.com/sql-join/)

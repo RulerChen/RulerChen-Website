@@ -40,3 +40,5 @@ System Design : 1500-2000
 Online Course : 2000-2500
 
 - CMU 15-445/645 : 2000
+
+雜談 : 10000
