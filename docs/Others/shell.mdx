@@ -135,6 +135,27 @@ fzf --preview 'cat {}'
 fzf --preview 'batcat --style=numbers --color=always {}'
 ```
 
+12. 如果想在 VSCode 中使用 zsh 和 fzf，可以在 VSCode 的設定中加入以下的設定
+
+```json title="settings.json"
+{
+  "terminal.integrated.defaultProfile.linux": "zsh"
+}
+```
+
+接著去搜尋 `keybindings.json`，然後加入以下的設定，這樣就可以使用 `Ctrl + R` 來搜尋歷史紀錄了
+
+```json title="keybindings.json"
+{
+  {
+    "key": "ctrl+r",
+    "command": "workbench.action.terminal.sendSequence",
+    "args": { "text": "\u0012" },
+    "when": "terminalFocus"
+  }
+}
+```
+
 ## MacOS ZSH Installation
 
 接著是在 MacOS 上安裝同樣的套件
@@ -321,7 +342,7 @@ sed 's/old/new/g' file.txt # 把檔案中的 old 替換成 new
 ### Shell Script
 
 ```bash
-#!/bin/bash 
+#!/bin/bash
 # 宣告這是一個 bash 腳本
 
 # 變數宣告
