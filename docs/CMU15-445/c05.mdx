@@ -21,7 +21,7 @@ keywords: [CMU15-445/645, Storage Models & Compression, CMU15-445/645 筆記]
 
 ## Storage Models
 
-relational model 並沒有強調同一個 tuple 的所有屬性都要被儲存在同一個 page 中，在不同的應用場景下，我們可以有不一樣的做法。
+relational model 並沒有強調同一個 tuple 的所有屬性都要被儲存在同一個 page 中，在不同的應用場景下可以有不一樣的做法。
 
 常見的儲存模型有以下幾種 :
 
@@ -112,9 +112,9 @@ PAX 是一種混合式的儲存模型，目標是將 column store 的優點 (處
 
 ![Naive Compression](/img/cmu15-445/c05/image-9.png)
 
-一個有名的壓縮例子是 MySQL 的 InnoDB，InnoDB 會將 page 壓縮成 1、2、4、8 KB (其中之一) 再傳送到 buffer pool 中，如果我們需要寫入資料，InnoDB 會將資料寫入到 mod log 中而不需要解壓縮，但如果我們需要讀取資料，InnoDB 會將全部解壓。
+一個有名的壓縮例子是 MySQL 的 InnoDB，InnoDB 會將 page 壓縮或填充成 1、2、4、8 KB (其中之一) 再傳送到 buffer pool 中，如果我們需要寫入資料，InnoDB 會將資料寫入到 mod log 中而不需要直接修改壓縮檔。
 
-這個方法的缺點在於，如果我們需要修改，我們需要解壓縮資料，這限制了壓縮的範圍，使得我們必須要資料分成較小的 block 來進行壓縮。
+Naive Compression 的缺點在於，如果我們需要修改，我們就會需要解壓縮資料，這限制了壓縮的範圍，使得我們必須要資料分成較小的 block 來進行壓縮。
 另一個問題是壓縮不會考慮資料的結構，也不會知道 query plan 如何訪問資料，因此 DBMS 不會知道要怎麼延遲解壓縮。
 
 ### Columnar Compression (Column-level)

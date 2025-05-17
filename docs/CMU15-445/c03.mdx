@@ -1,6 +1,6 @@
 ---
-title: 'Database Storage'
-sidebar_position: '3'
+title: "Database Storage"
+sidebar_position: "3"
 description: CMU15-445/645 Database Storage
 keywords: [CMU15-445/645, Database Storage, CMU15-445/645 筆記]
 ---
@@ -9,19 +9,19 @@ keywords: [CMU15-445/645, Database Storage, CMU15-445/645 筆記]
   <title>CMU 15-445/645 Database Storage</title>
 </head>
 
-## Database Storage
+這節會專注在 disk-oriented 的 DBMS 上，即假設所有的資料都會被存在 non-volatile 的硬碟上。
 
-這堂課會專注在 disk-oriented 的 DBMS 上，即假設所有的資料都會被存在 non-volatile 的硬碟上。
+## Storage
 
 電腦的儲存結構是 hierarchical 的，越靠近上方的儲存設備離 CPU 越近，速度也越快，如下圖所示 :
 
 ![storage](/img/cmu15-445/c03/image.png)
 
-速度的比較如下 :
+速度的差異大致如下 :
 
 ![speed](/img/cmu15-445/c03/image-1.png)
 
-volatile 與 non-volatile 的區別如下 :
+通常來說，所謂的 volatile storage 指的就是 RAM (memory)，而 non-volatile storage 指的就是硬碟 (disk)，他們的差別大致如下 :
 
 - volatile :
   - 當電源關閉時，資料會遺失
@@ -32,17 +32,15 @@ volatile 與 non-volatile 的區別如下 :
   - 如果我們想要存取某個資料，我們需要將 page 讀進記憶體中，然後再透過 offset 來存取我們想要的資料
   - 通常擅於使用 sequential access 來存取資料
 
-除此之外，也有一種較為少見的持久性記憶體，像是 Intel 的 Optane，但不在本課程的討論範圍內。
+除此之外，也有一些較為少見的持久性記憶體，像是 Intel 的 Optane，但不在本課程的討論範圍內。
 
 ## Disk-Oriented DBMS Overview
 
 ![overview](/img/cmu15-445/c03/image-2.png)
 
-在資料庫中，所有的資料都會在硬碟上固定大小的 page 中，
-第一頁是目錄頁，可以告訴我們那些檔案被放在哪裡。
+在資料庫中，所有的資料都會在硬碟上固定大小的 page 中，第一頁是目錄頁，可以告訴我們那些檔案被放在哪裡。
 
-當 execution engine 需要存取某個資料時， buffer pool 會先從 disk 中讀取目錄，並且依據目錄中的資訊把 page 讀進記憶體中，
-最後再返還給 execution engine 這個 page 的 pointer。
+當 execution engine 需要存取某個資料時， buffer pool 會先從 disk 中讀取目錄，並且依據目錄中的資訊把 page 讀進記憶體中，最後再返還給 execution engine 這個 page 的 pointer。
 
 ## DBMS vs OS
 
@@ -50,7 +48,7 @@ DBMS 希望可以管理超過記憶體大小的資料，並且在讀取時不要
 
 從 high-level 的設計來看，DBMS 就像 virtual memory 一樣，有一個很大的 address space 和作業系統從硬碟引入 page 的地方。
 
-作業系統提供了 `mmap` 這個函式，可以讓我們把硬碟中的資料映射到記憶體中，但是基於正確性以及性能的考慮，我們幾乎不會在 DBMS 中使用 `mmap`，特別是需要寫入時 (read-only 可以考慮使用)，主要會包括以下幾個問題 :
+作業系統提供了 `mmap` 這個函式，可以讓我們把硬碟中的資料映射到記憶體中，但是基於正確性以及性能的考慮，我們幾乎不會在 DBMS 中使用 `mmap`，特別是需要寫入時，主要會包括以下幾個問題 :
 
 - transaction 的安全性 : OS 會在任何時間點把 dirty page 寫回硬碟，影響 DBMS 的 ACID
 - IO 停頓 : DBMS 不知道哪些頁面在內存中，在 page fault 時，OS 會使線程停頓
@@ -63,7 +61,7 @@ DBMS 希望可以管理超過記憶體大小的資料，並且在讀取時不要
 - `mlock` : 告訴 OS 哪些頁面不能被寫入
 - `msync` : 通知 OS 將某些記憶體寫到硬碟上
 
-DBMS 幾乎不會使用 OS 自帶的硬碟管理機制，這是因為 DBMS 可以比 OS 知道更多的事情，因此可以更好的提升效率，包括 :
+DBMS 幾乎不會使用 OS 自帶的硬碟管理機制，這是因為 DBMS 可以比 OS 知道更多的資訊，因此可以更好的提升效率，包括 :
 
 - 將 dirty page 寫回硬碟的時機
 - prefetch
@@ -72,9 +70,9 @@ DBMS 幾乎不會使用 OS 自帶的硬碟管理機制，這是因為 DBMS 可�
 
 ## File Storage
 
-DBMS 會將所有資料儲存成一個或多個檔案，OS 並不會知道怎麼解讀這些檔案。
+對於大部分的 DBMS 來說，資料都是以檔案的形式儲存在硬碟上，大多數的 DBMS 都是將資料存在多個不同的檔案中，只有少數的 DBMS (如 SQLite) 會將所有的資料都存在一個檔案中。
 
-storage manager 會負責管理這些檔案，追蹤那些資料被寫到了哪個 page 上，以及那些 page 還有空間等等。
+DBMS 中的 storage manager 會負責管理這些檔案，追蹤那些資料被寫到了哪個 page 上，以及那些 page 還有空間等等。
 
 ### Database Page
 
@@ -88,22 +86,18 @@ DBMS 會將一個或多個檔案中固定大小的區域稱為 page，page 可�
 - OS page : 4kb
 - Database page : 1-16kb
 
-不同的 DBMS 有不同的 page size，
-像是 MySQL 使用 16kb，而 PostgreSQL 使用 8kb。
+不同的 DBMS 有不同的 page size，像是 MySQL 使用 16kb，而 PostgreSQL 使用 8kb。
 
 同時 DBMS 也有不同的儲存頁面的方式，常見的有 :
 
-- Heap File Organization
+- Heap File Organization : page 被無序的儲存，插入速度快，但需要維護額外的 directory 來記錄 page 的位置
 - Tree File Organization
 - Sequential / Sorted File Organization (ISAM)
 - Hashing File Organization
 
 ### Database Heap File
 
-heap file 是一個無序的集合，裡面的 tuple 都是隨機排序的，
-我們需要知道怎麼找到 DBMS 需要的 page 的位置。
-
-有兩種方式可以定位一個 page :
+heap file 是一個無序的集合，裡面的 tuple 都是隨機存儲的，我們有兩種方式可以定位一個 page :
 
 - Linked List
 - Page Directory
@@ -165,7 +159,7 @@ Tuple-oriented storage 是一種最常見的儲存方式，將每個 tuple 儲�
 
 在 header 中記錄 tuple 的數量，並持續往下寫入 tuple。
 
-這個方法有兩個明顯的缺點
+這個方法有兩個明顯的缺點 :
 
 - 當刪除 tuple 時，每次新增新的 tuple 就需要遍歷整個 page
 - 當欄位有可變長度的時會無法處理
@@ -182,7 +176,7 @@ Tuple-oriented storage 是一種最常見的儲存方式，將每個 tuple 儲�
 
 #### Log-structured Storage
 
-在 tuple-oriented storage 中，有一些問題無法被解決
+在 tuple-oriented storage 中，有一些問題無法被解決 :
 
 - fragmentation : 當 tuple 被刪除時，會造成空洞，或者是只有一個 tuple 的 page
 - useless disk IO : 當更新 tuple 時，會需要 load 一整個 page
@@ -194,8 +188,7 @@ log-structured storage 是一種解決這些問題的方式，它不會更新原
 
 ![log-structured](/img/cmu15-445/c03/image-9.png)
 
-這種方式的優點在於更新、刪除的速度都很快，但是如果遇到查詢的話，就需要從頭開始讀取 log，
-因此通常會搭配 index 來使用。
+這種方式的優點在於更新、刪除的速度都很快，但是如果遇到查詢的話，就需要從頭開始讀取 log，因此通常會搭配 index 來使用。
 
 ![log-structured-2](/img/cmu15-445/c03/image-10.png)
 
@@ -213,14 +206,13 @@ log-structured storage 是一種解決這些問題的方式，它不會更新原
 
 Log-structured storage 因為 RockDB 的出現而變得相當常見，但也有一些問題 :
 
-- Write Amplification
+- Write Amplification : 當我們寫入一個資料時，實際上會寫入多次，譬如說 SSTalbe 合併
 - Compaction Overhead
 
 #### Index-organized Storage
 
 不管是 tuple-oriented storage 還是 log-structured storage，都需要透過 index 來進行查詢。
-在 index-organized storage 中，我們會將 tuple 當成 index 中的值，
-並且使用類似 slot page 的方式來儲存，同時依據 key 來進行排序。
+在 index-organized storage 中，我們會將 tuple 當成 index 中的值，並且使用類似 slot page 的方式來儲存，同時依據 key 來進行排序。
 
 ![index-organized](/img/cmu15-445/c03/image-13.png)
 

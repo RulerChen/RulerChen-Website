@@ -39,12 +39,10 @@ latch 跟 lock 的差別如下 :
   - 保護資料庫不受其他 thread 的干擾
   - 無法 rollback
 
-在 DBMS 中，記憶體的分配會依據兩個原則 (Memory Allocation Policies) :
+在 DBMS 中，記憶體的分配會依據兩個原則 (Memory Allocation Policies) 來進行分配 :
 
 - Global Policies : 考慮所有查詢來分配記憶體
 - Local Policies : 只考慮單一查詢來分配記憶體
-
-大部分的 DBMS 會混合使用這兩種原則。
 
 ## Buffer Pool Optimization
 
@@ -81,7 +79,7 @@ scan sharing 主要是在有多個查詢同時進行 sequential scan 時，可�
 
 當 buffer pool 被填滿時，DBMS 需要決定要替換哪些 page，這個決定是根據替換策略 (Replacement Policy) 來決定的。
 
-這個替換策略的目標如下 :
+替換策略的目標如下 :
 
 - Correctness : 確保 page 在被替換前被寫回硬碟
 - Accuracy : 確保替換的 page 是最不可能再被使用的
@@ -107,7 +105,7 @@ scan sharing 主要是在有多個查詢同時進行 sequential scan 時，可�
 
 ### LRU-K
 
-不管是 LRU 還是 clock，都會遇到 sequential flooding 的問題，最新讀取的 page 反而是最不需要的 page，因此又產生了 LRU-K 來解決這個問題。
+不管是 LRU 還是 clock，都會遇到 sequential flooding 的問題，最新讀取的 page 反而是最不需要的 page，因此有了 LRU-K 來解決這個問題。
 
 LRU-K 會保存每個 page 最後 k 次被訪問的時間，然後根據這個時間來預估下次被訪問的時間，如果 k = 1 就是 LRU，通常會使用 k = 2。
 
