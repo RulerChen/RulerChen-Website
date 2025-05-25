@@ -1,6 +1,6 @@
 ---
-title: 'Hash Tables'
-sidebar_position: '7'
+title: "Hash Tables"
+sidebar_position: "7"
 description: CMU15-445/645 Hash Tables
 keywords: [CMU15-445/645, Hash Tables, CMU15-445/645 筆記]
 ---
@@ -9,7 +9,7 @@ keywords: [CMU15-445/645, Hash Tables, CMU15-445/645 筆記]
   <title>CMU 15-445/645 Hash Tables</title>
 </head>
 
-為了能讓 DBMS 快速查找資料，我們需要應用一些資料結構來幫助我們，其中最常見的是 Hash Table 跟 Tree。
+為了能讓 DBMS 快速查找資料，我們需要使用一些資料結構，其中最常見的是 Hash Table 跟 Tree。
 
 這些資料結構會被用在不同的地方，例如 :
 
@@ -29,7 +29,7 @@ keywords: [CMU15-445/645, Hash Tables, CMU15-445/645 筆記]
 
 hash table 是一個無序的資料結構，可以用來儲存 key-value pair，並且可以快速查找資料。
 
-主要可以分為兩個部分 :
+在實作細節上，主要可以分為兩個部分來討論 :
 
 - Hash Function
   - 如何將有較多可能性的 key 映射到較少可能性的 index
@@ -56,7 +56,7 @@ hash table 是一個無序的資料結構，可以用來儲存 key-value pair，
 - Hopscotch Hashing
 - Swiss Tables
 
-這裡我們只會介紹前兩個 static hashing schemes。
+這裡我們只會介紹前兩個 Linear Probe Hashing 跟 Cuckoo Hashing。
 
 ### Linear Probe Hashing
 

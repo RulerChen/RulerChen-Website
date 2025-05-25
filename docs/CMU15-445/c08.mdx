@@ -1,17 +1,18 @@
 ---
-title: 'Trees Indexes'
-sidebar_position: '8'
-description: CMU15-445/645 Trees Indexes
-keywords: [CMU15-445/645, Trees Indexes, CMU15-445/645 筆記]
+title: "Indexes & Filters"
+sidebar_position: "8"
+description: CMU15-445/645 Indexes & Filters
+keywords: [CMU15-445/645, Indexes & Filters, CMU15-445/645 筆記]
 ---
 
 <head>
-  <title>CMU 15-445/645 Trees Indexes</title>
+  <title>CMU 15-445/645 Indexes & Filters</title>
 </head>
 
-上一節我們介紹了 Hash Tables，由於這種資料結構是無序的，且無法支持範圍查詢，因此我們需要一種有序的資料結構來支持範圍查詢。
+Index 跟 Filter 是 DBMS 中非常重要的概念，能夠幫助我們更快地查找資料。
 
-2020 以前的課似乎會介紹更多的資料結構 (skip list、radix tree ...)，但 2020 以後的課程就只有介紹 B+ Tree。
+Index 用於快速查詢資料在表中的實際位置，像是 B+Tree Index、Hash Index。
+Filter 則是用於快速判斷某個資料是否可能存在集合中，像是 Bloom Filter。
 
 ## B-Tree
 
@@ -28,7 +29,7 @@ B-Tree 中的 B 通常代表 Balanced，而 B-Tree 的變種有很多，例如 :
 
 ### B+Tree
 
-B+Tree 是一種 self-balancing tree，並且在 search、insert、delete 跟 sequential access 時的時間複雜度都是 $O(\log n)$，是一種 BST 的變種。
+B+Tree 是一種 self-balancing tree，在 search、insert、delete 跟 sequential access 時的時間複雜度都是 $O(\log n)$，是一種 BST 的變種。
 
 ![B+ Tree](/img/cmu15-445/c08/image.png)
 
@@ -41,11 +42,9 @@ M-way B+Tree 的特點有 :
 
 ![B+ Tree](/img/cmu15-445/c08/image-1.png)
 
-在每個 node 中都包含了一個經過排序的 key / value pair 陣列，
-其中 key 就是 index 的值，而 value 則會根據是 inner node 或 leaf node 而有所不同。
+在每個 node 中都包含了一個經過排序的 key / value 陣列，其中 key 就是 index 的值，而 value 則會根據是 inner node 或 leaf node 而有所不同。
 
-其中 inner node 的 value 就是指向下一個節點的 pointer，
-而 leaf node 的 value 則有兩種不同的實作方式
+其中 inner node 的 value 就是指向下一個節點的 pointer，而 leaf node 的 value 則有兩種不同的實作方式
 
 - Record IDs : 直接儲存指向 tuple 的指標
 - Tuple Data : 直接儲存 tuple 的資料，但對於 secondary index 來說，這樣會造成重複儲存，因此要在 leaf node 儲存 Record IDs
@@ -56,28 +55,56 @@ M-way B+Tree 的特點有 :
 
 ### B+Tree vs B-Tree
 
-B-Tree 不會只把資料儲存在 leaf node 中，而是會把資料儲存在每個節點中，導致每個 node 能存放的資料量較少，因此 B-Tree 的高度會比 B+Tree 高，
-導致 B-Tree 的查詢效率較低，並且 B-Tree 因為不會在 left node 中有 doubly linked list，因此 sequential access 的效率也較低。
+B-Tree 不會只把資料儲存在 leaf node 中，而是會把資料儲存在每個節點中，導致每個 node 能存放的資料量較少，也因此 B-Tree 的高度會比 B+Tree 高，導致 B-Tree 的查詢效率較低，並且 B-Tree 因為不會在 left node 中有 doubly linked list，因此 sequential access 的效率也較低。
 
-### Selection Conditions
+### Composite Indexes
 
-B+tree 只需要 query 有任意一個 key 就可以使用 index，不需要像 hash index 需要全部的 key 才能使用。
+B+Tree 可以支援 composite indexes，也就是可以在一個 index 中儲存多個 key。
 
-舉例來說，如果我們有 a、b、c 三個 index，我們在搜尋 `a = 1 AND b = 2` 時，就可以使用到 a 和 b 的 index。
+```sql
+CREATE INDEX idx ON table_name (key1, key2, key3);
+```
+
+這樣的 index 可以用來加速查詢，並且可以支援多個 key 的查詢，但必須遵守最左匹配規則 (leftmost indexing rule)，也就是說，查詢時必須從左到右使用 index 中的 key。
+
+```sql
+-- ok
+SELECT * FROM table_name WHERE key1 = 1 AND key2 = 2 AND key3 = 3;
+
+-- ok
+SELECT * FROM table_name WHERE key1 = 1 AND key2 = 2;
+
+-- ok
+SELECT * FROM table_name WHERE key1 = 1;
+
+-- only key1 index is used
+SELECT * FROM table_name WHERE key1 = 1 AND key3 = 3;
+
+-- not ok
+SELECT * FROM table_name WHERE key2 = 2 AND key3 = 3;
+```
 
 ### Duplicate Keys
 
 有兩種常見的方式來處理 duplicate keys :
 
-- Append Record ID : 把唯一的 Record ID 附加在 key 後面
-- Overflow Leaf Nodes : 允許節點溢出
+- Append Record ID : 把唯一的 Record ID 附加在 key 後面，這樣可以保證每個 key 都是唯一的，但會增加 index 的大小。
+- Overflow Leaf Nodes : 允許節點溢出來儲存 duplicate keys。
 
 ![B+ Tree](/img/cmu15-445/c08/image-2.png)
 ![B+ Tree](/img/cmu15-445/c08/image-3.png)
 
 ### Clustered Indexes
 
-有些 DBMS 會規定 table 的儲存方式，通常會按照 primary key 來排序，如果沒有就會自動生成一個來排序。
+Clustered Index 是一種資料實體的排序方式，會讓 資料表的資料 (tuple) 實體上依照某個欄位排序儲存，而不是隨機或插入順序，這對於範圍查詢非常有用，因為可以直接從硬碟上讀取連續的資料頁面，且只會讀取一個 page 一次。
+
+![B+ Tree](/img/cmu15-445/c08/image-8.png)
+
+在 PostgreSQL 中，我們可以使用以下的 SQL 指令來做一次 one-time 的 clustering :
+
+```sql
+CLUSTER table_name USING index_name;
+```
 
 ### Index Scan Page Sorting
 
@@ -97,7 +124,7 @@ B+tree 只需要 query 有任意一個 key 就可以使用 index，不需要像 
 
 ### Merge Threshold
 
-由於 B+Tree 的 merge 開銷很大，所以有些 DBMS 並不會在每次插入時都 merge，而是會由其他的 process 來定期處理 merge。也因此 postgres 會叫 B+Tree 為 nbtree (non-balanced tree)。
+由於 B+Tree 的 merge 開銷很大，所以有些 DBMS 並不會在每次插入時都 merge，而是會由其他的 process 來定期處理 merge，也因此 postgres 會叫 B+Tree 為 nbtree (non-balanced tree)。
 
 ### Variable Length Keys
 
@@ -116,7 +143,7 @@ B+tree 只需要 query 有任意一個 key 就可以使用 index，不需要像 
 - Binary : 二分搜索
 - Interpolation : 用 key 的分布來估計位置
 
-## Optimizations
+## B+ Tree Optimizations
 
 ### Prefix
 
@@ -133,8 +160,7 @@ B+tree 只需要 query 有任意一個 key 就可以使用 index，不需要像 
 ### Suffix
 
 在 inner node 中， key 只是用來決定要往左還是往右走，因此只需要儲存可供辨識的部分。
-
-如 key 是 abcdefgh，我們可以只儲存 abc。
+例如 key 是 abcdefgh，我們可以只儲存 abc。
 
 ### Pointer Swizzing
 
@@ -142,13 +168,144 @@ B+tree 只需要 query 有任意一個 key 就可以使用 index，不需要像 
 
 ### Bulk Insert
 
-最快建立 B+Tree 的方法是將 key 先排好序，再從下往上建立 B+Tree，如果有大量的插入操作時可以這麼做。
+最快建立 B+Tree 的方法是將 key 先排好序，再從下往上建立 B+Tree，在有大量的插入操作時可以這麼做。
 
 ### Write-Optimized B+ Tree
 
 因為分裂和合併節點在 B+Tree 中非常耗時，因此有些 B-Tree 的變體會延遲這些行為，如 $B\epsilon$-Tree，這種樹會將變動儲存在 log 檔並慢慢往下傳遞。
 
 ![B-epsilon tree](/img/cmu15-445/c08/image-7.png)
+
+## Bloom Filter
+
+Bloom Filter 是一種機率型的資料結構，提供了 insert 跟 lookup 的功能 (沒有 delete)，可以幫助我們快速的判斷某個資料是否存在於集合中。
+有可能會產生 false positive (沒有這個資料，但回傳有)，但不會產生 false negative (有這個資料，但回傳沒有)。
+
+操作方法如下：
+
+1. 初始化一個位元陣列 (bitmap)，大小為 m 位元。
+2. 選擇 k 個 hash function，這些 hash function 可以將資料映射到 0 到 m-1 的範圍內。
+3. 當插入一個資料時，使用 k 個 hash function 計算出 k 個位置，將這些位置的位元設為 1。
+4. 當查找一個資料時，使用 k 個 hash function，檢查 k 個位置是否都是 1，如果是，則可能存在；如果有任何一個位置是 0，則一定不存在。
+
+除了比較正統的 Bloom Filter 之外，還有一些變體：
+
+- Counting Bloom Filter：使用計數器來代替位元陣列，這樣可以支援刪除操作。
+- Cuckoo Filter：使用 cuckoo hashing 跟 fringerprint 技術來減少 false positive 的機率，並且支援刪除操作。
+- Succinct Range Filter : 一種不可修改的 Bloom Filter，使用位元陣列來表示一個範圍內的值是否存在。
+
+## Skip List
+
+Skip list 是一種基於 linked list 的資料結構，提供了類似於平衡樹的查找效率 (logN)，但實現起來更簡單。它使用多層 linked list 來跳過一些節點，從而加快查找速度。
+
+與 B+Tree 一樣，Skip list 以有序的方式儲存資料，不同的是在插入跟刪除的時候，Skip list 不需要進行分裂或合併節點，而是透過隨機選擇 (丟硬幣) 的方式來維持平衡。
+
+![Skip List](/img/cmu15-445/c08/image-9.png)
+
+Skip list 提供了三種操作，分別是插入、刪除和查找。
+
+- 查找：從最高層開始，找到大於等於目標節點的第一個節點，然後向下移動到下一層，直到找到目標節點或到達最低層。
+- 插入：
+  - 首先需要隨機選擇一個層級，從最低即開始丟硬幣決定是否要在這一層插入，如果不是的話就向上移動一層直到最高層為止，確保每層的分布是對數級別的。
+  - 然後跟查找一樣，從最高層開始，找到每一層中正確的插入位置。
+  - 最後從最底層開始插入節點，直到目標層級。從下到上插入的原因是為了併發性，且如果是單向鏈結的話，可以透過 swapping pointers 來實現，避免使用 latch。
+- 刪除：
+  - 先找出所有要刪除的節點，接著做軟刪除，最後 GC 會定期清理這些軟刪除的節點。
+
+Skip list 的主要優點在於不需要做 rebalancing，這也就代表了鎖的開銷會相對較低，且如果不使用 reverse pointer 的話記憶體的用量也會相對較少。
+缺點在於不利於硬碟快取，因為有不同層級的節點會分布在不同的記憶體位置，這樣會導致 cache miss 的機率增加，且如果沒有 reverse pointer 的話反向搜索會相對困難。
+
+## Trie
+
+因為 B+Tree 不提供關於內部節點下方是否存在節點的資訊，所以要判斷一個鍵是否存在就必須遍歷到葉節點，這可能導致多次昂貴的磁碟 I/O (cache miss)。
+
+字典樹是一種樹形的資料結構，它將鍵儲存為數字 (或字元)，並且每個節點代表一個數字的前綴。
+這些數字可以是 ASCII 字元、Unicode 字元或其他類型的數字。
+字典樹的每個節點都包含一個指向下一層節點的指針，這些指針可以用來快速地查找鍵是否存在，且複雜度與鍵的長度成正比。
+
+跨度 (span) 是指一個數字所佔用的位元數。如果這個數字及其前綴存在於資料集合中，那麼在該數字處會儲存一個指向下一層節點的指針，否則就儲存 null。
+
+![Trie](/img/cmu15-445/c08/image-10.png)
+
+在實際應用中，Trie 的節點可能會非常稀疏，或是單一的分支過於冗長，因此我們可以採用壓縮的方式來儲存 :
+
+- 水平壓縮 (Horizontal Compression) : 如果同一層級的 span 很大且很空，可以考慮改成使用 array 來儲存
+- 垂直壓縮 (Vertical Compression) / 基數樹 (Radix Tree) : 如果只有一個單一的分支，可以考慮將這個分支直接合併到父節點中，這樣可以減少節點的數量，但這樣有可能造成錯誤，因此最後還是需要跟原本的 tuple 做比對。
+
+![Radix Tree](/img/cmu15-445/c08/image-16.png)
+
+從左到右是正常的 Trie，水平壓縮後的 Trie，垂直壓縮後的 Radix Tree。
+
+## Inverted Index
+
+前面討論的資料結構主要適用於查找一個確切的值，它們不支援關鍵字搜尋。
+舉例來說，如果我們想查詢所有包含 Taiwan 這個詞的維基百科文章，傳統索引就無法直接做到，這就是為什麼需要 Inverted Index 的原因。
+
+倒排索引儲存的是詞 (terms) 到包含這些詞項的記錄 (records) 之間的映射。
+這些包含詞的記錄列表被稱為 posting list，簡單來說，它就像一本書的索引，但不是按照頁碼順序排列詞語，而是按照關鍵字來查找包含該詞語的所有文檔或記錄。
+
+![Inverted Index](/img/cmu15-445/c08/image-11.png)
+
+### Lucene
+
+Lucene 是一個專門的倒排索引引擎，它儲存倒排索引的方式是使用一種類似於字典樹的資料結構，稱為有限狀態轉換器 (finite state transducer, FST)。
+與字典樹直接儲存指向元組的指針不同，有限狀態轉換器在每條邊上儲存權重，當你沿著路徑遍歷到你正在尋找的鍵時，這些權重的滾動加總最終會給你這個詞項在映射中儲存的確切位置。
+這使得 Lucene 能夠高效地從詞項映射到其 posting list。
+
+在 Lucene 的詞項字典中 (這是儲存所有唯一詞項的部分)，由於它是不可變的且預先構建的，因此可以應用多種壓縮技術，例如 :
+
+- 差分壓縮 (delta compression): 儲存相鄰值之間的差異，而不是每個值的完整形式，從而減少儲存空間。
+- 位元打包 (bit-packing): 根據實際數據的位元需求來儲存數據，而不是使用固定的字節數，這在數值範圍不大時能顯著節省空間。
+
+此外，Lucene 還支援預聚合 (pre-aggregation)，這可以加速基於詞項分組的聚合查詢。
+
+![Lucene Inverted Index](/img/cmu15-445/c08/image-12.png)
+
+### PostgreSQL
+
+PostgreSQL 的通用倒排索引 (Generalized Inverted Index, GIN) 使用 B+Tree 來構建字典。這個 B+Tree 葉節點的值 (即發布列表的儲存方式) 取決於發布列表的大小 :
+
+- 對於較小的 posting list，葉節點中直接儲存的是一個排序過的記錄 ID 列表。
+- 對於較大的 posting list，PostgreSQL 會為這些發布列表額外構建獨立的 B+Tree 來儲存記錄 ID，以提高訪問效率。
+
+PostgreSQL 還使用一個單獨的 pending list 來避免頻繁的小規模增量更新。
+當有新的更新時，它們會先被記錄在這個待處理列表中，然後累積起來，最終以批次插入的方式一次性應用到主字典中。
+
+![PostgreSQL GIN Inverted Index](/img/cmu15-445/c08/image-13.png)
+
+## Vector Index
+
+倒排索引雖然支援關鍵字搜尋，但它無法理解內容的語義意義，這代表要找到的關鍵字必須完整地包含在內容中。
+舉例來說，如果一個應用程式想要搜尋與特定主題相關的記錄，比如 "關於俚語的嘻哈團體歌曲"，在這種情況下，我們就需要一種除了倒排索引之外的其他方法。
+倒排索引只能找到包含 "俚語"、"嘻哈"、"團體"、"歌曲" 等詞的文檔，但它無法理解這些詞組合起來的整體概念或語義上的相關性。
+
+LLM 以其能夠為文本生成 embedding 而聞名，這些嵌入本質上是浮點數的陣列。
+如果兩個文本在語義上相似，它們的嵌入在幾何空間中也會彼此接近。
+因此，專門用於最近鄰搜尋 (nearest-neighbor search, NN) 的向量索引就能夠幫助我們解決上述類型的查詢。
+
+然而，與我們之前看到的傳統查詢不同，這種基於語義相似性的查詢沒有一個絕對正確的答案，結果往往是相關度最高的幾個選項。
+此外，在找到最近鄰居之前或之後，通常還需要對數據進行額外的過濾 (例如分類等等)，以滿足更精確的業務需求。
+
+### Inverted File
+
+倒排檔案方法透過聚類演算法 (clustering algorithm) 將高維向量劃分成較小的群組。
+當進行最近鄰搜尋時，會使用相同的聚類演算法將查詢向量定位到一個或幾個相關的群組中。
+然後，只在這些被定位到的群組內部查找所有向量，以找到最近的鄰居 (有時也需要檢查附近的群組，以防最佳鄰居位於群組邊界)。
+一個典型的例子是 IVFFlat 演算法。
+
+為了進一步提升查找速度，可以對索引執行預處理 (preprocessing) 和量化 (quantization)。這些技術可以降維或降低其精度，從而加快查找時間。
+
+![Inverted File](/img/cmu15-445/c08/image-14.png)
+
+### Navigable Small Worlds
+
+Navigable Small Worlds 是一種基於圖的近似最近鄰搜尋方法。
+它構建一個表示向量之間鄰居關係的圖，圖中的每個節點 (node) 代表一個向量，而它的邊 (edges) 則連結到其 n 個最近的鄰居。
+
+當進行最近鄰搜尋時，Navigable Small Worlds 利用這個圖，從一個定義好的入口點開始，透過 greedy algorithm 選擇那些能讓它更接近查詢向量的邊，來逐步導航。
+兩個知名的實現例子是 FAISS 和 HNSWlib (Hierarchical Navigable Small Worlds)。
+
+![NSW](/img/cmu15-445/c08/image-15.png)
 
 ## References
 
