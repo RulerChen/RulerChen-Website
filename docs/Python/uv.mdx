@@ -1,0 +1,274 @@
+---
+title: "[Python] Everything in Rust (uv + Ruff)"
+sidebar_position: "2"
+description: Python Project Setup
+keywords: [Python, uv, Ruff, Setup]
+---
+
+本篇文章會示範如何在 WSL (Ubuntu 24.04) 上使用 uv + Ruff 來建立一個使用 fastapi 的簡單 Python 專案，從而加速 Python 開發流程。
+
+## Introduction
+
+uv 是一款由 Astral 團隊開發的高效 Python 開發工具，主要可以做到以下幾點 :
+
+- 取代 `pip` 來安裝各種 Python 套件
+- 取代 `pipx` 來安裝各種 Python CLI 工具
+- 取代 `poetry` 來管理 Python 專案的相依套件
+- 取代 `pyenv` 來管理 Python 版本
+
+總而言之，uv 的目標是成為 Python 開發的唯一工具，由於它的高效能 (Rust-based) 和簡潔的設計，可以大幅提升開發效率。
+
+## Installation & Setup
+
+在 WSL (Ubuntu 24.04) 上安裝 uv 非常簡單，只需要執行以下指令:
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+```bash
+source $HOME/.local/bin/env
+```
+
+```bash
+uv help
+```
+
+接著用 uv 來安裝 Python:
+
+```bash
+# 查看可安裝版本
+uv python list
+
+# 安裝 Python 3.13
+uv python install 3.13
+
+# 移除 Python 3.9
+uv python uninstall 3.9
+```
+
+## Create a New Project
+
+接下來會示範使用 uv 來建立一個新的 Python 專案，並且使用 fastapi 作為 Web 框架。
+
+首先，uv 通常會有兩個檔案，分別是 `pyproject.toml` 和 `uv.lock`。
+`pyproject.toml` 用來描述專案以及專案的相依套件，而 `uv.lock` 則是用來鎖定相依套件的版本 (不要手動更新)。
+
+```bash
+uv init fastapi-demo --python 3.13
+cd fastapi-demo
+```
+
+這個指令會產生一個新的專案目錄 `fastapi-demo`，並且在裡面建立基本架構。
+
+```
+.git
+.gitignore
+.python-version
+main.py
+pyproject.toml
+README.md
+```
+
+- `.python-version` 是用來指定使用的 Python 版本
+- `main.py` 是專案的入口點
+- `pyproject.toml` 是專案的配置檔案，定義於 PEP621
+
+進入專案之後，第一件事情是使用 `uv sync` 來同步專案的相依套件並創建虛擬環境 .venv，它會根據 `uv.lock` 中的設定來安裝相依套件。
+
+接著安裝套件，在 uv 中有兩種方式可以安裝，一種是 `uv add`，另一種是 `uv install`，前者會將套件加入到 `pyproject.toml` 和 `uv.lock` 中，而後者則只會安裝套件而不更新，因此一般推薦前者。
+
+```bash
+# 安裝套件
+uv add fastapi --extra standard
+
+# 安裝開發套件，可以使用 --group 來指定套件組別
+uv add ruff --group dev
+uv add ruff --group prod
+
+# 移除套件
+uv remove fastapi
+```
+
+接下來修改一下 `main.py`，加入一個簡單的 FastAPI 應用程式:
+
+```python title="main.py"
+from fastapi import FastAPI
+
+app = FastAPI()
+
+@app.get("/")
+async def read_root():
+    return {"message": "Hello, uv + FastAPI!"}
+```
+
+最後啟動 FastAPI 應用程式，並在瀏覽器開啟 `http://localhost:8000` 來查看結果。
+
+```bash
+uv run fastapi dev
+# OR
+uv run fastapi run --workers 4 main.py
+```
+
+## Other Useful Functions
+
+### Running Scripts
+
+uv 也可以用來內函依賴的腳本，例如 :
+
+```python title="example.py"
+# /// script
+# dependencies = ["requests"]
+# ///
+
+import requests
+print(requests.get("https://astral.sh").status_code)
+```
+
+就可以直接執行 `uv run example.py` 來執行這個腳本，uv 會自動安裝相依套件並執行。
+或者是在執行的時候改成 `uv run --with requests example.py` 這樣就不用在檔案最上方寫 dependencies。
+
+### Tools
+
+許多 Python 的套件都有提供 CLI 工具，uv 也可以直接使用這些工具，例如:
+
+```bash
+uvx ruff check .
+# 等價於
+uv tool run ruff check .
+```
+
+### Integration with GitHub Actions
+
+uv 也可以與 GitHub Actions 整合，提供 CI/CD 的功能，可以參考 [官方範例](https://docs.astral.sh/uv/guides/integration/github/)
+
+```yaml
+name: Example
+
+jobs:
+  uv-example:
+    name: python
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install the project
+        run: uv sync --locked --all-extras --dev
+
+      - name: Run tests
+        run: uv run pytest tests
+```
+
+- `--locked` 表示會比對 `uv.lock` 跟 `pyproject.toml` 的相依套件版本，如果有差異則會報錯
+- `--all-extras` 表示會安裝所有的額外套件，也就是 `[project.optional-dependencies]` 中定義的所有套件
+- `--dev` 表示會安裝開發套件
+
+### Integration with Docker
+
+uv 也提供了官方的 image，可以參考 [官方範例](https://docs.astral.sh/uv/guides/integration/docker/) 跟 [GitHub](https://github.com/astral-sh/uv-docker-example/tree/main) 來使用。
+
+這裡以官方提供的 Dockerfile 為例：
+
+```dockekfilefile title="Dockerfile" showLineNumbers
+# An example of using standalone Python builds with multistage images.
+
+# First, build the application in the `/app` directory
+FROM ghcr.io/astral-sh/uv:bookworm-slim AS builder
+ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
+
+# Configure the Python directory so it is consistent
+ENV UV_PYTHON_INSTALL_DIR=/python
+
+# Only use the managed Python version
+ENV UV_PYTHON_PREFERENCE=only-managed
+
+# Install Python before the project for caching
+RUN uv python install 3.12
+
+WORKDIR /app
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    uv sync --locked --no-install-project --no-dev
+COPY . /app
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked --no-dev
+
+# Then, use a final image without uv
+FROM debian:bookworm-slim
+
+# Copy the Python version
+COPY --from=builder --chown=python:python /python /python
+
+# Copy the application from the builder
+COPY --from=builder --chown=app:app /app /app
+
+# Place executables in the environment at the front of the path
+ENV PATH="/app/.venv/bin:$PATH"
+
+# Run the FastAPI application by default
+CMD ["fastapi", "dev", "--host", "0.0.0.0", "/app/src/uv_docker_example"]
+```
+
+這是一個採用了 multi-stage build 的 Dockerfile，首先在 `builder` 階段安裝 Python 和相依套件，然後在最終的 image 中只保留應用程式和 Python 執行環境。
+
+1. 首先使用 `ghcr.io/astral-sh/uv:bookworm-slim` 作為基礎映像，這是 uv 官方提供的基礎映像，包含了 uv 和 Python 的執行環境
+2. 設定 `UV_COMPILE_BYTECODE=1` 來讓 Python 在安裝時產生 `.pyc` 檔案，這樣可以加速 Python 的啟動速度
+3. 設定 `UV_LINK_MODE=copy` 將套件檔案用複製的方式連結到最終映像中，這樣可以避免在最終映像中出現 symlink 的問題
+4. 設定 `UV_PYTHON_INSTALL_DIR=/python` 來指定 Python 的安裝目錄
+5. 設定 `UV_PYTHON_PREFERENCE=only-managed` 表示只使用 uv 管理的 Python 版本
+6. 在 `builder` 階段安裝 Python 3.12
+7. 設定工作目錄為 `/app`，並設定好 uv cache 和把 `uv.lock` 和 `pyproject.toml` 掛載到容器中，最後再使用 `uv sync` 來同步相依套件
+8. 接著回到工作目錄 `/app`，將應用程式的檔案複製到容器中並把專案本身下載到容器中
+9. 最後在最終的映像中，將 Python 的執行環境和應用程式從 `builder` 階段複製過來，並設定好環境變數 `PATH`，最後設定預設的命令為啟動 FastAPI 應用程式
+
+## Ruff
+
+Astral 團隊也開發了另一個工具叫做 Ruff，它是一個高效能的 Python linter 和 formatter。
+它的設計目標是取代 `flake8`、`black`、`isort` 等等的各式工具，並整合了如 `pyupgrade` 之類的工具來統一 Python 的工具鏈。
+
+在前面的專案中，我們已經透過 `uv add ruff --group dev` 安裝了 Ruff，接下來我們可以使用 Ruff 來檢查程式碼的風格和錯誤。
+
+```bash
+# 檢查程式碼風格和錯誤
+uv run ruff check
+
+# 自動修正程式碼風格和錯誤
+uv run ruff check --fix
+
+# 查看要修復的程式碼風格和錯誤
+uv run ruff check --diff --fix
+
+# 也可以做 fomatting
+uv run ruff format
+```
+
+可以直接在 `pyproject.toml` 中設定 Ruff 的配置，例如：
+
+```toml title="pyproject.toml"
+[tool.ruff]
+line-length = 88
+exclude = ["build/", "dist/", ".venv/", ".git/", "__pycache__/"]
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "UP", # pyupgrade
+]
+ignore = [
+    "E402",
+]
+
+[tool.ruff.format]
+quote-style = "double"
+docstring-code-format = true
+```
+
+再搭配 VScode 的擴充套件，即可在編輯器中即時檢查程式碼風格和錯誤。
