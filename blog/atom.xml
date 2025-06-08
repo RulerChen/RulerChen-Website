@@ -2,53 +2,11 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://RulerChen.github.io/RulerChen-Website/blog/</id>
     <title>RulerChen Blog</title>
-    <updated>2025-06-13T00:00:00.000Z</updated>
+    <updated>2023-08-31T00:00:00.000Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://RulerChen.github.io/RulerChen-Website/blog/"/>
     <subtitle>RulerChen Blog</subtitle>
     <icon>https://RulerChen.github.io/RulerChen-Website/img/profile.png</icon>
-    <entry>
-        <title type="html"><![CDATA[Carousell 後端實習心得]]></title>
-        <id>https://RulerChen.github.io/RulerChen-Website/blog/CarousellBackendIntern/</id>
-        <link href="https://RulerChen.github.io/RulerChen-Website/blog/CarousellBackendIntern/"/>
-        <updated>2025-06-13T00:00:00.000Z</updated>
-        <summary type="html"><![CDATA[Carousell 後端實習 2025]]></summary>
-        <content type="html"><![CDATA[<p>這周應該就是我待在 Carousell 的最後一周了，說起來也在這個地方待了快六個月了吧，感覺也該久違的寫一下 blog 紀錄一下這段時間的實習生活。</p>
-<p>整體來說感覺這次的實習大部分的時間都在耍廢，沒有甚麼很充實的被事情塞滿的感覺，但可以經歷這麼酷的過程我相信我在未來幾年應該也很難做到吧哈哈 🤣</p>
-<!-- -->
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="前情提要">前情提要<a href="https://rulerchen.github.io/RulerChen-Website/blog/CarousellBackendIntern/#%E5%89%8D%E6%83%85%E6%8F%90%E8%A6%81" class="hash-link" aria-label="前情提要的直接連結" title="前情提要的直接連結">​</a></h2>
-<p>這次的實習是我第二份實習，由於之前暑假丟的實習履歷上有一點點問題 (我到底是怎麼把入學時間寫成 2023 的 ...? 🤔) 因此丟出去的履歷幾乎都是連回應都沒有，真的很感謝後來問我為甚麼大一就要來實習的那個不知道哪間公司的人資，謝謝你救了我 ...</p>
-<p>在投上一份實習的時候，我其實沒有甚麼特別的期待，就只是單純想要找一份實習來打發時間，當時的我還是個大二的蔡逼，對未來沒有想法，也不知道自己能幹麼，所以有公司讓我去我就也沒想太多就直接去了。
-但在這次投的時候我已經大四了，由於一些原因，我幾乎已經確定自己會畢業後先工作而不是繼續升學，因此感覺也是時候認真思考一下自己的職涯規劃。
-由於是資管系做不了太偏硬體的東西，也沒有太多經驗跟興趣，也很不喜歡 CSS 🙃，因此這次的目標就是 Backend 或是 General 一點的 SWE。</p>
-<p>在來這間公司之前，感覺這邊福利跟薪水也都蠻不錯，正職可以全遠端工作，再加上當時面試的時候我加入的應該是一個主要位在新加坡的團隊，感覺是一個很不錯的機會可以在大學畢業前拯救一下我的破爛英文，所以接到 offer 之後沒什麼猶豫就決定要來了。</p>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="面試過程">面試過程<a href="https://rulerchen.github.io/RulerChen-Website/blog/CarousellBackendIntern/#%E9%9D%A2%E8%A9%A6%E9%81%8E%E7%A8%8B" class="hash-link" aria-label="面試過程的直接連結" title="面試過程的直接連結">​</a></h2>
-<p>面試過程其實對技術的要求還好，主要就是要對自己的履歷有了解，然後因為公司有很多印度人，所以很可能會遇到印度考官，英文記得好好準備，印度的口音還是非常特別的 ...</p>
-<p>題外話，我感覺公司的情況應該連在臺灣開實習缺都不太可能了吧 🤣，大家都要被印度老哥們給取代了，所以就不寫這麼細了。</p>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="實習過程">實習過程<a href="https://rulerchen.github.io/RulerChen-Website/blog/CarousellBackendIntern/#%E5%AF%A6%E7%BF%92%E9%81%8E%E7%A8%8B" class="hash-link" aria-label="實習過程的直接連結" title="實習過程的直接連結">​</a></h2>
-<p>在進來之前，我只查了這家正職的待遇感覺還蠻不錯的，但是我沒有查到這家公司的經營狀況，進來之後才知道公司的營運情況並不是很好。
-在 2024 年底的時候公司又又又進行了一波裁員跟 reorg，導致我當初面試的組被合併，甚至當時面試我的 EM 也被裁員了。
-也因此我被丟到合併之後的 buyer &amp; seller team，帶我的 mentor 是在 buyer 這邊 (原本面試的組是 seller)。</p>
-<p>不知道是不是因為這個原因，導致我其實沒有被分配到太多的工作，整體上來說工作量真的非常少 (但我看另一組的 intern 感覺有蠻多事情能做，有時候挺羨慕的)，有很多的時間可以做自己的事情跟看自己的書，有時候讓我覺得有點空虛。</p>
-<p>但雖然沒有像我之前的實習一樣有專門的專案可以做，但我還是有接觸到一些新的技術跟架構。
-這邊的開發流程跟 infra 我個人覺得真的都算蠻完整的，product team 的人都能專注在自己的業務邏輯上面，也有像是 feature env 之類的東西可以讓我們在開發的時候不會影響到其他人，這點我覺得還蠻不錯的。</p>
-<p>不過即使有好的開發流程也同樣會有一些很深的技術債，像是我們號稱旋轉最強兵器的 fieldset 我就不知道到底是哪個天才想出這樣的設計的，這東西號稱非常 powerful，是一種 backend-driven 並且可以支援各個不同平台的各種頁面的 API format，
-但實際上真的超級不實用，後端無法直接知道前端的展示效果，而且常常一個 component 都有超過 20 種不同的 attribute，並且每一種變化都需要各種 hardcode，真的是很神奇的設計 ...。
-據說之前就曾經多次討論想要重構這個東西，但或許是因為真的埋的太深了，導致一直都沒有辦法重構成功。</p>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="實習心得">實習心得<a href="https://rulerchen.github.io/RulerChen-Website/blog/CarousellBackendIntern/#%E5%AF%A6%E7%BF%92%E5%BF%83%E5%BE%97" class="hash-link" aria-label="實習心得的直接連結" title="實習心得的直接連結">​</a></h2>
-<p>我記得差不多是到過完年吧，可能是因為不賺錢的原因，明顯感覺到公司開始在縮減各種福利跟提出一些不完整的需求，導致在 sync 的時候常常感覺到氣氛不太對，
-像是公司開始強力要求住在台北的話就要開始 RTO，我個人覺得這個政策真的很奇怪，感覺比較像是要把人逼走省一大禮包的錢，這也導致很多人也有點不滿，加上公司這幾年的不斷裁員，那時候應該就有很多人開始準備離職了。
-到三月的時候第一個同事就離職了 (也因此奇妙地造就了我下一份實習機會 XD，等實習完再寫一篇吧)，後來到四月的時候另外兩個同事也陸續提了離職，到現在最後一周要離開的時候當初後端的同事只剩下我一個，真的莫名的有種物是人非的感覺，不過也算是一次非常有趣的經驗吧，提醒我以後找正職的時候一定要慎選公司。</p>
-<p>還有一個很酷的地方是公司只要求 124 要 RTO，因此 35 通常都沒啥人，可以看到準備離職的同事都把這邊當圖書館來這邊面試或是準備面試，看來我們旋轉轉運站的目標就是幫其他公司輸送人才吧 🤣。</p>
-<p>整體來說，這次的實習也不算是全無收穫，至少幫助我在履歷上又加了一行 XD，感覺對以後找正職應該是蠻有幫助的吧?
-而且感覺這次之後至少有比較願意開口說兩句我的破爛英文，雖然還是很爛，但至少有進步一點點吧 (大概)。</p>
-<p>最後就希望我的同事們都能找到下一份更好的工作吧，感覺臺灣的 Engineer team 真的快被主動(或被動)的解散了，祝大家都能在這麼凍的環境裡面找到更好的出路，也感謝我們這組的同事們這半年來的照顧，沒想到是我堅持到了最後吧 😏</p>]]></content>
-        <author>
-            <name>RulerChen</name>
-            <email>a20196780@gmail.com</email>
-            <uri>https://github.com/RulerChen</uri>
-        </author>
-    </entry>
     <entry>
         <title type="html"><![CDATA[PChome 前端暑期實習]]></title>
         <id>https://RulerChen.github.io/RulerChen-Website/blog/PChomeSummerIntern/</id>
