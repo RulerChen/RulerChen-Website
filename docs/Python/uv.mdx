@@ -226,6 +226,43 @@ CMD ["fastapi", "dev", "--host", "0.0.0.0", "/app/src/uv_docker_example"]
 8. 接著回到工作目錄 `/app`，將應用程式的檔案複製到容器中並把專案本身下載到容器中
 9. 最後在最終的映像中，將 Python 的執行環境和應用程式從 `builder` 階段複製過來，並設定好環境變數 `PATH`，最後設定預設的命令為啟動 FastAPI 應用程式
 
+### Integration with PyTorch
+
+[官網](https://docs.astral.sh/uv/guides/integration/pytorch/)
+
+PyTorch 預設是使用 cpu 版本，如果要使用 gpu 版本的 PyTorch，可以在 `pyproject.toml` 中加入以下設定 :
+
+```toml title="pyproject.toml"
+[project]
+name = "project"
+version = "0.1.0"
+requires-python = ">=3.12.0"
+dependencies = [
+  "torch>=2.7.0",
+  "torchvision>=0.22.0",
+]
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cpu", marker = "sys_platform != 'linux'" },
+  { index = "pytorch-cu128", marker = "sys_platform == 'linux'" },
+]
+torchvision = [
+  { index = "pytorch-cpu", marker = "sys_platform != 'linux'" },
+  { index = "pytorch-cu128", marker = "sys_platform == 'linux'" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+```
+
 ## Ruff
 
 Astral 團隊也開發了另一個工具叫做 Ruff，它是一個高效能的 Python linter 和 formatter。
