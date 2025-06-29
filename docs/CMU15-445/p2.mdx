@@ -11,11 +11,104 @@ keywords: [CMU15-445/645, B+ Tree, CMU15-445/645 筆記]
 
 ## Problem Description
 
-在這個 project 中，我們需要實現一個可擴充的 B+ tree index，總共有 4 個 Task :
+在這個 project 中，我們需要實現 B+ tree index，總共有 4 個 Task :
 
 - B+Tree Pages
 - B+Tree Operations (Insertion, Deletion, and Point Search)
 - Index Iterator
 - Concurrency Control
 
+## Tools
+
+這個作業提供了線上的 B+ tree visualizer，可以用來檢查自己的 B+ tree 是否正確 :
+
+```bash
+make b_plus_tree_printer -j
+./bin/b_plus_tree_printer
+```
+
+並透過這個[線上 B+ tree visualizer](http://dreampuf.github.io/GraphvizOnline/) 來檢查自己的 B+ tree 是否正確。
+
 ## Solution
+
+先打個預防針，這次的作業我在 contention benchmark 的時候發現我很難將數字控制在 [2.5,3.5] 之間，但我感覺我應該有正確實作 latch crabbing，但就是不知道為甚麼我感覺我越優化數值越低，真神奇...(兩個 test 分別是 2.01 跟 2.16)
+
+### Search
+
+Search 的部分應該是裡面最簡單的，從 root page 開始用 binary search 的方法一直往下搜尋，直到找到 leaf page 為止，可以把中途的節點都放到 `Context` 中的 `read_set_` 中。
+
+### Insertion
+
+Insert 主要可以分成三種情況來討論 :
+
+- 如果是空的 B+ tree，直接建立 root page 並插入 key
+- 如果最後的節點沒有 overflow，直接插入 key
+- 如果最後的節點 overflow，則需要分裂節點並將新的 key 插入到 parent page 中，需要遞迴的做這件事直到沒有 overflow 為止
+
+### Deletion
+
+Delete 的情況是三種操作裡面最複雜的，我是按照以下的順序實作的 :
+
+- 先刪除 key，如果沒有 underflow，則直接結束 (要特別注意是 root page 的情況，如果是 root page 並且沒有 key 了，則需要將整個 B+ tree 清空)
+- 如果有 underflow，則需要檢查 sibling page 是否可以借 key，如果可以借 key，則從 sibling page 中借一個 key 並更新 parent page 的 key，這種方式不需要繼續更新父節點
+- 如果 sibling page 不能借 key，則需要 merge sibling page，並將 parent page 中的 key 刪除，然後再檢查 parent page 是否 underflow，如果 parent page underflow，則需要繼續往上處理
+
+### Index Iterator
+
+這個部分感覺也沒什麼好說的，就是一直讀取下一個 page，需要自己決定一下 `IsEnd()` 想要實作成什麼樣子，我自己的做法是表示成 `read_page->GetNextPageId() == INVALID_PAGE_ID && index_ >= read_page->GetSize()`。
+
+### Concurrency Control
+
+latch crabbing 的部分可以參考上課講義，這部分我就不多說明了，基本上這次作業最好是在一開始就獲得 header page 的 guard，直到 latch crabbing 完成之後再決定要不要釋放。
+
+在這裡我想分享一個大坑，造成我浪費了一天...，這個大坑大概是下面這樣，這是我在實作 insert 的時候遇到的問題 :
+
+```cpp
+if (IsEmpty()) {
+  WritePageGuard header_guard = bpm_->WritePage(header_page_id_);
+  auto header_page = header_guard.AsMut<BPlusTreeHeaderPage>();
+
+  auto root_page_id = bpm_->NewPage();
+  WritePageGuard root_guard = bpm_->WritePage(root_page_id);
+  auto root_page = root_guard.AsMut<LeafPage>();
+  return root_page->Insert(key, value, comparator_);
+}
+```
+
+上面這個在 `IsEmpty()` 的時候是會獲得 header page 的 guard 的，但是他跟下面的 `header_guard` 是不連續的，這中間就有可能產生錯誤，因此要盡量避免使用 `IsEmpty()` 這種會獲得 guard 的方法，最好是直接使用 `WritePageGuard` 來獲得 header page 的 guard。
+
+題外話，contention test 似乎只針對 `Insert` 的部分進行測試，因此在 `Insert` 的時候要特別注意 latch crabbing 的實作 (Remove 跟 Search 就不管它了 XD)。
+
+## Submit
+
+```bash
+make b_plus_tree_insert_test -j$(nproc)
+./test/b_plus_tree_insert_test
+
+make b_plus_tree_sequential_scale_test -j$(nproc)
+./test/b_plus_tree_sequential_scale_test
+
+make b_plus_tree_delete_test -j$(nproc)
+./test/b_plus_tree_delete_test
+
+make b_plus_tree_concurrent_test -j$(nproc)
+./test/b_plus_tree_concurrent_test
+
+make b_plus_tree_contention_test -j$(nproc)
+./test/b_plus_tree_contention_test
+```
+
+```bash
+make format
+make check-format
+make check-lint
+make check-clang-tidy-p2
+```
+
+```bash
+make submit-p2
+```
+
+## Reference
+
+- [CMU Fall 2024 15-445 P1&P2[优化 P2]](https://zhuanlan.zhihu.com/p/828933572)

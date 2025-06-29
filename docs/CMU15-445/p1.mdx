@@ -191,6 +191,8 @@ void WritePageGuard::Drop() {
 
 其中我認為最重要的地方在於在更新如 pin_count 之類的 metadata 時，必須要在 bpm 的大鎖下進行，這樣才能確保不會有其他的執行緒同時修改這些資料。
 
+## Submit
+
 ```bash
 cd build
 
@@ -200,8 +202,6 @@ make page_guard_test -j$(nproc)
 make buffer_pool_manager_test -j$(nproc)
 ./test/buffer_pool_manager_test
 ```
-
-## Submit
 
 ```bash
 make format
@@ -220,3 +220,4 @@ make submit-p1
 - [CMU 15-445 2023 P1 优化攻略](https://www.aneureka.com/posts/cmu-15445-p1-opt)
 - [CMU 15445 2024 Fall Project 1 记录](https://zhuanlan.zhihu.com/p/1657237277)
 - [CMU Fall 2024 15-445 P1&P2[优化 P2]](https://zhuanlan.zhihu.com/p/828933572)
+- [CMU15-445 2023 Fall Project0~4 通关总结](https://zhuanlan.zhihu.com/p/679980578)
