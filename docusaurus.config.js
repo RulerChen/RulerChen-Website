@@ -92,10 +92,6 @@ module.exports = async function createConfigAsync() {
         },
         metadata: [
           {
-            name: "google-site-verification",
-            content: "QrdRbPEcOsJJ_kfRVewqfwR6GjPcRf0UVgRb85I-5fc"
-          },
-          {
             name: "description",
             content:
               "這是一個關於資訊領域的個人筆記網站，包含了前後端技術，資料結構與演算法等等的相關知識"

@@ -1,6 +1,7 @@
 import React from 'react';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Layout from '@theme/Layout';
+import Head from '@docusaurus/Head';
 
 // import Projects from '../components/Projects/Projects';
 // import Project from '../data/Projects.json';
@@ -16,6 +17,9 @@ export default function Home() {
   const { siteConfig } = useDocusaurusContext();
   return (
     <Layout title={`${siteConfig.title}`} wrapperClassName="Layout">
+      <Head>
+        <meta name="google-site-verification" content="QrdRbPEcOsJJ_kfRVewqfwR6GjPcRf0UVgRb85I-5fc" />
+      </Head>
       <main>
         <Banner />
         {/* <h1
