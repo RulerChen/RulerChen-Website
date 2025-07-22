@@ -41,6 +41,16 @@ module.exports = async function createConfigAsync() {
       experimental_faster: true
     },
 
+    headTags: [
+      {
+        tagName: "meta",
+        attributes: {
+          name: "google-site-verification",
+          content: "QrdRbPEcOsJJ_kfRVewqfwR6GjPcRf0UVgRb85I-5fc"
+        }
+      }
+    ],
+
     presets: [
       [
         "classic",

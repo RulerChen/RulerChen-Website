@@ -17,9 +17,6 @@ export default function Home() {
   const { siteConfig } = useDocusaurusContext();
   return (
     <Layout title={`${siteConfig.title}`} wrapperClassName="Layout">
-      <Head>
-        <meta name="google-site-verification" content="QrdRbPEcOsJJ_kfRVewqfwR6GjPcRf0UVgRb85I-5fc" />
-      </Head>
       <main>
         <Banner />
         {/* <h1
