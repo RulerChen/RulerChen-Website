@@ -1,12 +1,13 @@
 ---
-title: "P1 - Buffer Pool Manager"
-sidebar_position: "31"
+title: 'P1 - Buffer Pool Manager'
+sidebar_position: '101'
 description: Buffer Pool Manager
 keywords: [CMU15-445/645, Buffer Pool Manager, CMU15-445/645 筆記]
+tags: [CMU15-445, CMU15-445 Projects]
 ---
 
 <head>
-  <title>CMU 15-445/645 Project#1 Buffer Pool Manager</title>
+  <title>CMU 15-445 2024Fall P1 Buffer Pool Manager</title>
 </head>
 
 ## Problem Description
@@ -81,7 +82,6 @@ WritePageGuard 的部分大部分跟 ReadPageGuard 一樣，只是要改成使�
 - `CheckedReadPage(page_id_t page_id) -> std::optional<ReadPageGuard>` :
 
   這兩個函數是這個 Task 最重要的函數，都分成三種情況 :
-
   - 這個 page 已經在 buffer pool 中了，那我們就要更新他的資料 (pin_count, evictable, recordaccess) 並回傳
   - page_id 不在 buffer pool 中，但是 free_frame 中有空間，那我們就可以 pop_front 一個 frame，然後一樣更新 metadata
   - page_id 不在 buffer pool 中，free_frame 也沒有空間，那我們就要使用 lru_k_replacer 來 evict 一個 frame，然後一樣更新 metadata

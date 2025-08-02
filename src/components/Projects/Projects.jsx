@@ -11,7 +11,7 @@ const Projects = ({ ProjectsData, title }) => {
         <h1 className={styles.title}>{title}</h1>
 
         <div className={styles.cardContainer}>
-          {ProjectsData?.map(project => (
+          {ProjectsData?.map((project) => (
             <ProjectCard key={project.id} {...project} colorMode={colorMode} />
           ))}
         </div>
@@ -22,22 +22,13 @@ const Projects = ({ ProjectsData, title }) => {
 
 export default Projects;
 
-const ProjectCard = ({
-  projectTitle,
-  projectImage,
-  projectDescribe,
-  tech,
-  role,
-  githubUrl,
-  deployUrl,
-  colorMode
-}) => {
+const ProjectCard = ({ projectTitle, projectImage, projectDescribe, tech, role, githubUrl, deployUrl, colorMode }) => {
   return (
     <Tilt
       options={{
         max: 45,
         scale: 1,
-        speed: 450
+        speed: 450,
       }}
       className={styles.tilt}
     >
@@ -52,10 +43,7 @@ const ProjectCard = ({
       </div>
       {githubUrl && (
         <a href={githubUrl} target="_blank" rel="noreferrer noopenner">
-          <button
-            className={[styles.button, colorMode === 'light' && styles.buttonLight].join(' ')}
-            role="button"
-          >
+          <button className={[styles.button, colorMode === 'light' && styles.buttonLight].join(' ')} role="button">
             <span>專案連結</span>
           </button>
         </a>
@@ -63,17 +51,14 @@ const ProjectCard = ({
 
       {deployUrl && (
         <a href={deployUrl} target="_blank" rel="noreferrer noopenner">
-          <button
-            className={[styles.button, colorMode === 'light' && styles.buttonLight].join(' ')}
-            role="button"
-          >
+          <button className={[styles.button, colorMode === 'light' && styles.buttonLight].join(' ')} role="button">
             <span>部屬連結</span>
           </button>
         </a>
       )}
 
       <div className={styles.tiltSkillContainer}>
-        {tech?.map(techInfo => (
+        {tech?.map((techInfo) => (
           <img key={techInfo.name} src={techInfo.tag} alt={techInfo.name} />
         ))}
       </div>

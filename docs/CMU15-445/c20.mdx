@@ -1,189 +1,180 @@
 ---
-title: 'Database Recovery'
+title: 'Database Logging'
 sidebar_position: '20'
-description: CMU15-445/645 Database Recovery
-keywords: [CMU15-445/645, Database Recovery, CMU15-445/645 筆記]
+description: CMU15-445/645 Database Logging
+keywords: [CMU15-445/645, Database Logging, CMU15-445/645 筆記]
+tags: [CMU15-445]
 ---
 
 <head>
-  <title>CMU 15-445/645 Database Recovery</title>
+  <title>CMU 15-445 Database Logging</title>
 </head>
 
-本節主要延續上一節的 Database Logging，討論故障發生後，要如何恢復資料庫的狀態。
+![Database Logging](/img/cmu15-445/c19/image.png)
 
-## ARIES
+資料庫在運行時可能會發生各種故障，如果中斷了事務的運作，就可能產生資料不一致的問題，這時候就需要故障恢復機制來保證資料的完整，主要會分成兩個部分來討論 :
 
-ARIES (Algorithms for Recovery and Isolation Exploiting Semantics) 是 IBM 在 1990 年代初期為 DB2 系統開發的一種恢復演算法，儘管不是每個 DBMS 都嚴格依照 ARIES 的規範實現，但 ARIES 的基本思想和許多技術細節仍然被廣泛使用。
+- 在正常操作時進行一些準備工作，以確保系統能夠從故障中恢復 (本節)
+- 故障發生後，用來恢復資料庫狀態的操作，以確保交易的原子性、一致性與持久性 (下一節)
 
-ARIES 有三個關鍵的概念 :
+## Failure Classification
 
-- WAL
-  - 在資料庫實際寫入變更之前，先將所有變更記錄到穩定的存儲中
-  - 必須使用 steal / no-force 策略
-- Repeating History During Redo
-  - 在系統重新啟動時，重演崩潰前的所有操作，將資料庫恢復到崩潰前的確切狀態
-- Logging Changes During Undo
-  - 在進行 Undo 操作時，將這些撤銷操作記錄到日誌中。如果在 Undo 期間發生再次崩潰，系統可以確保這些撤銷操作不會被重複執行
+世界上並不存在完全可靠的系統，因此我們需要考慮各種可能的故障情況。
 
-## Log Sequence Numbers
+### Transaction Failures
 
-WAL 中的每條紀錄都需要包含一個唯一的序列號，稱為 LSN (Log Sequence Number)，各個元件都需要紀錄屬於他們的 LSN。
+這種類型的故障發生在交易過程中，由於某些錯誤導致交易被中止
 
-![Log Sequence Numbers](/img/cmu15-445/c20/image.png)
+- Logical Errors : 交易中的某些操作導致了錯誤，例如餘額不足
+- Internal State Errors : 交易中的某些操作導致了系統錯誤，例如 deadlock
 
-1. LSN : 全局唯一的序列號，用來標識每個日誌記錄，每次日誌寫入時，LSN 會遞增
-2. flushedLSN : 表示已經寫入到磁盤的最後一條日誌的 LSN
-3. pageLSN : 表示頁面上最後一次修改的日誌的 LSN
-4. recLSN : 自頁面上次被寫入磁碟後，最早的一次更新操作的 LSN
-5. lastLSN : 某個交易最後一次寫入日誌的 LSN
-6. MasterRecord : 最近一次 Checkpoint 的 LSN
+### System Failures
 
-在頁面寫入硬碟前，DBMS 會確保相應的 pageLSN 小於等於 flushedLSN，這樣可以保證日誌記錄已經安全地記錄在硬碟上。
+這種故障發生在承載 DBMS 的底層軟硬體出現非預期的問題時
 
-![Log Sequence Numbers](/img/cmu15-445/c20/image-1.png)
+- Software Failure : DBMS 軟體的實現出現問題，如除以零
+- Hardware Failure : DBMS 所在的硬體出現錯誤，如斷電
 
-## Normal Execution
+### Storage Media Failure
 
-大部分的交易都會包括一系列的讀寫操作，然後 commit 或是 abort。
+這種故障發生在物理存儲設備受到損壞並且無法修復時，通常無法修復，只能從備用的硬碟恢復。
 
-這裡我們先來討論假如沒有發生故障，交易是如何執行的，我們會有四個假設來簡化討論 :
+## Buffer Pool Management Policies
 
-- 所有的 log file 都能放進一個 page 中
-- 寫入硬碟是原子性的
-- 使用嚴格的 2PL 而不是 MVCC
-- 使用 WAL，且是 steal / no-force 策略
+在我們修改資料時，DBMS 需要先把資料讀到記憶體中，然後根據請求進行修改，最後再將修改後的資料寫回硬碟，在這個過程中，DBMS 需要保證以下兩點 :
 
-### Transaction Commit
+- 一旦提交後，交易的修改就應該是永久的
+- 如果中止，交易的修改不應該被持久化
 
-執行交易的順序如下 :
+如果真的遇到了故障，DBMS 可以採用以下的方法來恢復資料 :
 
-1. 將 COMMIT 寫入 WAL buffer
-2. 將 WAL buffer 寫入硬碟
-3. 修改 flushedLSN 為 COMMIT 的 LSN
-4. 將 WAL buffer 的內容清除，並寫入一個 TXN-END 紀錄
+- Undo : 回滾到交易開始前的狀態
+- Redo : 重做交易中的修改
 
-![Transaction Commit](/img/cmu15-445/c20/image-2.png)
+DBMS 如何處理 undo / redo 主要取決於 Buffer Pool Management Policies，有兩個策略 Steal Policy 跟 Force Policy。
 
-### Transaction Abort
+- Steal Policy : DBMS 是否允許將未提交的更改寫入硬碟
+- Force Policy : DBMS 是否要求將提交的更改寫入硬碟
 
-要處理 abort 的情況，我們就必須找到與該交易有關的所有日誌記錄以及執行順序，為了提高效率，同一個交易中的每個 log 都會紀錄上一個 log 的 LSN，即 prevLSN。
+以下圖為例，T1 要修改 A 而 T2 要修改 B，且 A 和 B 都位在同一個 page 中，當 T2 提交時，T1 尚未提交但已經修改了 A，這時候就需要根據 Steal Policy 和 Force Policy 來決定如何處理。
 
-1. 將 ABORT 寫入 WAL buffer
-2. 按照由 LSN|prevLSN 的 linked list，倒序回滾所有的 log
-3. 為了防止回滾再次故障，需要將回滾的 log 寫入 WAL
-4. 回滾完之後，寫入 TXN-END 紀錄
+![Buffer Pool Management Policies](/img/cmu15-445/c19/image-1.png)
 
-![Transaction Abort](/img/cmu15-445/c20/image-3.png)
+### Steal Policy
 
-### Compensation Log Record
+如果選擇 steal，若 T1 rollback，則需要把已經進行持久化的資料重新修改回原本的狀態再存回硬碟，這種方法在不發生故障的情況下可以提高效率。
 
-CLR 是一種描述撤銷前一次更新操作的日誌記錄。
-它包含更新日誌記錄的所有字段，並額外包含一個 undoNext 指針，指向下一個需要撤銷的 LSN。
+如果選擇 no-steal，若 T1 rollback，DBMS 不需要進行任何操作，這種方法在發生故障時效率較高。
 
-需要注意的是，CLR 不會被撤銷，因為它們是用來撤銷其他日誌記錄的。
+### Force Policy
 
-![Compensation Log Record](/img/cmu15-445/c20/image-4.png)
+如果選擇 force，當交易提交時，DBMS 需要立即將修改寫回硬碟，一致性較高。
+
+如果選擇 no-force，當交易提交時，DBMS 可以選擇延遲將資料批量寫回硬碟，效率較高。
+
+在實務上，我們通常會選擇 Steal / No-Force 或者 No-Steal / Force 來進行管理。
+
+## Shadow Paging
+
+在 buffer pool 的策略上，最容易選擇的就是 No-Steal / Force 的組合，在交易被中止時不需要回滾資料，提交後也不需要 redo 資料，唯一的問題是無法處理超過 buffer pool 大小的資料。
+
+而 shadow paging 就是一種使用 no-steal / force 的代表，它會維護兩份獨立的資料版本
+
+- Master : 包含了所有已提交的交易變更，是目前被所有讀取操作使用的資料庫版本
+- Shadow : 包含了未提交的交易變更的臨時資料庫版本，所有的更新操作都會在這個陰影版本中進行
+
+左邊是記憶體中的位置，右邊是硬碟中的位置
+
+![Shadow Paging](/img/cmu15-445/c19/image-2.png)
+
+當寫入的交易發生時，DBMS 會生成一份 shadow page，並在 shadow page 上進行修改，並將 DB root 的指針指向 shadow page，同時將資料都存在硬碟上。
+
+![Shadow Paging](/img/cmu15-445/c19/image-3.png)
+![Shadow Paging](/img/cmu15-445/c19/image-4.png)
+
+在 commit 之後，DBMS 會刪除舊的 master page。
+
+![Shadow Paging](/img/cmu15-445/c19/image-5.png)
+![Shadow Paging](/img/cmu15-445/c19/image-6.png)
+
+在 shadow page 的實現中，不管是 undo 還是 redo 都非常簡單，undo 只需要刪除 shadow page，而因為每次都會將資料寫入硬碟， redo 也不需要進行任何操作。
+
+但 shadow page 的缺點也很明顯 :
+
+- 複製 page table 的 overhead 較大，可以使用 copy-on-write 來減少 overhead
+- 每次提交需要將頁表、根頁面和所有更新的頁面同步到硬碟中，導致大量的隨機寫入
+- 由於相關資料可能被分割到不同的頁面中，可能會導致資料碎片化
+- 隨著資料的更新，對應頁面的引用將會失效，所以需要進行 garbage collection
+- shadow page 通常只支持單一寫入，或者需要將多個交易以批次形式提交這限制了併發性
+
+在 2010 年以前的 SQLite 也曾採用過類似的 shadow paging 的方法，它會將原始的 page 先保存到一個 journal file 中，然後再進行修改並存入硬碟，如果中途發生故障，可以根據 journal file 來進行恢復。
+
+## Write-Ahead Logging (WAL)
+
+對於 shadow paging 來說，最大的問題就是需要將許多不連續的頁面寫入硬碟，而 WAL 就是一種能夠解決這個問題的方法。
+
+WAL 的核心概念是在資料庫進行變更之前，先將變更寫入一個 log file 並寫入硬碟，然後再修改真正的數據頁面，這樣可以保證即使發生故障，也可以根據 log file 來進行恢復，通常 WAL 採用的 buffer pool 策略通常是 Steal / No-Force。
+
+在 transaction 開始時，DBMS 會在 log file 中寫入一條 `BEGIN` 記錄，結束時需要寫入一條 `COMMIT` 記錄，在執行過程中會記錄完整的資訊，包含了 transaction id、object id、舊值、新值等。
+
+如下面的範例所示，我們會先寫入 WAL buffer 中，再修改值，coomit 之後再清空。
+
+![Write-Ahead Logging](/img/cmu15-445/c19/image-7.png)
+![Write-Ahead Logging](/img/cmu15-445/c19/image-8.png)
+![Write-Ahead Logging](/img/cmu15-445/c19/image-9.png)
+![Write-Ahead Logging](/img/cmu15-445/c19/image-10.png)
+
+### WAL Group Commit
+
+每次都將 log flush 到硬碟可能會成為效能瓶頸，因此我們可以透過 group commit 來提高效能，只在達到一定數量或者一定時間後才進行 flush。
+
+### Log-Structured System
+
+在 log-structured 的 DBMS 中，交易的 log 首先寫入一個稱為 MemTable 的記憶體緩衝區，當 MemTable 滿了之後，會將其刷新到硬碟。
+但這個方法依然需要 WAL，因為 WAL 通常比 MemTable 刷新頻繁，並且包含未提交的交易，可以在崩潰時能夠恢復 MemTable 的內容。
+
+## Logging Schemes
+
+log 紀錄的內容可能依據不同的策略而有所不同，主要有以下幾種 :
+
+- Physical Logging
+- Logical Logging
+- Physiological Logging
+
+![Logging Schemes](/img/cmu15-445/c19/image-11.png)
+
+### Physical Logging
+
+物理日誌記錄是對資料庫中特定位置的位元級別變更進行記錄。每條日誌記錄都詳細記錄了在資料庫頁面上的具體變更位置和變更內容，類似於 `git diff` 的方式。
+
+### Logical Logging
+
+邏輯日誌記錄記錄的是交易執行的高階操作，而不是具體的位元變更。
+例如，它會記錄 UPDATE、DELETE 或 INSERT 操作的執行，而不是每個操作改變了哪個位元。
+
+### Physiological Logging
+
+物理邏輯混合日誌記錄是一種混合方法，將物理和邏輯日誌記錄結合在一起。
+具體來說，它針對單個頁面進行日誌記錄，但不具體記錄頁面中數據的組織方式。
+這種方法會基於頁面的 slot number 來識別資料列，但不指定變更在頁面中的確切位置。
+
+這種方法也是當下最流行的方法。
 
 ## Checkpoint
 
-在 DBMS 中，checkpoint 可以用於減少系統崩潰後需要回放的日誌量，以加速恢復過程。
+在使用 WAL 時，log 會隨著時間不段增長，這樣會導致 log file 過大，並且在恢復時需要不斷地回放 log，為了避免這種情況，DBMS 會定時將所有 buffer 中的資料寫到硬碟上，縮短故障恢復的時間。
 
-### Non-Fuzzy Checkpoint
+![Checkpoints](/img/cmu15-445/c19/image-12.png)
 
-在 non-fuzzy checkpoint 中，DBMS 會暫停所有交易的執行，以確保能夠將一致性快照寫入硬碟中，具體步驟如下 :
+當資料庫故障時，DBMS 可以根據 checkpoint 來進行恢復，所有在 checkpoint 之前 commit 的交易都可以被視為已經持久化，如 T1。
+而在 checkpoint 之後 commit 的交易，則需要根據 log file 來進行 redo，如 T2、T3。
 
-1. 暫停新的交易啟動
-2. 等待所有活躍交易執行完畢
-3. 將所有 dirty page 寫入硬碟
+chekcpoint 最主要要考慮的問題是多久執行一次 checkpoint，如果 checkpoint 過於頻繁，會導致效能下降，如果 checkpoint 過於稀疏，則在故障恢復時需要回放的 log 過多，導致恢復時間過長。
 
-這種方式可以保證資料的一致性，但是會導致系統暫停，因此顯然不是個好方法。
+### Blocking Checkpoint
 
-### Slightly Better Checkpoints
+blocking checkpoint 是一種最簡單的 checkpoint 實作方法，步驟如下 :
 
-non-fuzzy checkpoint 的問題在於暫停所有交易並且等待所有活躍交易執行完畢，而在 slightly better checkpoint 中，我們只暫停需要 write latch 的交易，並且不需要等待所有活躍交易執行完畢。
-
-![Slightly Better Checkpoints](/img/cmu15-445/c20/image-5.png)
-
-在 checkpoint 開始的時候，txn 已經獲取了 page3 的 write latch，因此它可以繼續執行，但是不能再獲取新的 write latch。
-此時 DBMS 會掃描一遍 buffer pool，將所有 dirty page 寫入硬碟，這時有可能 page3 的資料也被寫入硬碟，造成硬碟中的 snapshot 處於不一致的狀態。
-
-![Slightly Better Checkpoints](/img/cmu15-445/c20/image-5.png)
-
-我們可以記錄在 checkpoint 時那些交易是活躍的，那些資料是 dirty 的，並透過 WAL 來回復這些資料。
-
-在這個過程中，我們需要以下兩個資訊 :
-
-- Active Transaction Table (ATT) : 追蹤當前正在運行的交易，每個交易的條目包括 txnId、status (Running、Committing、Candidate for Undo)、lastLSN
-- Dirty Page Table (DPT) : 記錄緩衝池中已被修改但尚未寫入硬碟的頁面，包括 page info 和 recLSN
-
-這種方法比第一個方法更好，但是需要暫停寫的交易。
-
-### Fuzzy Checkpoint
-
-fuzzy checkpoint 允許在檢查期間繼續執行其他交易，不會中斷系統運行。
-
-![Fuzzy Checkpoint](/img/cmu15-445/c20/image-6.png)
-
-在這個模式下，我們需要兩種紀錄來標記區間 :
-
-- CHECKPOINT-BEGIN : 標記 checkpoint 開始
-- CHECKPOINT-END : 標記 checkpoint 結束，同時包含 ATT 和 DPT 的內容
-
-檢查點完成後，CHECKPOINT-BEGIN 記錄的 LSN 才會被記錄在 MasterRecord 中。
-
-## ARIES Recovery Phase
-
-ARIES 恢復協議 是一種 DBMS 在崩潰後恢復數據的一個廣泛使用的方法，總共分為三個階段 :
-
-1. Analysis
-2. Redo
-3. Undo
-
-從 WAL 中找到 MasterRecord，並且找到最後一個 BEGIN-CHECKPOINT 紀錄。
-
-![ARIES Recovery Phase](/img/cmu15-445/c20/image-7.png)
-
-### Analysis Phase
-
-從最後一個檢查點開始往前掃描 WAL
-
-- 如果發現 TXN-END，則在 ATT 中移除該交易
-- 遇到其他交易時，將其加入 ATT 並設為 UNDO
-- 如果發現提交紀錄，則設為 COMMIT
-- 如果發現是更新紀錄，則將其加入 DPT，並修改 recLSN
-
-### Redo Phase
-
-redo phase 的目標是重建資料庫崩潰時的狀態，從 DPT 中最小的 recLSN 對應的日誌記錄開始掃描。
-
-對於每個 CLR，DBMS 會重新應用更新，除非以下情況之一成立 :
-
-- 受影響的頁面不在 DPT 中
-- 受影響的頁面在 DPT 中，但該記錄的 LSN 小於該頁面在 DPT 中的 recLSN
-- 受影響頁面的 pageLSN（在硬碟上）大於或等於 LSN
-
-redo 時，需要重新執行 log 中的操作，將 pageLSN 更新為 LSN，並且不再新增 CLR，在結束時，DBMS 會將所有狀態為 COMMIT 的交易寫入 TXN-END 日誌記錄，並把它們從 ATT 中移除。
-
-### Undo Phase
-
-在回滾階段，DBMS 會逆轉所有在崩潰時仍未提交的交易，將所有在 ATT 上被標記為 U 的交易進行回滾。
-
-DBMS 會使用每個交易的 lastLSN，以逆向 LSN 的順序處理交易，選擇 ATT 中所有交易中最大的 lastLSN 來加速遍歷，在回滾每個交易的更新時，DBMS 會為每個修改寫入一個 CLR。
-
-## Additional Topics
-
-> Q1 : 如果系統在 recovery 的 analysis 階段崩潰要怎麼辦 ?
-
-A1 : DBMS 可以重新執行 recovery 即可
-
-> Q2 : 如果系統在 recovery 的 redo 階段崩潰要怎麼辦 ?
-
-A2 : DBMS 可以重新執行 recovery 即可
-
-> Q3 : 如何在 redo 階段時提升效能 ?
-
-A3 : 假設系統不會再次崩潰，則可以用異步的方式將所有變更寫入硬碟
-
-> Q4 : 如何在 undo 階段時提升效能 ?
-
-A4 : 使用 Lazy Undo，只有在新的交易需要讀取被回滾的頁面時才進行回滾，以及避免使用 long-running 的交易
+- 暫停新交易 : 暫停接受新的交易，並等待所有當前活躍的交易完成
+- 刷新緩衝區 : 將當前記憶體中的所有日誌記錄和修改過的緩衝區寫到硬碟中
+- 記錄 checkpoint : 寫入一個 `<CHECKPOINT>` 記錄到日誌檔案中，並將其寫入硬碟

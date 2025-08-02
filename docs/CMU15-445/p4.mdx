@@ -1,12 +1,13 @@
 ---
-title: "P4 - Concurrency Control"
-sidebar_position: "34"
+title: 'P4 - Concurrency Control'
+sidebar_position: '104'
 description: Concurrency Control
 keywords: [CMU15-445/645, Concurrency Control, CMU15-445/645 筆記]
+tags: [CMU15-445, CMU15-445 Projects]
 ---
 
 <head>
-  <title>CMU 15-445/645 Project#4 Concurrency Control</title>
+  <title>CMU 15-445 2024Fall P4 Concurrency Control</title>
 </head>
 
 ## Problem Description
@@ -22,6 +23,40 @@ keywords: [CMU15-445/645, Concurrency Control, CMU15-445/645 筆記]
 
 ## Solution
 
+## Submit
+
+```bash
+make txn_timestamp_test -j$(nproc)
+./test/txn_timestamp_test
+
+make txn_scan_test -j$(nproc)
+./test/txn_scan_test
+
+make txn_executor_test -j$(nproc)
+./test/txn_executor_test
+
+make txn_index_test -j$(nproc)
+./test/txn_index_test
+
+make txn_index_concurrent_test -j$(nproc)
+./test/txn_index_concurrent_test
+
+make txn_abort_serializable_test -j$(nproc)
+./test/txn_abort_serializable_test
+```
+
+```bash
+make format
+make check-format
+make check-lint
+make check-clang-tidy-p4
+```
+
+```bash
+make submit-p4
+```
+
 ## Reference
 
 - [CMU Fall 2024 15-445 MVCC & SI & P4[待完]](https://zhuanlan.zhihu.com/p/10666804837)
+- [CMU 15445 Project4](https://4ever-xxxl.github.io/cmu-15445-project-4/)

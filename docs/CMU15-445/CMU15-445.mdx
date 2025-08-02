@@ -1,17 +1,40 @@
 ---
-title: "CMU15-445"
-sidebar_position: "0"
+title: 'CMU15-445'
+sidebar_position: '0'
 description: CMU15-445/645 Introduction to Database Systems
 keywords: [CMU15-445/645, Database, CMU, Carnegie Mellon University]
+tags: [CMU15-445]
 ---
 
-這個系列是我對 CMU 15-445/645 Introduction to Database Systems 的筆記，版本是 2024 Fall。
+<head>
+  <title>CMU 15-445 2024Fall 課程介紹</title>
+</head>
 
-這門課會從 DB 的底層開始做一些大致的介紹，包括存儲層、索引、查詢處理、交易處理、跟簡單的分布式系統等等，對於應用的場景比較少著墨，作業會用 C++ 實作一些重要的 DB 組件，如 B+ Tree 等等。
-對於想從底層了解 DB 的實作的人來說，這門課是非常好的選擇。
+## Course Overview
+
+這個系列是我對 CMU 的 15-445/645 Introduction to Database Systems 的筆記，版本主要是 2024 Fall。
+
+非常感謝 Andy Pavlo 教授願意開源課程影片、作業、以及 GradeScope，讓所有學生都能享受到幾乎跟本校學生一樣的學習體驗。
+
+這門課主要會著墨於 DB 的底層實作，像是資料在 OS 中的儲存方式、各種 Index 的底層資料結構、SQL Query 是如何被執行的，以及經典的 Concurrency Control 與 Recovery 等等。
+對於想從底層了解 DB 的實作的人來說，這門課是非常好的選擇。相對的，如果你是想學習怎麼下 SQL 或是如何設計 DB Schema 的話，這門課的著墨就相對較少。
+
+這門課有五個需要使用 C++ 完成的作業 (會依據年份調整)，分別是 :
+
+1. HyperLogLog
+2. Buffer Pool Manager
+3. B+ Tree Index
+4. SQL Query Execution
+5. Concurrency Control
+
+所有的 lab 都有提供完整的測試案例，除了可以在本地測試外，這門課也提供了外校學生可以使用的 GradeScope 平台來提交作業並進行自動測試。
+
+## After Course
+
+這部分就等我完成所有 lab 之後再來寫寫心得吧~
 
 ## References
 
 - [Official Course Website](https://15445.courses.cs.cmu.edu/fall2024/)
 - [Lecture Videos (YouTube)](https://www.youtube.com/playlist?list=PLSE8ODhjZXjYDBpQnSymaectKjxCy6BYq)
-- [Note 1](https://zhenghe.gitbook.io/open-courses/cmu-15-445-645-database-systems/relational-data-model)
+- [GradeScope](https://www.gradescope.com/courses/817458)

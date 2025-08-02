@@ -1,12 +1,13 @@
 ---
 title: 'P3 - Query Execution'
-sidebar_position: '33'
+sidebar_position: '103'
 description: Query Execution
 keywords: [CMU15-445/645, Query Execution, CMU15-445/645 筆記]
+tags: [CMU15-445, CMU15-445 Projects]
 ---
 
 <head>
-  <title>CMU 15-445/645 Project#3 Query Execution</title>
+  <title>CMU 15-445 2024Fall P3 Query Execution</title>
 </head>
 
 ## Problem Description
@@ -18,9 +19,74 @@ keywords: [CMU15-445/645, Query Execution, CMU15-445/645 筆記]
 - HashJoin Executor and Optimization
 - Sort + Limit Executors + Window Functions + Top-N Optimization
 
+## Overview
+
+- `src/tools/shell/shell.cpp`: 這是 shell 的入口點，負責解析 SQL 語句並調用相應的 executor
+- `src/common/bustub_instance.cpp`: 這是 Bustub 的實例，負責管理資料庫的連接和執行 SQL 語句，`ExecuteSql()` 函數是執行 SQL 的主要入口
+- `src/common/bustub_instance.cpp`: 接著會進入到 `ExecuteSqlTxn()` 函數
+  - 先處理預設的指令，如 `dt`、`di`、`help`、`dbgmvcc`、`txn`
+  - 建立 Binder 並呼叫 `ParseAndSave()`，這個函數會呼叫第三方的工具 `libpg_query` 來解析 SQL 語句，並將解析結果存儲到 `Binder` 中
+  - 依據不同的類型 (如 DDL、DML、Meta-command) 來呼叫不同的函數來綁定實體
+  - 建立 Planner 並呼叫 `PlanQuery()`，這個函數會將 `Binder` 中的 SQL 語句轉換為 `PlanNode`，這是一個樹狀結構，表示 SQL 語句的執行計劃
+  - 建立 Optimizer 並呼叫 `Optimize()`，這個函數會對 `PlanNode` 進行優化，生成最終的執行計劃
+  - 建立 ExecutorContext 並呼叫 `ExecutionEngine` 中的 `Execute()`，這個函數會根據 `PlanNode` 執行 SQL 語句，並返回結果
+- `src/execution/executor_engine.cpp`: 這是執行引擎的入口點
+  - 呼叫 `ExecutorFactory::CreateExecutor()` 來創建對應的 Executor，這個函數在 `src/execution/executor_factory.cpp` 中實現，會依據 `AbstractPlanNodeRef` 的類型來遞迴的創建對應的 Executor
+  - 呼叫 `Executor::Init()` 來初始化 Executor，這個函數會根據 `PlanNode` 的類型來初始化 Executor 的狀態，並遞迴地初始化子 Executor
+  - 呼叫 `PollExecutor()` 來執行 Executor，這個函數會不斷呼叫 `Executor::Next()` 來獲取下一個結果，直到沒有更多的結果為止
+  - 呼叫 `PerformChecks()` 來做一些驗證性測試，主要針對 Nested Loop Join 的情況\
+
+並且有很多的 class 都需要讀一下，建議可以先參考 Reference 中的文章，這樣可以更快的了解整個流程。
+
+- `src/include/execution/executor_context.h`: 這個檔案定義了 Executor 的上下文，包含了執行所需的各種資訊，如當前的 Transaction、Catalog、Statistics 等等。
+- `src/include/catalog/catalog.h`: Catalog 負責管理資料庫的 metadata，主要有 `TableInfo` 跟 `IndexInfo` 兩個類型，分別用來表示資料表和索引的資訊。
+- `src/include/storage/table/table_heap.h`: TableHeap 是一個雙向鏈表 (指標儲存在 `TableInfo` 中)，用來存儲該資料表的 page，
+- `src/include/storage/table/table_page.h`: TablePage 是一個 page 的實現，包含了資料表的實際資料，使用上課說過的 slotted page 的方式來存儲資料。
+- `src/include/storage/table/tuple.h`: Tuple 是一個資料表的行 (row) 的實現，包含了 rid 跟 data。
+- `src/include/storage/index/value.h`: Value 是一個資料表的值 (value) 的實現，包含了各種資料型別的值。
+
+而在這次作業中，我們主要就是實作各個 Executor 的 `Init()` 跟 `Next()` 函數，來完成 SQL 的執行。
+
 ## Solution
+
+不要使用以下的寫法，可能會導致模板函數無法正確解析:
+
+```cpp
+auto [key, rid] = *iter_;
+```
+
+## Submit
+
+如果要執行 SQL，可以使用以下指令或是到[網站](https://15445.courses.cs.cmu.edu/fall2024/bustub/)上執行
+
+```bash
+cd build && make -j$(nproc) shell
+./bin/bustub-shell
+```
+
+測試的方式有點麻煩，要自己一個一個試
+
+```bash
+make -j$(nproc) sqllogictest
+./bin/bustub-sqllogictest ../test/sql/p3.05-index-scan-btree.slt
+./bin/bustub-sqllogictest ../test/sql/p3.05-index-scan-btree.slt --verbose
+```
+
+```bash
+make format
+make check-format
+make check-lint
+make check-clang-tidy-p3
+```
+
+```bash
+make submit-p3
+```
 
 ## Reference
 
 - [CMU Fall 2024 15-445 P3[待优化]&PaperNotes](https://zhuanlan.zhihu.com/p/5843407385)
 - [做个数据库：2022 CMU15-445 Project3 Query Execution](https://zhuanlan.zhihu.com/p/587566135)
+- [BusTub 养成记：从课程项目到 SQL 数据库](https://zhuanlan.zhihu.com/p/570917775)
+- [CMU 15445-2022 P3 Query Optimize](https://zhuanlan.zhihu.com/p/593909820)
+- [CMU15445-2024fall-project3 踩坑经历](https://juejin.cn/post/7527199538878939146)

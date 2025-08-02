@@ -25,12 +25,7 @@ spec:
   containers:
     - name: producer
       image: busybox
-      command:
-        [
-          'sh',
-          '-c',
-          'while true; do echo $(hostname) $(date) >> /var/log/index.html; sleep 10; done'
-        ]
+      command: ['sh', '-c', 'while true; do echo $(hostname) $(date) >> /var/log/index.html; sleep 10; done']
       volumeMounts:
         - name: webcontent
           mountPath: /var/log
@@ -59,12 +54,7 @@ spec:
   containers:
     - name: producer
       image: busybox
-      command:
-        [
-          'sh',
-          '-c',
-          'while true; do echo $(hostname) $(date) >> /var/log/index.html; sleep 10; done'
-        ]
+      command: ['sh', '-c', 'while true; do echo $(hostname) $(date) >> /var/log/index.html; sleep 10; done']
       volumeMounts:
         - name: webcontent
           mountPath: /var/log

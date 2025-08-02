@@ -1,154 +1,127 @@
 ---
-title: 'Joins Algorithms'
+title: 'Sorting & Aggregations Algorithms'
 sidebar_position: '11'
-description: CMU15-445/645 Joins Algorithms
-keywords: [CMU15-445/645, Joins Algorithms, CMU15-445/645 筆記]
+description: CMU15-445/645 Sorting & Aggregations Algorithms
+keywords: [CMU15-445/645, Sorting & Aggregations Algorithms, CMU15-445/645 筆記]
+tags: [CMU15-445]
 ---
 
 <head>
-  <title>CMU 15-445/645 Joins Algorithms</title>
+  <title>CMU 15-445 Sorting & Aggregations Algorithms</title>
 </head>
 
-在 RDBMS 中，我們常常會依據 normalization 的原則將資料分散到不同的表格中以避免記錄到重複的資料，因此在查詢時，我們就需要透過 Join 來將資料合併。
+這堂課會深入探討資料庫中查詢計畫的構建、Sorting 與聚合 Aggregation 演算法的原理與實作。
 
-在這節中，我們主要會討論兩個 table 做 inner join 的情況 (當然這種方法也可以擴展到其他 join 方式及多個 table)，在一般情況下，我們會希望比較小的 table 作為 outer table，而比較大的 table 作為 inner table，
+## Query Plan
 
-## Join
+在 RDBMS 中，當使用者送出一段 SQL，會先經過 query optimizer 分析與重寫，最終轉換為一棵 query plan tree，這棵查詢計畫樹會由一連串的 operators 組成，每個 operator 都代表一個資料庫操作，如掃描表格、過濾條件、連接等。
 
-我們主要要討論兩個部分，分別是 :
+對於 disk-oriented 的 DBMS 來說，查詢執行時勢必要將部分資料從磁碟載入到記憶體中處理，並可能需要將中間結果回寫至磁碟。
+因此，查詢演算法設計的一個重要原則，盡量減少 I/O 的次數，特別是避免隨機存取。
 
-- Output
-- Cost Analysis Criteria
+![Query Plan](/img/cmu15-445/c10/image.png)
 
-![Join](/img/cmu15-445/c11/image.png)
+## Sorting
 
-### Output
+在 DBMS 中，tuple 在 page 中是無序的，但我們在執行以下操作時可能會需要排序 :
 
-![Join Output](/img/cmu15-445/c11/image-1.png)
+- `ORDER BY`
+- 使用 `DISTINCT` 去除重複的 tuple 時，如果有排序就可以加快運算
+- 當需要大量插入資料到 B+Tree 時，如果有排序就能加快速度
+- Aggregations (GROUP BY)
 
-主要有兩種連結方式 :
+如果資料的大小可以放入記憶體中，我們就可以使用如 quick sort 的方式來進行排序，否則我們就必須考慮到 disk I/O 的成本來選擇排序演算法。
 
-- Early Materialization
-- Late Materialization
+### TOP-N Heap Sort
 
-#### Early Materialization
+如果我們的 SQL 指令中有 `LIMIT N` 和 `ORDER BY` 時，我們就可以使用 heap sort 來實現。
+這種方法的好處是我們只需要掃一次所有資料並且維護一個大小為 N 的 heap 即可。
 
-將所有的資料都放到新的 tuple 中，這樣之後就不需要在回去表中讀取資料，較適合 row store。
+### External Merge Sort
 
-![Early Materialization](/img/cmu15-445/c11/image-2.png)
+當資料量大於記憶體時，我們就需要使用外部排序 (External Sort) 來處理。
 
-#### Late Materialization
+外部排序通常會使用 divide and conquer 的方式來實現，主要包含 2 個步驟 :
 
-也可以只複製 join key 跟 record id，之後再去表中讀取資料，較適合 column store。
+- sorting : 將資料分割成小塊，並且在 memory 中進行排序
+- merging : 將排序好的資料合併
 
-![Late Materialization](/img/cmu15-445/c11/image-3.png)
+![External Merge Sort](/img/cmu15-445/c10/image-1.png)
 
-### Cost Analysis Criteria
+頁面的排序可以使用 early materialization 或 late materialization 來實現
 
-由於資料庫的資料通常無法一次性的讀進記憶體中，因此我們需要透過 join algorithms 來最大化減少硬碟 I/O 的次數，對於 join algorithms 來說，唯一的評論標準就是 I/O 數量。
+- early materialization : 排序頁面中會儲存完整的資料
+- late materialization : 只儲存 record id 或指針
 
-接下來的資料都是基於以下的假設 :
+#### General (K-way) Merge Sort
 
-- 對 $R$ 跟 $S$ 兩個 table 做 join
-- $R$ 有 $M$ 個 page， $m$ 個 tuple
-- $S$ 有 $N$ 個 page， $n$ 個 tuple
+我們假設 file 被分成 N 個 page，且 DBMS 有 B 個 fixed-size buffers。
+需要把每個 page 讀入 buffer，並且進行排序，最後再將排序好的 page 寫回 disk，並透過不斷的合併來完成排序。
 
-## Nested Loop Join
+![General Merge Sort](/img/cmu15-445/c10/image-2.png)
 
-### Naive Nested Loop Join
+其複雜度如下 :
 
-對於 outer table 的每一個 tuple，都會去 inner table 中找尋符合的 tuple 來比對。
+- pass 的數量 : $1 + \lceil \log_{B-1} N \rceil$
+- I/O 數量 : $2N \times$ pass 的數量
 
-cost 是 $M + (m \times N)$
+### External Merge Sort Optimizations
 
-![Naive Nested Loop Join](/img/cmu15-445/c11/image-4.png)
+#### Double Buffering Optimization
 
-### Block Nested Loop Join
+預處理接下來要使用的 page，將其讀入另一個 buffer 中來減少 IO 停頓。
 
-每次取 R 中的所有 tuple 出來，並與 S 的所有 tuple 比對一次。
+![Double Buffering](/img/cmu15-445/c10/image-3.png)
 
-![Block Nested Loop Join](/img/cmu15-445/c11/image-5.png)
+#### Comparison Optimizations
 
-cost 是 $M + (M \times N)$
+- Code Specialization : 將 comparator hardcode 到特定的類型，而不使用 function pointer，如 C++ 的 template
+- Suffix Truncation : 只比較 VARCHAR 的前幾個字元
 
-如果我們有 B 塊 buffer ，我們可以將一塊用於 inner table 的讀入，一塊負責寫出，剩下 B - 2 則用於 outer table。
+#### Using B+tree
 
-cost 則變為 $M + \lceil \frac{M}{B-2} \rceil \times N$
+如果已經有 B+tree 的索引，我們可以使用 B+tree 來加速排序，我們只需遍歷 leaf node 即可得到排序好的資料，會分成兩種情況 :
 
-### Index Nested Loop Join
+- clustered B+tree
+  I/O 是順序的，比外部排序效率更高
 
-前面幾種較慢的原因在於我們需要多次對全表掃描，但若 inner table 在 join attribute 上有 index，我們就可以透過 index 來加速，只需掃描一次即可。
+![Clustered B+tree](/img/cmu15-445/c10/image-4.png)
 
-![Index Nested Loop Join](/img/cmu15-445/c11/image-6.png)
+- unclustered B+tree
 
-cost 是 $M + m \times C$，其中 C 是掃描一次 index 的 cost。
+I/O 是隨機的，效率極低
 
-## Sort-Merge Join
+![Unclustered B+tree](/img/cmu15-445/c10/image-5.png)
 
-主要分為兩個步驟 :
+## Aggregations
 
-- Sort
-  - 將兩個 table 依照 join attribute 排序
-- Merge
-  - 從兩個 table 的端點開始進行掃描，並進行比對
-  - 如果遇到重複則需要 backtracking
+為了將多個 tuple 的單個屬性合併成一個值，DBMS 需要能將資料快速分組的方法。
 
-![Sort-Merge Join](/img/cmu15-445/c11/image-7.png)
+### Sorting
 
-sort cost (R) : $2M \times (1 + \lceil \log_{B-1} \lceil\frac{M}{B} \rceil \rceil)$  
-sort cost (S) : $2N \times (1 + \lceil \log_{B-1} \lceil\frac{N}{B} \rceil \rceil)$  
-merge cost : $M + N$
+將資料依照 grouping key 排序，然後進行聚合，這種方法的好處是可以利用排序的結果來加速聚合運算，但缺點是排序的成本較高，特別是當資料量大於記憶體時。
 
-最差的情況就是所有的 join attribute 都一樣，此時的 cost 是 $M \times N$ + sort cost。
+![Sorting](/img/cmu15-445/c10/image-6.png)
 
-sort meger 主要適用的情境是 :
+### Hashing
 
-- 當 table 的某個 attribute 已經排好序了，如 clustered index
-- SQL 的輸出必須要排序時
+在計算聚合時，進行 hash 運算遠比排序快，我們只需要去除重複的 key 即可，而不需要排序。
 
-## Hash Join
+我們需要先掃描表格並填入臨時的 hash table，接著再檢查該 key 是否已經存在，並進行適當修改。
 
-如果有兩個分別在 R 跟 S 的 tuple 有相同的值，則代表他們 hash 之後的值也必定相等，所以我們也可以只針對 hash 之後相同的值進行處理。
+當哈希表過大無法放入 memory 時，我們可以使用 external hashing 來實現
 
-### Simple Hash Join
+- Phase 1 : Partition
 
-主要分為兩個階段 :
+使用 hash function h1 來將 tuple 分配到 B - 1 個 partition 中，剩下的一個 partition 用來存放輸入的資料。
 
-- Build
-  - 將 outer table 中的 join attribute 透過 hash function h1 進行 hash，並放入 hash table T 中
-- Probe
-  - 將 inner table 中的 join attribute 透過 hash function h1 得到這個 tuple 在 T 中的位置，並進行比對
+![Partition](/img/cmu15-445/c10/image-7.png)
 
-其中 T 的 key 是 join attribute，value 則可以是 early materialization 或 late materialization，在這個方法中，T 有可能沒辦法被放入 memory 中，導致需要進行多次 I/O，如果可以預測 T 的大小，我們也可以使用靜態 hash table。
+- Phase 2 : ReHash
 
-也可以使用 bloom filter 來幫助我們快速找到不在 T 中的 tuple。
+對每個 partition 利用 hash table 計算聚合的內容。
 
-![Simple Hash Join](/img/cmu15-445/c11/image-8.png)
+在 rehash 的過程中，存在一組 grouping key -> return value 的 hash table，我們只需要更新這個 key-value pair 即可。
 
-### Grace Hash Join / Partitioned Hash Join
-
-![Grace Hash Join](/img/cmu15-445/c11/image-10.png)
-![Grace Hash Join](/img/cmu15-445/c11/image-9.png)
-
-主要分為兩個階段
-
-- Partition
-  - 將兩個 table 使用同樣的 hash function 進行 partition，使有機會配對成功的 tuple 進入同一個 partition 中
-- Probe
-  - 將每一組 partition 中的 tuple 進行 hash join
-
-如果一次 partition 後還是無法放入 memory 中，我們可以進行多次 partition (recursive partitioning)，如果單一的 key 有太多的 tuple，可以使用 block nested loop join 來處理。
-
-partition cost : $2(M + N)$ read + write both tables  
-probe cost : $M + N$ read both tables  
-total : $3(M + N)$
-
-![Grace Hash Join](/img/cmu15-445/c11/image-11.png)
-
-如果有些 key 非常常使用，我們可以將他們放入 memory 中並立即比較，而非溢出到硬碟中。
-
-## Conclusion
-
-對於大部分的 join 來說，hash join 都是比較好的選擇，除非你的 SQL 需要排序才會考慮 sort-merge join。
-
-![Join Algorithms](/img/cmu15-445/c11/image-12.png)
+![ReHash](/img/cmu15-445/c10/image-8.png)
+![ReHash](/img/cmu15-445/c10/image-9.png)

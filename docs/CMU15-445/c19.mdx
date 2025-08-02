@@ -1,179 +1,192 @@
 ---
-title: 'Database Logging'
+title: 'Multi-Version Concurrency Control'
 sidebar_position: '19'
-description: CMU15-445/645 Database Logging
-keywords: [CMU15-445/645, Database Logging, CMU15-445/645 筆記]
+description: CMU15-445/645 Multi-Version Concurrency Control
+keywords: [CMU15-445/645, Multi-Version Concurrency Control, CMU15-445/645 筆記]
+tags: [CMU15-445]
 ---
 
 <head>
-  <title>CMU 15-445/645 Database Logging</title>
+  <title>CMU 15-445 Multi-Version Concurrency Control</title>
 </head>
 
-![Database Logging](/img/cmu15-445/c19/image.png)
+## Multi-Version Concurrency Control
 
-資料庫在運行時可能會發生各種故障，如果中斷了事務的運作，就可能產生資料不一致的問題，這時候就需要故障恢復機制來保證資料的完整，主要會分成兩個部分來討論 :
+多版本併發控制 (MVCC) 是一種廣泛應用於現代 DBMS 的技術，這種技術會透過維護資料庫中每個邏輯對象的多個物理版本來實現併發控制，允許同時讀寫操作而不互相阻塞，當事務需要讀取資料時，只會讀到該事務開始之前的最新版本，如果保留所有的版本，DBMS 甚至可以讀取任一時間點的資料 (time-travel)。
 
-- 在正常操作時進行一些準備工作，以確保系統能夠從故障中恢復 (本節)
-- 故障發生後，用來恢復資料庫狀態的操作，以確保交易的原子性、一致性與持久性 (下一節)
+MVCC 涉及多個設計決策，這些決策影響資料庫的性能、存儲需求以及如何處理不同的併發場景
 
-## Failure Classification
+- Concurrency Control Protocol : 可以選擇使用之前討論過的併發控制方法，如 2PL、Timestamp Ordering、Optimistic Concurrency Control 等
+- Version Storage : 決定如何存儲和管理多個版本的資料
+- Garbage Collection : 隨著時間的推移，某些舊版本的資料變得無用，因此需要有一個機制來清理這些版本
+- Index Management : 多版本的存在會對索引結構的設計造成挑戰，特別是如何快速找到正確版本的資料
+- Deletes : 當刪除某個數據時，如何處理該資料的不同版本是一個需要考慮的問題
 
-世界上並不存在完全可靠的系統，因此我們需要考慮各種可能的故障情況。
+### Snapshot Isolation
 
-### Transaction Failures
+在 MVCC 中，快照隔離是一種提供交易一致性快照的隔離級別。
+交易在開始時會得到一個資料庫的快照，該快照僅包含已提交交易的數據，並且該交易在完成前與其他交易完全隔離。
 
-這種類型的故障發生在交易過程中，由於某些錯誤導致交易被中止
+- Read : 交易從快照中讀取數據，因此讀操作不會被其他交易的寫操作阻塞，這使得快照隔離特別適合只讀交易
+- Write : 寫操作在交易的私有工作空間中進行，只有當交易成功提交後，這些更改才會對其他交易可見
+- Write Conflicts : 如果兩個交易更新同一個對象，會以先提出的交易為主
+- Write Skew Anomaly : 兩個交易分別修改不同的對象，最終可能導致非可序列化的調度，如下方的圖片範例。
 
-- Logical Errors : 交易中的某些操作導致了錯誤，例如餘額不足
-- Internal State Errors : 交易中的某些操作導致了系統錯誤，例如 deadlock
+![Write Skew Anomaly](/img/cmu15-445/c18/image-4.png)
 
-### System Failures
+### Example
 
-這種故障發生在承載 DBMS 的底層軟硬體出現非預期的問題時
+$T_1$ 先修改 $A$，創造一個新的版本 $A_1$，並將 $A_0$ 的結束時間改成 1
 
-- Software Failure : DBMS 軟體的實現出現問題，如除以零
-- Hardware Failure : DBMS 所在的硬體出現錯誤，如斷電
+![MVCC Example](/img/cmu15-445/c18/image.png)
 
-### Storage Media Failure
+此時 $T_2$ 想讀取 $A$，因為 $T_1$ 還沒提交，所以 $T_2$ 只能讀取 $A_0$
 
-這種故障發生在物理存儲設備受到損壞並且無法修復時，通常無法修復，只能從備用的硬碟恢復。
+![MVCC Example](/img/cmu15-445/c18/image-1.png)
 
-## Buffer Pool Management Policies
+接著 $T_2$ 想要修改 $A$，但是有另一個 active 的事務正在修改 $A$，所以 $T_2$ 會被 block
 
-在我們修改資料時，DBMS 需要先把資料讀到記憶體中，然後根據請求進行修改，最後再將修改後的資料寫回硬碟，在這個過程中，DBMS 需要保證以下兩點 :
+![MVCC Example](/img/cmu15-445/c18/image-2.png)
 
-- 一旦提交後，交易的修改就應該是永久的
-- 如果中止，交易的修改不應該被持久化
+直到 $T_1$ commit 之後，$T_2$ 才能創建新的版本 $A_2$，並將 $A_1$ 的結束時間改成 2
 
-如果真的遇到了故障，DBMS 可以採用以下的方法來恢復資料 :
+![MVCC Example](/img/cmu15-445/c18/image-3.png)
 
-- Undo : 回滾到交易開始前的狀態
-- Redo : 重做交易中的修改
+## Concurrency Control Protocol
 
-DBMS 如何處理 undo / redo 主要取決於 Buffer Pool Management Policies，有兩個策略 Steal Policy 跟 Force Policy。
+可以使用前面所介紹過的併發控制方法 :
 
-- Steal Policy : DBMS 是否允許將未提交的更改寫入硬碟
-- Force Policy : DBMS 是否要求將提交的更改寫入硬碟
+- Two-Phase Locking
+- Timestamp Ordering
+- Optimistic Concurrency Control
 
-以下圖為例，T1 要修改 A 而 T2 要修改 B，且 A 和 B 都位在同一個 page 中，當 T2 提交時，T1 尚未提交但已經修改了 A，這時候就需要根據 Steal Policy 和 Force Policy 來決定如何處理。
+## Version Storage
 
-![Buffer Pool Management Policies](/img/cmu15-445/c19/image-1.png)
+在 MVCC 中，版本存儲決定了如何在資料庫中存儲同一邏輯對象的不同物理版本，以及交易在運行時如何找到對應的可見版本。
 
-### Steal Policy
+每個 tuple 資料庫中都會維護一個 version chain，這是一個根據時間戳排序的 linked list，每當一個對象被更新時，DBMS 會在鏈中添加一個新版本，相關的索引通常指向 head (最新或最舊的版本)。
+在查詢時，DBMS 會遍歷版本鏈，直到找到對應交易可見的正確版本。
 
-如果選擇 steal，若 T1 rollback，則需要把已經進行持久化的資料重新修改回原本的狀態再存回硬碟，這種方法在不發生故障的情況下可以提高效率。
+主要有以下三種方法來存儲版本 :
 
-如果選擇 no-steal，若 T1 rollback，DBMS 不需要進行任何操作，這種方法在發生故障時效率較高。
+- Append-Only Storage
+- Time-Travel Storage
+- Delta Storage
 
-### Force Policy
+### Append-Only Storage
 
-如果選擇 force，當交易提交時，DBMS 需要立即將修改寫回硬碟，一致性較高。
+所有 tuple 的物理版本都存儲在同一個表中。每次更新時，DBMS 會將新的元組版本附加到表中，並更新版本鏈。
 
-如果選擇 no-force，當交易提交時，DBMS 可以選擇延遲將資料批量寫回硬碟，效率較高。
+有兩種方向可以選擇
 
-在實務上，我們通常會選擇 Steal / No-Force 或者 No-Steal / Force 來進行管理。
+- Oldest-to-Newest (O2N) : 最舊的版本在前面，最新的版本在後面，查詢時需要遍歷整個鏈條
+- Newest-to-Oldest (N2O) : 最新的版本在前面，最舊的版本在後面，每次插入新版本時，需要更新索引指針
 
-## Shadow Paging
+![Append-Only Storage](/img/cmu15-445/c18/image-5.png)
 
-在 buffer pool 的策略上，最容易選擇的就是 No-Steal / Force 的組合，在交易被中止時不需要回滾資料，提交後也不需要 redo 資料，唯一的問題是無法處理超過 buffer pool 大小的資料。
+### Time-Travel Storage
 
-而 shadow paging 就是一種使用 no-steal / force 的代表，它會維護兩份獨立的資料版本
+DBMS 維護一個獨立的 time travel table，用來存儲元組的舊版本。
+每次更新時，DBMS 會將舊版本複製到 time travel table 中，並在主表中覆蓋元組為新版本，主表中的元組指向時間旅行表中的舊版本。
 
-- Master : 包含了所有已提交的交易變更，是目前被所有讀取操作使用的資料庫版本
-- Shadow : 包含了未提交的交易變更的臨時資料庫版本，所有的更新操作都會在這個陰影版本中進行
+![Time-Travel Storage](/img/cmu15-445/c18/image-6.png)
 
-左邊是記憶體中的位置，右邊是硬碟中的位置
+### Delta Storage
 
-![Shadow Paging](/img/cmu15-445/c19/image-2.png)
+類似於時間旅行存儲，但僅存儲元組之間的 Delta，而不是完整的舊版本，DBMS 可以通過逆向應用增量數據來重建舊版本。
+這種方式通常比時間旅行存儲寫入更快，但查詢舊版本時會更慢。
 
-當寫入的交易發生時，DBMS 會生成一份 shadow page，並在 shadow page 上進行修改，並將 DB root 的指針指向 shadow page，同時將資料都存在硬碟上。
+![Delta Storage](/img/cmu15-445/c18/image-7.png)
 
-![Shadow Paging](/img/cmu15-445/c19/image-3.png)
-![Shadow Paging](/img/cmu15-445/c19/image-4.png)
+## Garbage Collection
 
-在 commit 之後，DBMS 會刪除舊的 master page。
+在 MVCC 中，隨著時間的推移，某些舊版本的資料變得無用，如沒有 active 的事務可以看到的版本，或是該事務是被一個 abort 的事務創建的，這時候就需要有一個機制來清理這些版本，這個機制稱為 garbage collection (GC)。
 
-![Shadow Paging](/img/cmu15-445/c19/image-5.png)
-![Shadow Paging](/img/cmu15-445/c19/image-6.png)
+在 GC 中，我們需要討論兩個方向 :
 
-在 shadow page 的實現中，不管是 undo 還是 redo 都非常簡單，undo 只需要刪除 shadow page，而因為每次都會將資料寫入硬碟， redo 也不需要進行任何操作。
+- 如何找到無用的版本
+- 如何確定何時可以安全的回收
 
-但 shadow page 的缺點也很明顯 :
+### Tuple-level GC
 
-- 複製 page table 的 overhead 較大，可以使用 copy-on-write 來減少 overhead
-- 每次提交需要將頁表、根頁面和所有更新的頁面同步到硬碟中，導致大量的隨機寫入
-- 由於相關資料可能被分割到不同的頁面中，可能會導致資料碎片化
-- 隨著資料的更新，對應頁面的引用將會失效，所以需要進行 garbage collection
-- shadow page 通常只支持單一寫入，或者需要將多個交易以批次形式提交這限制了併發性
+Tuple-level GC 通過直接檢查元組來檢查舊版本的資料，有兩種常見的方式
 
-在 2010 年以前的 SQLite 也曾採用過類似的 shadow paging 的方法，它會將原始的 page 先保存到一個 journal file 中，然後再進行修改並存入硬碟，如果中途發生故障，可以根據 journal file 來進行恢復。
+#### Background Vacuuming
 
-## Write-Ahead Logging (WAL)
+假設有兩個 active 的事務，timestamp 分別是 12 跟 25
 
-對於 shadow paging 來說，最大的問題就是需要將許多不連續的頁面寫入硬碟，而 WAL 就是一種能夠解決這個問題的方法。
+會有一個在背景執行的 vacuum thread，這個 process 會定期檢查所有的 tuple，並將那些沒有 active 事務可以看到的版本刪除
 
-WAL 的核心概念是在資料庫進行變更之前，先將變更寫入一個 log file 並寫入硬碟，然後再修改真正的數據頁面，這樣可以保證即使發生故障，也可以根據 log file 來進行恢復，通常 WAL 採用的 buffer pool 策略通常是 Steal / No-Force。
+![Background Vacuuming](/img/cmu15-445/c18/image-9.png)
 
-在 transaction 開始時，DBMS 會在 log file 中寫入一條 `BEGIN` 記錄，結束時需要寫入一條 `COMMIT` 記錄，在執行過程中會記錄完整的資訊，包含了 transaction id、object id、舊值、新值等。
+系統會維護一個 dirty page bitmap 追蹤上次 vacuum 之後有哪些頁面被修改過，這樣就可以只檢查這些頁面，用空間換取時間
 
-如下面的範例所示，我們會先寫入 WAL buffer 中，再修改值，coomit 之後再清空。
+![Background Vacuuming](/img/cmu15-445/c18/image-10.png)
 
-![Write-Ahead Logging](/img/cmu15-445/c19/image-7.png)
-![Write-Ahead Logging](/img/cmu15-445/c19/image-8.png)
-![Write-Ahead Logging](/img/cmu15-445/c19/image-9.png)
-![Write-Ahead Logging](/img/cmu15-445/c19/image-10.png)
+#### Cooperative Cleaning
 
-### WAL Group Commit
+worker thread 在遍歷 version chain 時順便回收。這種方法僅適用於 O2N chains。
 
-每次都將 log flush 到硬碟可能會成為效能瓶頸，因此我們可以透過 group commit 來提高效能，只在達到一定數量或者一定時間後才進行 flush。
+![Cooperative Cleaning](/img/cmu15-445/c18/image-11.png)
 
-### Log-Structured System
+### Transaction-level GC
 
-在 log-structured 的 DBMS 中，交易的 log 首先寫入一個稱為 MemTable 的記憶體緩衝區，當 MemTable 滿了之後，會將其刷新到硬碟。
-但這個方法依然需要 WAL，因為 WAL 通常比 MemTable 刷新頻繁，並且包含未提交的交易，可以在崩潰時能夠恢復 MemTable 的內容。
+在 Transaction-level GC 中，每個交易都會維護其自己的 read / write set。
+當交易完成時，GC 可以根據這些集合來識別哪些元組版本可以被回收。
 
-## Logging Schemes
+![Transaction-level GC](/img/cmu15-445/c18/image-12.png)
 
-log 紀錄的內容可能依據不同的策略而有所不同，主要有以下幾種 :
+## Index Management
 
-- Physical Logging
-- Logical Logging
-- Physiological Logging
+在 MVCC 中，索引管理是關鍵的一環，因為它涉及如何有效地追蹤和查找不同版本的數據，需要將 primary index 和 secondary index 分開討論。
 
-![Logging Schemes](/img/cmu15-445/c19/image-11.png)
+### Primary Key Indexes
 
-### Physical Logging
+MVCC 中，Primary Key Indexes 通常指向 version chain 的頭部，需要更新時會被視為刪除舊版本並插入新版本。
 
-物理日誌記錄是對資料庫中特定位置的位元級別變更進行記錄。每條日誌記錄都詳細記錄了在資料庫頁面上的具體變更位置和變更內容，類似於 `git diff` 的方式。
+### Secondary Indexes
 
-### Logical Logging
+輔助索引的管理比主鍵索引更加複雜，因為這些索引需要考慮不同版本的元組如何影響索引。
 
-邏輯日誌記錄記錄的是交易執行的高階操作，而不是具體的位元變更。
-例如，它會記錄 UPDATE、DELETE 或 INSERT 操作的執行，而不是每個操作改變了哪個位元。
+#### Physical Pointers
 
-### Physiological Logging
+所有的 secondary index 都指向 version chain 的頭部，這樣在更新時會出現效能問題。
 
-物理邏輯混合日誌記錄是一種混合方法，將物理和邏輯日誌記錄結合在一起。
-具體來說，它針對單個頁面進行日誌記錄，但不具體記錄頁面中數據的組織方式。
-這種方法會基於頁面的 slot number 來識別資料列，但不指定變更在頁面中的確切位置。
+![Physical Pointers](/img/cmu15-445/c18/image-13.png)
 
-這種方法也是當下最流行的方法。
+#### Logical Pointers
 
-## Checkpoint
+可以改為指向一個 indirection layer (如 primary key)，這樣就可以避免更新 secondary index 的問題。
 
-在使用 WAL 時，log 會隨著時間不段增長，這樣會導致 log file 過大，並且在恢復時需要不斷地回放 log，為了避免這種情況，DBMS 會定時將所有 buffer 中的資料寫到硬碟上，縮短故障恢復的時間。
+![Logical Pointers](/img/cmu15-445/c18/image-14.png)
+![Logical Pointers](/img/cmu15-445/c18/image-15.png)
 
-![Checkpoints](/img/cmu15-445/c19/image-12.png)
+### MVCC Duplicate Key Problem
 
-當資料庫故障時，DBMS 可以根據 checkpoint 來進行恢復，所有在 checkpoint 之前 commit 的交易都可以被視為已經持久化，如 T1。
-而在 checkpoint 之後 commit 的交易，則需要根據 log file 來進行 redo，如 T2、T3。
+在 MVCC 索引中，通常部會儲存 tuple 和 key 的版本資訊 (MySQL 除外)，因此 MVCC 系統需要支持多個版本的相同邏輯元組。
 
-chekcpoint 最主要要考慮的問題是多久執行一次 checkpoint，如果 checkpoint 過於頻繁，會導致效能下降，如果 checkpoint 過於稀疏，則在故障恢復時需要回放的 log 過多，導致恢復時間過長。
+![MVCC Duplicate Key Problem](/img/cmu15-445/c18/image-16.png)
 
-### Blocking Checkpoint
+為了解決這個問題，索引的資料結構需要能支持 non-unique key，並且能夠存儲多個版本的 tuple，
+worker 有可能會得到不只一個 tuple，需要選擇適當的 tuple 返回。
 
-blocking checkpoint 是一種最簡單的 checkpoint 實作方法，步驟如下 :
+## Deletes
 
-- 暫停新交易 : 暫停接受新的交易，並等待所有當前活躍的交易完成
-- 刷新緩衝區 : 將當前記憶體中的所有日誌記錄和修改過的緩衝區寫到硬碟中
-- 記錄 checkpoint : 寫入一個 `<CHECKPOINT>` 記錄到日誌檔案中，並將其寫入硬碟
+在 MVCC 中，刪除操作涉及到不同版本的資料行可能在不同交易中同時可見，因此，DBMS 通常不會立即物理地刪除資料行，而是使用一些標記或策略來表示資料行已被邏輯上刪除。
+當所有交易都無法再看到該資料行時，才會物理刪除該資料行。
+
+### Deleted Flag
+
+當一個資料行被邏輯上刪除時，DBMS 會在該資料行的 header 中設置一個標記來表示此資料行已被刪除。
+
+### Tombstone Tuple
+
+當一個資料行被邏輯上刪除時，DBMS 會創建一個特殊的墓碑資料行來表示該資料行已被刪除，這個墓碑資料行通常會被放入一個專門的池中，並且使用特殊的 bit pattern 來標記。
+
+## Summary
+
+![Summary](/img/cmu15-445/c18/image-17.png)
+
+## References
+
+- [MVCC Paper](https://web.archive.org/web/20051025124412/http://www.lcs.mit.edu/publications/specpub.php?id=773)

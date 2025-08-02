@@ -1,233 +1,178 @@
 ---
-title: 'Distributed OLTP Database Systems'
+title: 'Introduction to Distributed Databases'
 sidebar_position: '22'
-description: CMU15-445/645 Distributed OLTP Database Systems
-keywords: [CMU15-445/645, Distributed OLTP Database Systems, CMU15-445/645 筆記]
+description: CMU15-445/645 Introduction to Distributed Databases
+keywords: [CMU15-445/645, Introduction to Distributed Databases, CMU15-445/645 筆記]
+tags: [CMU15-445]
 ---
 
 <head>
-  <title>CMU 15-445/645 Distributed OLTP Database Systems</title>
+  <title>CMU 15-445 Introduction to Distributed Databases</title>
 </head>
 
-在上節中，我們討論了基本的分散式資料庫系統，但仍然有很多細節沒有討論到，這節會討論一些分散式 OLTP 系統的細節，像是 :
+Distributed DBMS 是一種將單一邏輯資料庫分散到多個物理資源上的系統，跟 Parallel DBMS 的差異在於分散式的節點相對距離較遠，且可能要通過公共網路進行通信。
 
-- 如果其中有節點發生故障怎麼處理
-- 如果訊息在網路上延遲怎麼處理
-- 是否需要所有節點都同意才能 commit 一個 transaction
+在此之前，我們已經學過了許多在 single node 環境下的資料庫技術，如 :
 
-我們要假設所有的節點都是可信任的，不然就需要採用 Byzantine Fault Tolerance 的方法 (blockchain)。
+- Optimization & Planning
+- Concurrency Control
+- Recovery
 
-## Replication
+而這些技術在分散式系統中都會有不同的挑戰，也是我們要討論的主題。
 
-DBMS 可以將資料複製到多個節點上以及高可用性，在實現上，有幾個重要的考慮因素 :
+## System Architecture
 
-- Replication Configuration
-- Propagation Scheme
-- Propagation Timing
-- Update Method
+DBMS 的 system architecture 定義了 CPU 可以直接訪問那些共享資源，其中 single node 的架構就是 shared everything，而在分散式系統中，我們主要討論的是另外三種架構 :
 
-### Replication Configuration
+- Shared Memory
+- Shared Disk
+- Shared Nothing
 
-主要可以分為兩種方式，Primary-Replica 和 Multi-Master。
+![System Architecture](/img/cmu15-445/c21/image.png)
 
-![Replication](/img/cmu15-445/c22/image.png)
+### Shared Memory
 
-#### Primary-Replica
+不同的 CPU 可以訪問同一個記憶體位置，這種架構幾乎沒有人使用。
 
-所有關於寫的操作都會先寫到 primary node， primary node 更新完後再通知其他 replica node 更新，而只讀的資料可以直接從 replica node 讀取。
-如果 master 節點崩潰，則由共識算法選擇新的 master 節點。
+### Shared Disk
 
-#### Multi-Master
+在這種架構下，不同的 CPU 可以透過網路訪問同一塊邏輯硬碟，但各自有各自的記憶體。
 
-每個節點都可以更新資料，但節點之間需要透過 atomic commit protocol 來確保一致性。
+- 優點
+  - 將運算層跟存儲層分開，方便獨立擴容
+- 缺點
+  - CPU 之間需要更多通訊來了解彼此的狀態
 
-#### K-safety
+使用這種架構的系統如下圖所示 :
 
-K-safety 是用來衡量資料庫的容錯能力的閾值，K 值表示每個物件必須始終可用的副本數量，如果副本數量低於這個閾值，DBMS 會停止系統。
+![Shared Disk](/img/cmu15-445/c21/image-3.png)
 
-### Propagation Scheme
+### Shared Nothing
 
-當交易在資料庫上提交時，DBMS 會決定是否需要等待該交易傳播到其他節點後再向應用程式客戶端發送確認，主要有兩種方式 :
+在這種環境下，每個節點都有自己的 CPU、Memory、Disk，節點之間會透過網路來通信。
 
-- Synchronous Propagation : Strong Consistency
-- Asynchronous Propagation : Eventual Consistency
+- 優點
+  - 可以提供很好的效能
+- 缺點
+  - 較難確保一致性
+  - 較難進行擴容，在新增節點時，需要重新分配資料到新節點上，這會需要進行物理移動，且同時還要保證資料的一致性和可用性。
 
-![Propagation Scheme](/img/cmu15-445/c22/image-2.png)
+使用這種架構的系統如下圖所示 :
 
-#### Synchronous Propagation
+![Shared Nothing](/img/cmu15-445/c21/image-1.png)
 
-主節點將更新發送到從節點，並等待它們確認已完全應用更改後，再通知客戶端更新成功。
-確保了強一致性，不會丟失任何數據，通常在傳統的 DBMS 中使用。
+## Design Issues
 
-#### Asynchronous Propagation
+接下來我們會討論在分散式系統中可能遇到的問題 :
 
-主節點在本地更新完後立即向應用程式返回確認，而不等待從節點更改完成。
-可能會導致讀取過期數據，但如果可以容忍某些數據丟失，這種方式是一種有效的優化，通常在 NoSQL 系統中使用。
+- 應用程式如何獲取資料
+- 如何在分散式系統中進行查詢
+- 如何保證正確性
 
-### Propagation Timing
+對於 distributed DBMS 的使用者來說，他們不需要知道資料是如何分散的，只需要知道如何訪問資料。
 
-主節點甚麼時候將更新發送到從節點的策略，主要有兩種方式 :
+### Homogeneous VS Heterogeneous
 
-- Continuous Propagation
-- On Commit Propagation
+在分散式系統中，我們需要先決定節點與節點之間的關係，可以分為兩種 :
 
-#### Continuous Propagation
+- Homogeneous (同質節點) : 每個節點在叢集中能夠執行相同的任務，在擴容以及故障恢復比較簡單
+- Heterogeneous (異質節點): 節點被分配特定的任務，因此不同節點之間需要進行通信才能完成任務，可以在一個物理節點上執行多個虛擬節點
 
-DBMS 在生成 log 後立即發送 log 給從節點，其中包括提交和中止消息。
+![Homogeneous VS Heterogeneous](/img/cmu15-445/c21/image-5.png)
 
-#### On Commit Propagation
+以 MongoDB 為例，它的集群有三種節點，分別是 Router、Config Server、Shard。
+使用者會發送請求給 Router，Router 會根據 Config Server 的設定來將請求轉發給 Shard。
 
-DBMS 只有在交易提交後才將該交易的 log 發送到從節點，避免了為 abort 的交易傳送 log，但會導致同步效率較低。
+## Partitioning Schemes
 
-### Active vs Passive
+Partitioning Schemes 是一種把資料庫分散到多個節點上的方法，也常被稱作 sharding。
 
-根據如何將更改應用到從節點上，複製可以分為 :
+### Naive Table Partitioning
 
-- Active-Active
-- Active-Passive
+假設一個節點有足夠的容量，我們可以讓一個節點儲存一張表，缺點是可能導致資料不均勻。
 
-#### Active-Active
+### Vertical Partitioning
 
-交易在每個從節點上獨立執行，最後 DBMS 檢查每個節點上的結果是否一致，以確保交易正確提交。
+將表格的屬性拆分成不同的分區。每個分區還必須存儲元組信息，以便能夠重建原始記錄。
 
-#### Active-Passive
+![Vertical Partitioning](/img/cmu15-445/c21/image-7.png)
 
-交易在一個節點上執行，然後將總體更改傳播到從節點。
+### Horizontal Partitioning
 
-## Atomic Commit Protocols
+將表的資料切成多個不相關的子集，並且找到一個 key 來將資料平均分配到不同的節點上，常見的分配方式有 :
 
-當一個橫跨多個節點的交易完成時，DBMS 需要詢問所有參與的節點是否可以安全地提交交易。
-根據所使用的協議，可能需要不同數量的節點同意才能提交交易，
+- Range Partitioning
+- Hash Partitioning
+- Predicate Partitioning
 
-常見的協議包括 :
+![Horizontal Partitioning](/img/cmu15-445/c21/image-8.png)
 
-- Two-Phase Commit (2PC)
-- Three-Phase Commit (3PC)
-- Paxos
-- Raft
-- Zookeeper Atomic Broadcast (ZAB)
-- Viewstamped Replication
+通常會使用 partitionKey 來查詢資料，並使用 consistent Hashing 來決定資料應該存儲在哪個節點上。
 
-本節主要討論 2PC 和 Paxos。
+![Consistent Hashing](/img/cmu15-445/c21/image-11.png)
 
-### Two-Phase Commit (2PC)
+將每個 hash 值到邏輯環上的一個位置，然後由最接近該位置的節點 (順時針方向) 負責該鍵。
+當一個節點被添加或移除時，只有相鄰的節點之間的鍵會被移動，並且只有 1/n 的鍵會被重新分配。
+除此之外，我們也可以利用 consistent hashing 來做 replication 。
 
-2PC 是一個經典的分散式交易提交協議，分為兩個階段 :
+在 shared nothing 的架構下，通常使用物理分片
 
-- Prepare Phase
-- Commit Phase
+![Physical Sharding](/img/cmu15-445/c21/image-9.png)
 
-#### 2PC Success
+在 shared disk 的架構下，通常使用邏輯分片
 
-首先應用程式會向協調者發送提交請求之後進入準備階段 (Prepare Phase)。
+![Logical Sharding](/img/cmu15-445/c21/image-10.png)
 
-協調者向參與節點發送 prepare 請求，詢問它們是否可以提交當前交易
+## Distributed Concurrency Control
 
-![2PC](/img/cmu15-445/c22/image-3.png)
+在分散式系統中，交易會訪問一個或多個分區的資料，就會需要複雜的協調，即所謂的 transaction coordination，通常分為中心化和去中心化兩種方式。
 
-等待所有節點回覆 OK 後，則進入提交階段 (Commit Phase)。
+### Centralized Coordinator
 
-協調者會向所有參與者發送提交消息，通知它們提交交易。
+#### Transaction Processing Monitor (TP Monitor)
 
-![2PC](/img/cmu15-445/c22/image-4.png)
+要實現中心化的協調就需要有一個元件來管理所有的交易，這個元件被稱作 Transaction Processing Monitor (TP Monitor)，每次發送請求時，都要經過 TP Monitor 來進行協調。
 
-等待所有交易提交後，協調者向應用程式回覆提交成功。
+舉例如下所示
 
-![2PC](/img/cmu15-445/c22/image-5.png)
+假設一個 DBMS 有四個 partitions，分別是 P1、P2、P3、P4，並且有一個 TP Monitor 來管理所有的交易。
+這時有一個交易需要修改 P1、P3、P4 上的資料，那麼它首先要向 TP Monitor 請求 P1、P3、P4 上的鎖
 
-#### 2PC Abort
+![Centralized Coordinator](/img/cmu15-445/c21/image-12.png)
 
-在準備階段時，如果有任何一個節點無法執行，則應該回覆 ABORT 給協調者。
+拿到鎖之後才能修改資料，修改完畢後再向 coordinator 發送 commit 請求，coordinator 會向所有的分區詢問這個交易是否可以 commit，最後返還 ACK 給使用者。
 
-![2PC](/img/cmu15-445/c22/image-6.png)
+![Centralized Coordinator](/img/cmu15-445/c21/image-13.png)
 
-而此時協調者應該向應用程式回覆提交失敗，同時向所有參與者發送中止消息，並且確保所有交易都有回滾。
+#### Middleware
 
-![2PC](/img/cmu15-445/c22/image-7.png)
+Middleware 是一個位於應用程式和資料庫之間的軟體，負責跟資料庫進行通信，對於應用程式來說，它就是資料庫本身。
 
-#### 2PC Optimization
+![Middleware](/img/cmu15-445/c21/image-14.png)
 
-- Early Prepare Voting (Rare): 如果 DBMS 發送的查詢已經是某個節點最後的查詢，該節點可以將查詢結果和準備階段的投票一起返回
-- Early Acknowledgement after Prepare (Common): 如果所有節點都在準備階段同意提交交易，協調者可以在提交階段完成前向客戶端發送成功確認
+### Decentralized Coordinator
 
-#### 2PC Fault Tolerance
+再去中心化的架構中，執行某個交易時會選擇一個節點作為 master，負責協調所有的交易。
 
-在 2PC 中，每個節點都需要保存每個階段輸入和輸出的 log 來幫助恢復。
+![Decentralized Coordinator](/img/cmu15-445/c21/image-15.png)
 
-在 recovery 時可能會有以下情況 :
+### Federated Database
 
-- 如果交易在準備階段，則連絡協調者確認最後的交易結果
-- 如果交易不在準備狀態，則該交易立即中止，因為節點在崩潰之前並未達到準備狀態
-- 如果交易正在提交且該節點是協調者，會在重啟後向所有參與節點發送 COMMIT 消息，以完成交易提交
+在前面的範例中，我們都假設資料庫是同一種的，但在實際應用中，我們可能會想要使用不同種類的資料庫，並只暴露一個統一的介面。
 
-如果是協調者在 commit 之前發生故障，則只需要等待協調者重啟後再次發送 COMMIT 消息即可，如果是在 commit 開始之後發生故障，則其他節點需要等待該節點重啟或者直接決定新的協調者。
+這種技術有很多的挑戰，像是 query optimization、data migration、data consistency，目前仍然沒有一個很好的解決方法。
 
-如果是參與者在 commit 開始之前發生故障，則協調者只要依據超時機制將交易中止即可，如果是在 commit 開始之後發生故障，則協調者需要不斷重試來保證一致性。
+![Federated Database](/img/cmu15-445/c21/image-16.png)
 
-由於 2PC 需要等待所有節點的回覆，可能會導致 live lock，因此有了共識算法。
+### Distributed Concurrency Control
 
-### Paxos
+分散式的併發控制有很多挑戰，比如 :
 
-Paxos 是一種共識算法，在這個算法中，提議者會負責提交 commit 或 abort 的指令，而接受者則投票決定是否接受提議，由於不需要每個節點都同意，因此效能上會比 2PC 好。
+- Replication
+- Network Communication Overhead
+- Node Failures
+- Clock Skew
 
-Paxos 的協調者被稱為提議者 (Proposer)，參與者被稱為接受者 (Acceptor)。
+在下圖的例子中，我們可以看到由於沒有中心化的協調器，一旦發現如圖中的死鎖情況，就很難進行協調。
 
-首先，應用程式會向 proposer 發送提交請求，然後 proposer 會向 acceptor 發送提議
-
-![Paxos](/img/cmu15-445/c22/image-8.png)
-
-與 2PC 不同的是，Paxos 不需要等待所有節點的回覆，只需要等待過半數的節點同意即可，因此會繼續向 acceptor 發送 commit 請求。
-
-![Paxos](/img/cmu15-445/c22/image-9.png)
-
-但不同的是，即使在 commit 階段，acceptor 也可以拒絕提議，舉例如下 :
-
-假設有兩個 proposer，proposer 1 在 n 的時間提出協議並被所有人 agree
-
-![Paxos](/img/cmu15-445/c22/image-10.png)
-
-這時候 proposer 2 在 n+1 的時間提出協議，接著 proposer 1 發出 commit 請求，由於時間先後順序，acceptor 會拒絕 proposer 1 的提議，之後 proposer 2 會繼續直到提交完成。
-
-![Paxos](/img/cmu15-445/c22/image-11.png)
-
-這樣會導致的問題是有可能同時兩個 proposer 互相組塞，因此我們可以透過 Multi-Paxos 來解決這個問題。
-
-#### Multi-Paxos
-
-如果系統內常有任意數量的 proposer，達成共識就會有點困難，因此我們可以先透過 Paxos 選出一個主要的提議者，然後由主要提議者來進行提議，並在達到一定時間之後再重新選舉主要提議者。
-這樣在一段時間內提交交易就不需要 propose 而是直接進行 commit，這樣就能提高效率。
-
-## Consistency Issues (CAP / PACELC)
-
-### CAP
-
-CAP 定理指出一個分散式系統無法同時滿足以下三個條件 :
-
-- 一致性 (Consistency) : 對所有節點上的操作來說，一旦寫入完成，所有後續的讀取應該返回該寫入的值或更晚的寫入值
-- 可用性 (Availability) : 可用性指的是所有仍在運行的節點都能滿足所有請求的能力。即使部分節點故障，仍然能夠提供服務
-- 分區容錯性 (Partition Tolerance) : 分區容錯性意味著即使系統中部分節點間的消息丟失，系統仍能正確運行
-
-### PACELC
-
-CAP 定理的現代版本是 PACELC 定理，這個定理進一步考慮了一致性和延遲之間的取捨。
-
-- P (Partition)：當在網絡分區時，系統必須在可用性 (A) 和一致性 (C) 之間做出選擇。
-- EL (Else)：即使在系統運行正常且無網絡分區的情況下，也必須在延遲 (L) 和一致性 (C) 之間做出選擇。
-
-### CAP vs PACELC
-
-在 RDBMS 中，通常會在重要節點故障時拒絕寫入，以確保一致性，而在 NoSQL 中，通常會接受寫入，常採用的策略是最後一次寫入勝出。
-
-## Google Spanner
-
-Google Spanner 是一個由 google 發明的資料庫系統，具有以下特點 :
-
-- semi-relational data model、Decentralized shared-disk architecture 以及 Log-structured on-disk storage
-- Strict 2PL + MVCC + Multi-Paxos + 2PC
-- Externally consistent : Spanner 保證事務具有外部一致性，這意味著如果事務 T1 完成後事務 T2 開始，則 T2 必須看到 T1 的結果。為了實現這一點，Spanner 使用原子鐘和 GPS 產生的全球唯一時間戳來確保事務順序。
-
-![Google Spanner](/img/cmu15-445/c22/image-1.png)
-
-## References
-
-- [Paxos](https://poweichen.gitbook.io/blockchain-guide-zh/distribute_system/paxos)
+![Distributed Concurrency Control](/img/cmu15-445/c21/image-17.png)

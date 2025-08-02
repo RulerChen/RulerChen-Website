@@ -1,12 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Typewriter } from 'react-simple-typewriter';
-import {
-  FaEnvelope,
-  FaFacebookSquare,
-  FaGithubSquare,
-  FaLinkedin,
-  FaGraduationCap
-} from 'react-icons/fa';
+import { FaEnvelope, FaFacebookSquare, FaGithubSquare, FaLinkedin, FaGraduationCap } from 'react-icons/fa';
 
 import Info from '../../data/Info.json';
 import styles from './styles.module.css';
@@ -37,14 +31,7 @@ const Home = () => {
                 <>
                   I'm{' '}
                   <span style={{ fontWeight: 'bold' }}>
-                    <Typewriter
-                      words={Info.SELF_INFO.SELF_DESCRIPTION}
-                      loop={100}
-                      cursor
-                      cursorStyle="_"
-                      typeSpeed={50}
-                      deleteSpeed={20}
-                    />
+                    <Typewriter words={Info.SELF_INFO.SELF_DESCRIPTION} loop={100} cursor cursorStyle="_" typeSpeed={50} deleteSpeed={20} />
                   </span>
                 </>
               )}

@@ -129,7 +129,6 @@ Distributor 有以下幾個主要功能 :
 4.  Forwarding
 
     一旦日誌被驗證並預處理，Distributor 就會將日誌轉發給指定的 Ingester
-
     - Replication factor
 
       為了降低單個 Ingester 可能遺失資料的風險，Distributor 會將寫入資料轉發到多個 Ingester，這個數量由 Loki 的設定檔中的 `replication_factor` 決定，預設為 3
@@ -193,7 +192,6 @@ Query Frontend 是一種無狀態的組件，在大多數情況下只需要兩�
    即使沒有獨立的 Query Scheduler，Query Frontend 也可以將查詢排隊
 
    排隊功能可以帶來以下的好處 :
-
    - 防止 Querier 的記憶體溢出 (OOM) : 如果發生了 OOM，也可以進行重試，提升查詢的穩定性，同時也可以降低記憶體的需求
    - 負載均衡 : 將大型查詢分散到多個 Querier 上，避免單個 Querier 被壓垮
    - 租戶的公平調度 : 可以用於防止單一租戶的 DDoS 影響到其他租戶
@@ -205,7 +203,6 @@ Query Frontend 是一種無狀態的組件，在大多數情況下只需要兩�
 3. Caching
 
    Query Frontend 提供了多種不同的 cache 策略，用於提升查詢的速度 :
-
    - Metric queries : 可以快取前端的 metric 查詢結果，如果塊取的結果不完整，則可以使用子查詢來補全。此外，可以選擇性地將查詢與 step 參數對齊，以提高 cache 的命中率，並將結果快取到 redis 或 memory 中。
    - Log queries : 對於 log query，Query Frontend 使用 negative cache 來記錄空的時間段
    - Index stats queries (索引統計查詢) : 主要用於 Loki 內部，類似 Metric queries，只能在 single store 的 tsdb 中使用
@@ -353,7 +350,6 @@ Loki 會採用大量平行化的方式來處理這個問題，同時使用 Bloom
 我們可以從上圖中看到兩個關鍵的組件，分別是 Bloom Compactor 跟 Bloom Gateway。
 
 - Bloom Compactor :
-
   - 負責在 Loki 的物件儲存中的日誌區塊 (chunks) 建立 Bloom filter
   - 針對每個日誌序列 (series，類似於 stream id) 建立 Bloom filter
   - 從每個日誌序列的每個日誌行中提取 n-grams

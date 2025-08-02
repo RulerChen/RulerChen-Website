@@ -62,18 +62,18 @@ const pool = new pg.Pool({
   port: 5432,
   user: 'postgres',
   password: 'postgres',
-  database: 'postgres'
+  database: 'postgres',
 });
 
 app.use((req, res, next) => {
   res.on('finish', () => {
     if (res.statusCode >= 400) {
       logger.error({
-        message: `msg="Received response" method=${req.method} path=${req.route.path} ip=${req.ip} status=${res.statusCode} url=${req.originalUrl}`
+        message: `msg="Received response" method=${req.method} path=${req.route.path} ip=${req.ip} status=${res.statusCode} url=${req.originalUrl}`,
       });
     } else {
       logger.info({
-        message: `msg="Received response" method=${req.method} path=${req.route.path} ip=${req.ip} status=${res.statusCode} url=${req.originalUrl}`
+        message: `msg="Received response" method=${req.method} path=${req.route.path} ip=${req.ip} status=${res.statusCode} url=${req.originalUrl}`,
       });
     }
   });
@@ -93,9 +93,7 @@ app.get('/api/book/:bookId', async (req, res) => {
   }
 
   try {
-    const result = await pool.query('SELECT id, title FROM books WHERE id = $1', [
-      req.params.bookId
-    ]);
+    const result = await pool.query('SELECT id, title FROM books WHERE id = $1', [req.params.bookId]);
     if (result.rowCount === 0) {
       return res.status(404).send('Book not found');
     }
@@ -189,11 +187,11 @@ class LoggerService {
         {
           stream: {
             level: level,
-            service_name: 'loki-demo'
+            service_name: 'loki-demo',
           },
-          values: [[`${Date.now() * 1000000}`, message, metadata]]
-        }
-      ]
+          values: [[`${Date.now() * 1000000}`, message, metadata]],
+        },
+      ],
     };
 
     try {
@@ -268,12 +266,7 @@ services:
     command: ['run', '--server.http.listen-addr=0.0.0.0:12345', '/etc/alloy/config.alloy']
     healthcheck:
       test:
-        [
-          'CMD',
-          '/bin/bash',
-          '-c',
-          "echo -e 'GET /-/ready HTTP/1.1\\nHost: localhost\\nConnection: close\\n\\n' > /dev/tcp/localhost/12345"
-        ]
+        ['CMD', '/bin/bash', '-c', "echo -e 'GET /-/ready HTTP/1.1\\nHost: localhost\\nConnection: close\\n\\n' > /dev/tcp/localhost/12345"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -341,7 +334,7 @@ services:
         '-c',
         'log_truncate_on_rotation=on',
         '-c',
-        'log_statement=all'
+        'log_statement=all',
       ]
     environment:
       POSTGRES_USER: postgres

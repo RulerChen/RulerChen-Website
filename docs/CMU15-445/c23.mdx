@@ -1,212 +1,234 @@
 ---
-title: 'Distributed OLAP Database Systems'
+title: 'Distributed OLTP Database Systems'
 sidebar_position: '23'
-description: CMU15-445/645 Distributed OLAP Database Systems
-keywords: [CMU15-445/645, Distributed OLAP Database Systems, CMU15-445/645 筆記]
+description: CMU15-445/645 Distributed OLTP Database Systems
+keywords: [CMU15-445/645, Distributed OLTP Database Systems, CMU15-445/645 筆記]
+tags: [CMU15-445]
 ---
 
 <head>
-  <title>CMU 15-445/645 Distributed OLAP Database Systems</title>
+  <title>CMU 15-445 Distributed OLTP Database Systems</title>
 </head>
 
-## Decision Support System (DSS)
+在上節中，我們討論了基本的分散式資料庫系統，但仍然有很多細節沒有討論到，這節會討論一些分散式 OLTP 系統的細節，像是 :
 
-決策支持系統是用於協助組織的管理層、運營層和規劃層進行決策的應用程式。
-DSS 通過分析存儲在資料庫中的歷史數據，幫助人們針對未來的問題和挑戰做出明智的決策。
+- 如果其中有節點發生故障怎麼處理
+- 如果訊息在網路上延遲怎麼處理
+- 是否需要所有節點都同意才能 commit 一個 transaction
 
-### OLAP and OLTP
+我們要假設所有的節點都是可信任的，不然就需要採用 Byzantine Fault Tolerance 的方法 (blockchain)。
 
-資料庫有兩種使用場景，OLTP 和 OLAP。
+## Replication
 
-OLTP 負責與正在運行中的應用程序交互，再透過異步的方式將數據同步到 OLAP 系統中作分析。
+DBMS 可以將資料複製到多個節點上以及高可用性，在實現上，有幾個重要的考慮因素 :
 
-![OLTP vs OLAP](/img/cmu15-445/c23/image.png)
+- Replication Configuration
+- Propagation Scheme
+- Propagation Timing
+- Update Method
 
-OLTP 資料庫中的資料會通過一些流程將資料轉移到 OLAP 資料庫中，主要有兩種方式 :
+### Replication Configuration
 
-- ETL (Extract, Transform, Load)
-- ELT (Extract, Load, Transform)
+主要可以分為兩種方式，Primary-Replica 和 Multi-Master。
 
-現代的流程中通常會在 OLAP 資料庫中進行轉換，而非傳統的 ETL 流程。
+![Replication](/img/cmu15-445/c22/image.png)
 
-在 ETL 中，我們不只是簡單的搬移資料，通常還會對表的結構進行轉換，來提高分析的效能，常見的 scheme 有以下兩種 :
+#### Primary-Replica
 
-- Star Schema
-- Snowflake Schema
+所有關於寫的操作都會先寫到 primary node， primary node 更新完後再通知其他 replica node 更新，而只讀的資料可以直接從 replica node 讀取。
+如果 master 節點崩潰，則由共識算法選擇新的 master 節點。
 
-### Star Schema
+#### Multi-Master
 
-star schema 主要分成兩種表，fact table 和 dimension table。
+每個節點都可以更新資料，但節點之間需要透過 atomic commit protocol 來確保一致性。
 
-fact table 通常儲存應用程式的核心事件以及指標，而 dimension table 則是對 fact table 的描述，兩者會通過 foreign key 進行關聯，且只能允許一層關聯。
+#### K-safety
 
-![Star Schema](/img/cmu15-445/c23/image-1.png)
+K-safety 是用來衡量資料庫的容錯能力的閾值，K 值表示每個物件必須始終可用的副本數量，如果副本數量低於這個閾值，DBMS 會停止系統。
 
-### Snowflake Schema
+### Propagation Scheme
 
-snowflake schema 與 star schema 類似，但 dimension table 可以進一步分解成多個表，這樣可以減少重複的資料。
+當交易在資料庫上提交時，DBMS 會決定是否需要等待該交易傳播到其他節點後再向應用程式客戶端發送確認，主要有兩種方式 :
 
-![Snowflake Schema](/img/cmu15-445/c23/image-2.png)
+- Synchronous Propagation : Strong Consistency
+- Asynchronous Propagation : Eventual Consistency
 
-### Star vs Snowflake
+![Propagation Scheme](/img/cmu15-445/c22/image-2.png)
 
-這兩種 schema 都有各自的優缺點，star schema 簡單直觀，但可能會有大量的重複資料，而 snowflake schema 可以減少重複資料，但可能會增加 join 的複雜度。
+#### Synchronous Propagation
 
-## Execution Model
+主節點將更新發送到從節點，並等待它們確認已完全應用更改後，再通知客戶端更新成功。
+確保了強一致性，不會丟失任何數據，通常在傳統的 DBMS 中使用。
 
-分散式資料庫管理系統的執行模型定義了在查詢執行過程中，系統如何在不同節點之間進行通信，通常有兩種方式 :
+#### Asynchronous Propagation
 
-- Pushing a Query to Data
-- Pull Data to Query
+主節點在本地更新完後立即向應用程式返回確認，而不等待從節點更改完成。
+可能會導致讀取過期數據，但如果可以容忍某些數據丟失，這種方式是一種有效的優化，通常在 NoSQL 系統中使用。
 
-### Pushing a Query to Data
+### Propagation Timing
 
-在這種方法中，DBMS 將查詢 (或部分查詢) 推送到包含所需資料的節點，並在當地執行過濾和處理，最大限度地減少網路上的數據傳輸。
+主節點甚麼時候將更新發送到從節點的策略，主要有兩種方式 :
 
-![Pushing a Query to Data](/img/cmu15-445/c23/image-4.png)
+- Continuous Propagation
+- On Commit Propagation
 
-### Pull Data to Query
+#### Continuous Propagation
 
-在這種方法中，DBMS 將需要處理的資料拉取到執行查詢的節點。
+DBMS 在生成 log 後立即發送 log 給從節點，其中包括提交和中止消息。
 
-![Pull Data to Query](/img/cmu15-445/c23/image-3.png)
+#### On Commit Propagation
 
-### Query Fault Tolerance
+DBMS 只有在交易提交後才將該交易的 log 發送到從節點，避免了為 abort 的交易傳送 log，但會導致同步效率較低。
 
-節點從遠端來源接收的資料會被緩存在緩衝池中，方便進行查詢，也可以暫時持久化到臨時文件中。
-Ephemeral Pages 在重新啟動後不會被持久化，因此如果在查詢執行期間節點發生崩潰，分散式 DBMS 需要考慮如何處理長時間執行的 OLAP 查詢。
+### Active vs Passive
 
-大多數的分散式 OLAP 在設計時假設節點在查詢執行期間不會失敗。如果查詢執行過程中某個節點失敗，那麼整個查詢將會失敗，
-必須從頭開始執行，這對於需要數天才能完成的 OLAP 查詢來說代價高昂。
-因此 DBMS 可以在查詢執行過程中對中間結果進行快照，以便在節點失敗時能夠恢復。
-然而，這一操作非常昂貴，因為將資料寫入硬碟的速度較慢。
+根據如何將更改應用到從節點上，複製可以分為 :
 
-## Query Planning
+- Active-Active
+- Active-Passive
 
-在分散式環境中，query planning 的過程變得更加複雜，因為資料分佈在多個節點上，並且每個節點的計算和儲存資源可能有所不同。
-因此，查詢計畫不僅需要考慮到傳統的優化技術，還需要考慮到節點之間資料的移動成本和延遲。
+#### Active-Active
 
-在 single node 時所提到的優化技術仍然適用於分散式環境，像是 :
+交易在每個從節點上獨立執行，最後 DBMS 檢查每個節點上的結果是否一致，以確保交易正確提交。
 
-- Predicate Pushdown
-- Early Projections
-- Optimal Join Orderings
+#### Active-Passive
 
-在分散式系統中有兩種粒度可以進行優化 :
+交易在一個節點上執行，然後將總體更改傳播到從節點。
 
-- Physical Operators : 先生成一個單一的全域查詢計畫，然後將物理運算符分配給不同的節點，將其拆分為針對特定分區的計畫片段，一般 DBMS 會使用這種方法
-- SQL : 將原始的 SQL 改寫成多條 SQL 語句，較少使用
+## Atomic Commit Protocols
 
-## Distributed Join Algorithm
+當一個橫跨多個節點的交易完成時，DBMS 需要詢問所有參與的節點是否可以安全地提交交易。
+根據所使用的協議，可能需要不同數量的節點同意才能提交交易，
 
-在分散式系統中，同一個表中的 tuple 可能會在不同的節點上，因此在進行聯接操作時，需要考慮到不同的場景。
+常見的協議包括 :
 
-接下來會討論下面這條 SQL 在不同的場景下的執行方式。
+- Two-Phase Commit (2PC)
+- Three-Phase Commit (3PC)
+- Paxos
+- Raft
+- Zookeeper Atomic Broadcast (ZAB)
+- Viewstamped Replication
 
-```SQL
-SELECT *
-FROM R
-JOIN S ON R.id = S.id
-```
+本節主要討論 2PC 和 Paxos。
 
-### Scenario 1
+### Two-Phase Commit (2PC)
 
-在這個場景中，一個表被複製到每個節點，而另一個表則按鍵分區到各個節點。
+2PC 是一個經典的分散式交易提交協議，分為兩個階段 :
 
-每個節點在本地執行聯接操作，然後將結果發送到 coordinating node 進行聚合。
+- Prepare Phase
+- Commit Phase
 
-![Scenario 1](/img/cmu15-445/c23/image-5.png)
+#### 2PC Success
 
-### Scenario 2
+首先應用程式會向協調者發送提交請求之後進入準備階段 (Prepare Phase)。
 
-在這個場景中，兩個表都按 join attribute 進行分區。
+協調者向參與節點發送 prepare 請求，詢問它們是否可以提交當前交易
 
-每個節點執行本地聯接操作，然後將結果發送到 coordinating node 進行聚合。
+![2PC](/img/cmu15-445/c22/image-3.png)
 
-![Scenario 2](/img/cmu15-445/c23/image-6.png)
+等待所有節點回覆 OK 後，則進入提交階段 (Commit Phase)。
 
-### Scenario 3
+協調者會向所有參與者發送提交消息，通知它們提交交易。
 
-在這個場景中，兩個表按不同的鍵進行分區。
+![2PC](/img/cmu15-445/c22/image-4.png)
 
-如果其中一個表較小，DBMS 可以將該表廣播到所有節點，並在本地進行 join，最終將結果發送到 coordinating node，這種情況被稱為 Broadcast Join。
+等待所有交易提交後，協調者向應用程式回覆提交成功。
 
-![Scenario 3](/img/cmu15-445/c23/image-7.png)
+![2PC](/img/cmu15-445/c22/image-5.png)
 
-### Scenario 4
+#### 2PC Abort
 
-在這個場景中，，兩個表都未按 join key 進行分區。
+在準備階段時，如果有任何一個節點無法執行，則應該回覆 ABORT 給協調者。
 
-DBMS 需要重新分配這些表，將它們根據 join key 進行 shuffle，然後在本地執行聯接，最終將結果發送到 coordinating node。
+![2PC](/img/cmu15-445/c22/image-6.png)
 
-![Scenario 4](/img/cmu15-445/c23/image-8.png)
+而此時協調者應該向應用程式回覆提交失敗，同時向所有參與者發送中止消息，並且確保所有交易都有回滾。
 
-### Semi-Join
+![2PC](/img/cmu15-445/c22/image-7.png)
 
-半聯接是一種聯接操作，其結果只包含來自左表的欄位。
+#### 2PC Optimization
 
-DBMS 可以使用 semi join 來最小化聯接過程中傳輸的資料量。
+- Early Prepare Voting (Rare): 如果 DBMS 發送的查詢已經是某個節點最後的查詢，該節點可以將查詢結果和準備階段的投票一起返回
+- Early Acknowledgement after Prepare (Common): 如果所有節點都在準備階段同意提交交易，協調者可以在提交階段完成前向客戶端發送成功確認
 
-有些資料庫可以支援 semi-join 的語法，如果不行則可以用 EXISTS 來模擬。
+#### 2PC Fault Tolerance
 
-## Cloud System
+在 2PC 中，每個節點都需要保存每個階段輸入和輸出的 log 來幫助恢復。
 
-OLAP 資料庫的雲端服務主要分成兩類 :
+在 recovery 時可能會有以下情況 :
 
-- Managed DBMS : 將開源的資料庫移到雲端，並做一些小修改
-- Cloud-Native DBMS : 為雲原生設計的資料庫，通常基於 shared-disk
+- 如果交易在準備階段，則連絡協調者確認最後的交易結果
+- 如果交易不在準備狀態，則該交易立即中止，因為節點在崩潰之前並未達到準備狀態
+- 如果交易正在提交且該節點是協調者，會在重啟後向所有參與節點發送 COMMIT 消息，以完成交易提交
 
-### Serverless
+如果是協調者在 commit 之前發生故障，則只需要等待協調者重啟後再次發送 COMMIT 消息即可，如果是在 commit 開始之後發生故障，則其他節點需要等待該節點重啟或者直接決定新的協調者。
 
-無伺服器資料庫是一種動態管理計算資源的 DBMS 模式。
-當用戶的應用程式處於空閒狀態時，系統會將計算資源釋放，同時將當前進度檢查點存儲到磁碟上，這樣當應用重新啟動時，系統就能夠恢復之前的狀態，而使用者只需要為實際使用的存儲和計算資源付費。
+如果是參與者在 commit 開始之前發生故障，則協調者只要依據超時機制將交易中止即可，如果是在 commit 開始之後發生故障，則協調者需要不斷重試來保證一致性。
 
-### Data Lake
+由於 2PC 需要等待所有節點的回覆，可能會導致 live lock，因此有了共識算法。
 
-Data Lake 是一種集中的資料存儲庫，用於儲存大量結構化、半結構化和非結構化數據，無需預先定義架構或轉換為內部格式，可以儲存各種類型的資料，但需要使用者自行轉換和處理。
+### Paxos
 
-## OLAP Commoditization
+Paxos 是一種共識算法，在這個算法中，提議者會負責提交 commit 或 abort 的指令，而接受者則投票決定是否接受提議，由於不需要每個節點都同意，因此效能上會比 2PC 好。
 
-過去十年間，OLAP 引擎子系統的商品化成為一種趨勢，許多非 DBMS 供應商的組織開始將這些子系統分拆為獨立的開源組件。
+Paxos 的協調者被稱為提議者 (Proposer)，參與者被稱為接受者 (Acceptor)。
 
-這些組件主要包括 System Catalogs、Query Optimizers、File Format / Access Libraries、Execution Engines 等等。
+首先，應用程式會向 proposer 發送提交請求，然後 proposer 會向 acceptor 發送提議
 
-### System Catalogs
+![Paxos](/img/cmu15-445/c22/image-8.png)
 
-系統目錄是 DBMS 中保存資料庫結構的元數據的資料庫。
-它包含有關資料庫結構的資訊，例如資料表、索引、視圖、資料類型以及使用者和權限等。
-系統目錄讓 DBMS 能夠知道如何存取和管理儲存在資料庫中的資料。
+與 2PC 不同的是，Paxos 不需要等待所有節點的回覆，只需要等待過半數的節點同意即可，因此會繼續向 acceptor 發送 commit 請求。
 
-- HCatalog
-- Google Data Catalog
-- Amazon Glue Data Catalog
+![Paxos](/img/cmu15-445/c22/image-9.png)
 
-### Query Optimizers
+但不同的是，即使在 commit 階段，acceptor 也可以拒絕提議，舉例如下 :
 
-Query Optimizer 是 DBMS 中最困難的部分之一，用於為基於啟發式和基於成本的查詢優化提供擴展性框架。
-DBMS 提供轉換規則和成本估算，框架返回邏輯或物理查詢計劃。
+假設有兩個 proposer，proposer 1 在 n 的時間提出協議並被所有人 agree
 
-- Greenplum Orca
-- Apache Calcite
+![Paxos](/img/cmu15-445/c22/image-10.png)
 
-### Data File Formats
+這時候 proposer 2 在 n+1 的時間提出協議，接著 proposer 1 發出 commit 請求，由於時間先後順序，acceptor 會拒絕 proposer 1 的提議，之後 proposer 2 會繼續直到提交完成。
 
-大多數 DBMS 使用專有的二進制文件格式來存儲資料庫。
-系統之間的資料共享通常需要將資料轉換為通用的文本格式 (如 CSV、JSON 和 XML)。
-然而，近年來出現了多種開源二進制文件格式，使得跨系統訪問變得更容易。
+![Paxos](/img/cmu15-445/c22/image-11.png)
 
-- Apache Parquet：來自 Cloudera/Twitter 的壓縮列式存儲格式
-- Apache ORC：來自 Apache Hive 的壓縮列式存儲格式
-- Apache CarbonData：來自華為的帶索引的壓縮列式存儲格式
-- Apache Iceberg：來自 Netflix 的支持架構演化的靈活數據格式
-- HDF5：用於科學工作負載的多維數組格式
-- Apache Arrow：來自 Pandas/Dremio 的內存壓縮列式存儲格式
+這樣會導致的問題是有可能同時兩個 proposer 互相組塞，因此我們可以透過 Multi-Paxos 來解決這個問題。
 
-### Execution Engines
+#### Multi-Paxos
 
-Execution Engine 是資料庫系統中實際執行 SQL 查詢的部分。
-當 Query Optimizer 生成了一個最佳的查詢計畫後，執行引擎負責逐步執行這些計畫中的操作。
+如果系統內常有任意數量的 proposer，達成共識就會有點困難，因此我們可以先透過 Paxos 選出一個主要的提議者，然後由主要提議者來進行提議，並在達到一定時間之後再重新選舉主要提議者。
+這樣在一段時間內提交交易就不需要 propose 而是直接進行 commit，這樣就能提高效率。
 
-- Velox
-- DataFusion
-- Intel OAP
+## Consistency Issues (CAP / PACELC)
+
+### CAP
+
+CAP 定理指出一個分散式系統無法同時滿足以下三個條件 :
+
+- 一致性 (Consistency) : 對所有節點上的操作來說，一旦寫入完成，所有後續的讀取應該返回該寫入的值或更晚的寫入值
+- 可用性 (Availability) : 可用性指的是所有仍在運行的節點都能滿足所有請求的能力。即使部分節點故障，仍然能夠提供服務
+- 分區容錯性 (Partition Tolerance) : 分區容錯性意味著即使系統中部分節點間的消息丟失，系統仍能正確運行
+
+### PACELC
+
+CAP 定理的現代版本是 PACELC 定理，這個定理進一步考慮了一致性和延遲之間的取捨。
+
+- P (Partition)：當在網絡分區時，系統必須在可用性 (A) 和一致性 (C) 之間做出選擇。
+- EL (Else)：即使在系統運行正常且無網絡分區的情況下，也必須在延遲 (L) 和一致性 (C) 之間做出選擇。
+
+### CAP vs PACELC
+
+在 RDBMS 中，通常會在重要節點故障時拒絕寫入，以確保一致性，而在 NoSQL 中，通常會接受寫入，常採用的策略是最後一次寫入勝出。
+
+## Google Spanner
+
+Google Spanner 是一個由 google 發明的資料庫系統，具有以下特點 :
+
+- semi-relational data model、Decentralized shared-disk architecture 以及 Log-structured on-disk storage
+- Strict 2PL + MVCC + Multi-Paxos + 2PC
+- Externally consistent : Spanner 保證事務具有外部一致性，這意味著如果事務 T1 完成後事務 T2 開始，則 T2 必須看到 T1 的結果。為了實現這一點，Spanner 使用原子鐘和 GPS 產生的全球唯一時間戳來確保事務順序。
+
+![Google Spanner](/img/cmu15-445/c22/image-1.png)
+
+## References
+
+- [Paxos](https://poweichen.gitbook.io/blockchain-guide-zh/distribute_system/paxos)

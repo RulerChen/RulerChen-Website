@@ -1,191 +1,202 @@
 ---
-title: 'Multi-Version Concurrency Control'
+title: 'Timestamp Ordering Concurrency Control'
 sidebar_position: '18'
-description: CMU15-445/645 Multi-Version Concurrency Control
-keywords: [CMU15-445/645, Multi-Version Concurrency Control, CMU15-445/645 筆記]
+description: CMU15-445/645 Timestamp Ordering Concurrency Control
+keywords: [CMU15-445/645, Timestamp Ordering Concurrency Control, CMU15-445/645 筆記]
+tags: [CMU15-445]
 ---
 
 <head>
-  <title>CMU 15-445/645 Multi-Version Concurrency Control</title>
+  <title>CMU 15-445 Timestamp Ordering Concurrency Control</title>
 </head>
 
-## Multi-Version Concurrency Control
+Timestamp Ordering (T/O) concurrency control 是一種樂觀的並發控制協議，這種協議會假設衝突不常發生，因此不會在讀取或寫入資料庫之前獲取鎖。
+T/O 的主要概念是為每個 transaction 分配一個 timestamp，如果 $TS(T_i) < TS(T_j)$，則 DBMS 需要確保執行計劃等價於一個交易順序為 $T_i, T_j$ 的序列。
 
-多版本併發控制 (MVCC) 是一種廣泛應用於現代 DBMS 的技術，這種技術會透過維護資料庫中每個邏輯對象的多個物理版本來實現併發控制，允許同時讀寫操作而不互相阻塞，當事務需要讀取資料時，只會讀到該事務開始之前的最新版本，如果保留所有的版本，DBMS 甚至可以讀取任一時間點的資料 (time-travel)。
+而實現 T/O 需要單調遞增的 timestamp，通常有以下幾種方法 :
 
-MVCC 涉及多個設計決策，這些決策影響資料庫的性能、存儲需求以及如何處理不同的併發場景
+- system clock : 使用系統的時鐘來生成 timestamp，有可能會受到夏令時間 (Daylight Savings Time，會在夏令時調整時鐘) 等意外狀況的影響
+- logical counter : 使用邏輯計數器來生成 timestamp，這種方法可能會有溢出問題，並且很難在分散式系統中維持一致性
+- hybrid clock : 結合系統時鐘和邏輯計數器
 
-- Concurrency Control Protocol : 可以選擇使用之前討論過的併發控制方法，如 2PL、Timestamp Ordering、Optimistic Concurrency Control 等
-- Version Storage : 決定如何存儲和管理多個版本的資料
-- Garbage Collection : 隨著時間的推移，某些舊版本的資料變得無用，因此需要有一個機制來清理這些版本
-- Index Management : 多版本的存在會對索引結構的設計造成挑戰，特別是如何快速找到正確版本的資料
-- Deletes : 當刪除某個數據時，如何處理該資料的不同版本是一個需要考慮的問題
+## Basic Timestamp Ordering (BASIC T/O)
 
-### Snapshot Isolation
+Basic Timestamp Ordering (BASIC T/O) 是一種最基本的 T/O 協議。
+在這個協議中，事務讀寫都不需要加鎖，且每條資料 $X$ 都會有兩個 timestamp，分別是 read timestamp ($R-TS(X)$) 和 write timestamp ($W-TS(X)$)，Basic T/O 會在每次操作時檢查這些時間戳。如果交易試圖讀取未來的資料，該交易將被中止並重新啟動。
 
-在 MVCC 中，快照隔離是一種提供交易一致性快照的隔離級別。
-交易在開始時會得到一個資料庫的快照，該快照僅包含已提交交易的數據，並且該交易在完成前與其他交易完全隔離。
+### Read
 
-- Read : 交易從快照中讀取數據，因此讀操作不會被其他交易的寫操作阻塞，這使得快照隔離特別適合只讀交易
-- Write : 寫操作在交易的私有工作空間中進行，只有當交易成功提交後，這些更改才會對其他交易可見
-- Write Conflicts : 如果兩個交易更新同一個對象，會以先提出的交易為主
-- Write Skew Anomaly : 兩個交易分別修改不同的對象，最終可能導致非可序列化的調度，如下方的圖片範例。
+1. 檢查 $W-TS(X)$ 是否大於 $TS(T_i)$，如果小於則代表 $T_i$ 試圖讀取未來的資料，因此 $T_i$ 會被中止並重新啟動，否則 $T_i$ 可以讀取 $X$
+2. 如果讀取成功，則更新 $R-TS(X)$ 為 $max(R-TS(X), TS(T_i))$
+3. 為了確保可以重複讀取到相同的資料，DBMS 會儲存一個副本
 
-![Write Skew Anomaly](/img/cmu15-445/c18/image-4.png)
+### Write
+
+1. 檢查 $TS(T_i)$ 是否小於 $R-TS(X)$ 和 $W-TS(X)$，如果小於則代表 $T_i$ 試圖覆蓋未來的資料，因此 $T_i$ 會被中止並重新啟動，否則 $T_i$ 可以寫入 $X$
+2. 如果寫入成功，則更新 $W-TS(X)$ 為 $max(W-TS(X), TS(T_i))$
 
 ### Example
 
-$T_1$ 先修改 $A$，創造一個新的版本 $A_1$，並將 $A_0$ 的結束時間改成 1
+詳細的例子可以參考投影片的第 10 頁 [CMU 15-445/645: Timestamp Ordering Concurrency Control](https://15445.courses.cs.cmu.edu/fall2023/slides/17-timestampordering.pdf)。
+這邊我們只解釋第二個例子。
 
-![MVCC Example](/img/cmu15-445/c18/image.png)
+![Example](/img/cmu15-445/c17/image.png)
+![Example](/img/cmu15-445/c17/image-1.png)
 
-此時 $T_2$ 想讀取 $A$，因為 $T_1$ 還沒提交，所以 $T_2$ 只能讀取 $A_0$
+我們可以看到 T1 在 T2 修改了 A 之後又修改了 A，因此 T1 會被中止並重新啟動。
 
-![MVCC Example](/img/cmu15-445/c18/image-1.png)
+### Thomas Write Rule (TWR)
 
-接著 $T_2$ 想要修改 $A$，但是有另一個 active 的事務正在修改 $A$，所以 $T_2$ 會被 block
+如果 $TS(T_i) < W-TS(X)$，根據 Thomas Write Rule，DBMS 可以選擇忽略這個寫入操作並繼續執行，雖然這違反了 T/O 的原則，但是由於沒有其他操作依賴於這個寫入操作 (會寫入到 local copy 中)，因此不會影響 schedule 的 serializability。
 
-![MVCC Example](/img/cmu15-445/c18/image-2.png)
+### Summary
 
-直到 $T_1$ commit 之後，$T_2$ 才能創建新的版本 $A_2$，並將 $A_1$ 的結束時間改成 2
+如果不使用 TWR，則 Basic T/O 可以保證 schedule 是 conflict serializable，
 
-![MVCC Example](/img/cmu15-445/c18/image-3.png)
+其優缺點如下:
 
-## Concurrency Control Protocol
+- 優點
+  - 無需加鎖
+  - 不會造成死鎖
+- 缺點
+  - 長的 transaction 因為衝突而導致產生 starvation。
+  - 複製資料、維護 timestamp 會增加系統的開銷
+  - 可能產生無法恢復的 schedule (unrecoverable schedule)
 
-可以使用前面所介紹過的併發控制方法 :
+## Optimistic Concurrency Control (OCC)
 
-- Two-Phase Locking
-- Timestamp Ordering
-- Optimistic Concurrency Control
+Optimistic Concurrency Control (OCC) 是一種樂觀的並發控制協議，使用時間戳來驗證交易。
+OCC 適合在衝突較少的情況下使用，比如當所有交易都是唯讀的，或者當交易訪問不重疊的資料子集時。
 
-## Version Storage
+在 OCC 中，所有的交易都會被放在一個私有空間中，且所有的修改都會在裡面進行，主要分為三個階段 :
 
-在 MVCC 中，版本存儲決定了如何在資料庫中存儲同一邏輯對象的不同物理版本，以及交易在運行時如何找到對應的可見版本。
+- Read Phase
+  - 追蹤每個交易讀取和寫入的資料，並放到私有空間中，並在結束時獲得 timestamp
+- Validation Phase
+  - 當要提交的時候，檢查是否有衝突
+- Write Phase
+  - 如果驗證成功，則將修改寫入到資料庫中
 
-每個 tuple 資料庫中都會維護一個 version chain，這是一個根據時間戳排序的 linked list，每當一個對象被更新時，DBMS 會在鏈中添加一個新版本，相關的索引通常指向 head (最新或最舊的版本)。
-在查詢時，DBMS 會遍歷版本鏈，直到找到對應交易可見的正確版本。
+### Example
 
-主要有以下三種方法來存儲版本 :
+與 Basic T/O 相比，OCC 只需要儲存 $W-TS(X)$
 
-- Append-Only Storage
-- Time-Travel Storage
-- Delta Storage
+![Example](/img/cmu15-445/c17/image-2.png)
 
-### Append-Only Storage
+接著 T1 跟 T2 會將資料放到私有空間中
 
-所有 tuple 的物理版本都存儲在同一個表中。每次更新時，DBMS 會將新的元組版本附加到表中，並更新版本鏈。
+![Example](/img/cmu15-445/c17/image-3.png)
 
-有兩種方向可以選擇
+T2 完成整個交易，由於沒有資料要寫入，因此跳過 write phase，並獲得 timestamp 1
 
-- Oldest-to-Newest (O2N) : 最舊的版本在前面，最新的版本在後面，查詢時需要遍歷整個鏈條
-- Newest-to-Oldest (N2O) : 最新的版本在前面，最舊的版本在後面，每次插入新版本時，需要更新索引指針
+![Example](/img/cmu15-445/c17/image-4.png)
 
-![Append-Only Storage](/img/cmu15-445/c18/image-5.png)
+T1 將值修改為 456，由於還不知道 timestamp，因此暫時為無限大。
+接著進行 validation phase，由於 $W-TS(A) = 1$，因此 T1 可以提交，並將 $W-TS(A)$ 更新為 2。
 
-### Time-Travel Storage
+![Example](/img/cmu15-445/c17/image-5.png)
 
-DBMS 維護一個獨立的 time travel table，用來存儲元組的舊版本。
-每次更新時，DBMS 會將舊版本複製到 time travel table 中，並在主表中覆蓋元組為新版本，主表中的元組指向時間旅行表中的舊版本。
+### Validation Phase
 
-![Time-Travel Storage](/img/cmu15-445/c18/image-6.png)
+DBMS 會檢查交易之間的 RW 衝突以及 WW 衝突，並確保所有衝突都朝同一個方向發生，
+主要有兩種檢查方向
 
-### Delta Storage
+- Backward Validation
+- Forward Validation
 
-類似於時間旅行存儲，但僅存儲元組之間的 Delta，而不是完整的舊版本，DBMS 可以通過逆向應用增量數據來重建舊版本。
-這種方式通常比時間旅行存儲寫入更快，但查詢舊版本時會更慢。
+DBMS 檢查提交中的交易與所有其他正在運行的交易的順序。尚未進入驗證階段的交易會被分配一個無限大的 timestamp。
 
-![Delta Storage](/img/cmu15-445/c18/image-7.png)
+如果 $TS(T_i) < TS(T_j)$，則交易必須滿足以下條件之一
 
-## Garbage Collection
+- $T_i$ 在 $T_j$ 開始執行之前完成了所有三個階段
 
-在 MVCC 中，隨著時間的推移，某些舊版本的資料變得無用，如沒有 active 的事務可以看到的版本，或是該事務是被一個 abort 的事務創建的，這時候就需要有一個機制來清理這些版本，這個機制稱為 garbage collection (GC)。
+![Example](/img/cmu15-445/c17/image-6.png)
 
-在 GC 中，我們需要討論兩個方向 :
+- $T_i$ 在 $T_j$ 開始寫入階段之前完成，且 $T_i$ 沒有寫入 $T_j$ 讀取過的任何物件
 
-- 如何找到無用的版本
-- 如何確定何時可以安全的回收
+![Example](/img/cmu15-445/c17/image-7.png)
 
-### Tuple-level GC
+- $T_i$ 在 $T_j$ 完成讀取階段之前完成了其讀取階段，且 $T_i$ 沒有寫入 $T_j$ 讀取或寫入過的任何物件
 
-Tuple-level GC 通過直接檢查元組來檢查舊版本的資料，有兩種常見的方式
+### Summary
 
-#### Background Vacuuming
+OCC 會有以下的問題 :
 
-假設有兩個 active 的事務，timestamp 分別是 12 跟 25
+- 將資料複製到私有空間會增加系統的開銷
+- validation / write phase 需要在全局的 critical section 中執行，這可能會造成瓶頸
+- 由於交易只有在執行完成後才會進行驗證，因此 abort 會浪費大量已完成的工作
+- timestamp 的分配在分散式系統中可能會有問題
 
-會有一個在背景執行的 vacuum thread，這個 process 會定期檢查所有的 tuple，並將那些沒有 active 事務可以看到的版本刪除
+## Dynamic Databases and Phantom Problem
 
-![Background Vacuuming](/img/cmu15-445/c18/image-9.png)
+到目前為止，我們只討論了資料庫的讀取以及更新，而沒有考慮到插入和刪除等等的操作，這些操作可能會帶來新的問題，其中一個問題就是 Phantom Problem。
 
-系統會維護一個 dirty page bitmap 追蹤上次 vacuum 之後有哪些頁面被修改過，這樣就可以只檢查這些頁面，用空間換取時間
+![Example](/img/cmu15-445/c17/image-8.png)
 
-![Background Vacuuming](/img/cmu15-445/c18/image-10.png)
+幻影問題是指在交易執行期間，其他交易插入了新的資料，導致同樣的查詢產生了不同的結果，解決方式大致有以下三種 :
 
-#### Cooperative Cleaning
+- Re-Execute Scans
+- Predicate Locking
+- Index Locking
 
-worker thread 在遍歷 version chain 時順便回收。這種方法僅適用於 O2N chains。
+### Re-Execute Scans
 
-![Cooperative Cleaning](/img/cmu15-445/c18/image-11.png)
+在交易提交時，DBMS 會重新執行所有查詢，確保結果與第一次執行時一致。
+如果有任何新增或刪除的記錄導致結果不同，DBMS 可以檢測到這種情況並適當處理。
 
-### Transaction-level GC
+缺點是在資料庫規模較大時，這種方法會增加系統的開銷。
 
-在 Transaction-level GC 中，每個交易都會維護其自己的 read / write set。
-當交易完成時，GC 可以根據這些集合來識別哪些元組版本可以被回收。
+### Predicate Locking
 
-![Transaction-level GC](/img/cmu15-445/c18/image-12.png)
+這種方法基於查詢的條件 (如 WHERE 子句) 來鎖定滿足條件的所有資料。
+通過鎖定與查詢條件匹配的所有潛在資料，防止其他交易對這些資料進行修改。
 
-## Index Management
+幾乎沒有 DBMS 使用這種方法，因為對每條新插入的資料進行檢測會導致性能嚴重下降。
 
-在 MVCC 中，索引管理是關鍵的一環，因為它涉及如何有效地追蹤和查找不同版本的數據，需要將 primary index 和 secondary index 分開討論。
+### Index Locking
 
-### Primary Key Indexes
+通過索引來鎖定特定範圍內的資料，防止在鎖定範圍內插入新資料，從而避免幻影問題。
 
-MVCC 中，Primary Key Indexes 通常指向 version chain 的頭部，需要更新時會被視為刪除舊版本並插入新版本。
+- Key-Value Locks：對索引中的單個鍵值進行鎖定，包括對不存在的鍵值進行虛擬鎖定。
+- Gap Locks：鎖定鍵值之間的間隙，防止在這些間隙中插入新資料。
+- Key-Range Locks：鎖定從一個現有鍵到下一個鍵的範圍。
+- Hierarchical Locking：允許交易持有更廣泛的鍵範圍鎖，並使用不同的鎖定模式來減少鎖管理器的負擔。
 
-### Secondary Indexes
+![Hierarchical Locking](/img/cmu15-445/c17/image-9.png)
 
-輔助索引的管理比主鍵索引更加複雜，因為這些索引需要考慮不同版本的元組如何影響索引。
+### Locking Without An Index
 
-#### Physical Pointers
+如果查詢的欄位沒有索引，那麼我們需要獲取
 
-所有的 secondary index 都指向 version chain 的頭部，這樣在更新時會出現效能問題。
+- table 上每個 page 的鎖
+- table 本身的鎖
 
-![Physical Pointers](/img/cmu15-445/c18/image-13.png)
+## Isolation Levels
 
-#### Logical Pointers
+serializability 是一種很實用的特性，它可以讓寫程式的人不用擔心併發所帶來的問題，
+但由於它的嚴格性，因此會導致性能下降，因此有時候我們需要降低 isolation level 來提高性能。
 
-可以改為指向一個 indirection layer (如 primary key)，這樣就可以避免更新 secondary index 的問題。
+更弱的 isolation level 會導致更高的性能，但也會帶來更多的問題，
+如 dirty read、non-repeatable read、phantom read 等等。
 
-![Logical Pointers](/img/cmu15-445/c18/image-14.png)
-![Logical Pointers](/img/cmu15-445/c18/image-15.png)
+![Isolation Levels](/img/cmu15-445/c17/image-10.png)
 
-### MVCC Duplicate Key Problem
+如果要更詳細的了解，可以參考 [這篇筆記](https://zhenghe.gitbook.io/open-courses/ddia-bi-ji/transactions)
 
-在 MVCC 索引中，通常部會儲存 tuple 和 key 的版本資訊 (MySQL 除外)，因此 MVCC 系統需要支持多個版本的相同邏輯元組。
+在 SQL-92 中，我們可以自己定義 isolation level
 
-![MVCC Duplicate Key Problem](/img/cmu15-445/c18/image-16.png)
+```SQL
+SET TRANSACTION ISOLATION LEVEL <isolation-level>;
+BEGIN TRANSACTION ISOLATION LEVEL <isolation-level>;
+```
 
-為了解決這個問題，索引的資料結構需要能支持 non-unique key，並且能夠存儲多個版本的 tuple，
-worker 有可能會得到不只一個 tuple，需要選擇適當的 tuple 返回。
+![Isolation Levels](/img/cmu15-445/c17/image-11.png)
 
-## Deletes
+但並非所有的資料庫都支持所有的 isolation level，因此需要查看相應的文件。
 
-在 MVCC 中，刪除操作涉及到不同版本的資料行可能在不同交易中同時可見，因此，DBMS 通常不會立即物理地刪除資料行，而是使用一些標記或策略來表示資料行已被邏輯上刪除。
-當所有交易都無法再看到該資料行時，才會物理刪除該資料行。
+![Isolation Levels](/img/cmu15-445/c17/image-12.png)
 
-### Deleted Flag
+除了 SQL-92 定義的四種 isolation level 外，還有其他的 isolation level，如 :
 
-當一個資料行被邏輯上刪除時，DBMS 會在該資料行的 header 中設置一個標記來表示此資料行已被刪除。
-
-### Tombstone Tuple
-
-當一個資料行被邏輯上刪除時，DBMS 會創建一個特殊的墓碑資料行來表示該資料行已被刪除，這個墓碑資料行通常會被放入一個專門的池中，並且使用特殊的 bit pattern 來標記。
-
-## Summary
-
-![Summary](/img/cmu15-445/c18/image-17.png)
-
-## References
-
-- [MVCC Paper](https://web.archive.org/web/20051025124412/http://www.lcs.mit.edu/publications/specpub.php?id=773)
+- Cursor Stability : 介於可重複讀和讀已提交之間，避免了丟失更新異常 (Lost Update Anomaly)。
+- Snapshot Isolation : 保證交易在執行過程中讀到的是交易開始時的數據快照。只有當寫入集不與其他同時進行的更新衝突時，交易才能提交，但有可能遇到 Write Skew 問題 (兩個快照對同一個地方進行修改)。

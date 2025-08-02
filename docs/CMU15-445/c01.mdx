@@ -1,12 +1,13 @@
 ---
-title: "Relational Model & Algebra"
-sidebar_position: "1"
+title: 'Relational Model & Algebra'
+sidebar_position: '1'
 description: CMU15-445/645 Relational Model & Algebra
 keywords: [CMU15-445/645, Relational Model & Algebra, CMU15-445/645 筆記]
+tags: [CMU15-445]
 ---
 
 <head>
-  <title>CMU 15-445/645 Relational Model & Algebra</title>
+  <title>CMU 15-445 Relational Model & Algebra</title>
 </head>
 
 ## Database System
@@ -110,37 +111,30 @@ Vector Model 的資料庫是一種專門處理高維度向量 (如由機器學�
 Relational Algebra 是一種用來描述關係模型的操作的數學表達式，常見的操作包括以下幾種 :
 
 - select
-
   - Example: $\sigma_{a_{id}=a2}(R)$
   - SQL: `SELECT * FROM R WHERE a_id = 'a2'`
 
 - projection
-
   - Example: $\pi_{b_id-100, a_id}(R)$
   - SQL: `SELECT b_id-100, a_id FROM R WHERE a_id = 'a2'`
 
 - union
-
   - Example: $R \cup S$
   - SQL: `(SELECT * FROM R) UNION ALL (SELECT * FROM S)`
 
 - intersection
-
   - Example: $R \cap S$
   - SQL: `(SELECT * FROM R) INTERSECT (SELECT * FROM S)`
 
 - difference
-
   - Example: $R - S$
   - SQL: `(SELECT * FROM R) EXCEPT (SELECT * FROM S)`
 
 - product
-
   - Example: $R \times S$
   - SQL: `(SELECT * FROM R) CROSS JOIN (SELECT * FROM S)`
 
 - join
-
   - Example: $R \bowtie S$
   - SQL: `SELECT * FROM R JOIN S USING (ATTRIBUTE1, ATTRIBUTE2...)`
 

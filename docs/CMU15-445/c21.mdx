@@ -1,177 +1,190 @@
 ---
-title: 'Introduction to Distributed Databases'
+title: 'Database Recovery'
 sidebar_position: '21'
-description: CMU15-445/645 Introduction to Distributed Databases
-keywords: [CMU15-445/645, Introduction to Distributed Databases, CMU15-445/645 筆記]
+description: CMU15-445/645 Database Recovery
+keywords: [CMU15-445/645, Database Recovery, CMU15-445/645 筆記]
+tags: [CMU15-445]
 ---
 
 <head>
-  <title>CMU 15-445/645 Introduction to Distributed Databases</title>
+  <title>CMU 15-445 Database Recovery</title>
 </head>
 
-Distributed DBMS 是一種將單一邏輯資料庫分散到多個物理資源上的系統，跟 Parallel DBMS 的差異在於分散式的節點相對距離較遠，且可能要通過公共網路進行通信。
+本節主要延續上一節的 Database Logging，討論故障發生後，要如何恢復資料庫的狀態。
 
-在此之前，我們已經學過了許多在 single node 環境下的資料庫技術，如 :
+## ARIES
 
-- Optimization & Planning
-- Concurrency Control
-- Recovery
+ARIES (Algorithms for Recovery and Isolation Exploiting Semantics) 是 IBM 在 1990 年代初期為 DB2 系統開發的一種恢復演算法，儘管不是每個 DBMS 都嚴格依照 ARIES 的規範實現，但 ARIES 的基本思想和許多技術細節仍然被廣泛使用。
 
-而這些技術在分散式系統中都會有不同的挑戰，也是我們要討論的主題。
+ARIES 有三個關鍵的概念 :
 
-## System Architecture
+- WAL
+  - 在資料庫實際寫入變更之前，先將所有變更記錄到穩定的存儲中
+  - 必須使用 steal / no-force 策略
+- Repeating History During Redo
+  - 在系統重新啟動時，重演崩潰前的所有操作，將資料庫恢復到崩潰前的確切狀態
+- Logging Changes During Undo
+  - 在進行 Undo 操作時，將這些撤銷操作記錄到日誌中。如果在 Undo 期間發生再次崩潰，系統可以確保這些撤銷操作不會被重複執行
 
-DBMS 的 system architecture 定義了 CPU 可以直接訪問那些共享資源，其中 single node 的架構就是 shared everything，而在分散式系統中，我們主要討論的是另外三種架構 :
+## Log Sequence Numbers
 
-- Shared Memory
-- Shared Disk
-- Shared Nothing
+WAL 中的每條紀錄都需要包含一個唯一的序列號，稱為 LSN (Log Sequence Number)，各個元件都需要紀錄屬於他們的 LSN。
 
-![System Architecture](/img/cmu15-445/c21/image.png)
+![Log Sequence Numbers](/img/cmu15-445/c20/image.png)
 
-### Shared Memory
+1. LSN : 全局唯一的序列號，用來標識每個日誌記錄，每次日誌寫入時，LSN 會遞增
+2. flushedLSN : 表示已經寫入到磁盤的最後一條日誌的 LSN
+3. pageLSN : 表示頁面上最後一次修改的日誌的 LSN
+4. recLSN : 自頁面上次被寫入磁碟後，最早的一次更新操作的 LSN
+5. lastLSN : 某個交易最後一次寫入日誌的 LSN
+6. MasterRecord : 最近一次 Checkpoint 的 LSN
 
-不同的 CPU 可以訪問同一個記憶體位置，這種架構幾乎沒有人使用。
+在頁面寫入硬碟前，DBMS 會確保相應的 pageLSN 小於等於 flushedLSN，這樣可以保證日誌記錄已經安全地記錄在硬碟上。
 
-### Shared Disk
+![Log Sequence Numbers](/img/cmu15-445/c20/image-1.png)
 
-在這種架構下，不同的 CPU 可以透過網路訪問同一塊邏輯硬碟，但各自有各自的記憶體。
+## Normal Execution
 
-- 優點
-  - 將運算層跟存儲層分開，方便獨立擴容
-- 缺點
-  - CPU 之間需要更多通訊來了解彼此的狀態
+大部分的交易都會包括一系列的讀寫操作，然後 commit 或是 abort。
 
-使用這種架構的系統如下圖所示 :
+這裡我們先來討論假如沒有發生故障，交易是如何執行的，我們會有四個假設來簡化討論 :
 
-![Shared Disk](/img/cmu15-445/c21/image-3.png)
+- 所有的 log file 都能放進一個 page 中
+- 寫入硬碟是原子性的
+- 使用嚴格的 2PL 而不是 MVCC
+- 使用 WAL，且是 steal / no-force 策略
 
-### Shared Nothing
+### Transaction Commit
 
-在這種環境下，每個節點都有自己的 CPU、Memory、Disk，節點之間會透過網路來通信。
+執行交易的順序如下 :
 
-- 優點
-  - 可以提供很好的效能
-- 缺點
-  - 較難確保一致性
-  - 較難進行擴容，在新增節點時，需要重新分配資料到新節點上，這會需要進行物理移動，且同時還要保證資料的一致性和可用性。
+1. 將 COMMIT 寫入 WAL buffer
+2. 將 WAL buffer 寫入硬碟
+3. 修改 flushedLSN 為 COMMIT 的 LSN
+4. 將 WAL buffer 的內容清除，並寫入一個 TXN-END 紀錄
 
-使用這種架構的系統如下圖所示 :
+![Transaction Commit](/img/cmu15-445/c20/image-2.png)
 
-![Shared Nothing](/img/cmu15-445/c21/image-1.png)
+### Transaction Abort
 
-## Design Issues
+要處理 abort 的情況，我們就必須找到與該交易有關的所有日誌記錄以及執行順序，為了提高效率，同一個交易中的每個 log 都會紀錄上一個 log 的 LSN，即 prevLSN。
 
-接下來我們會討論在分散式系統中可能遇到的問題 :
+1. 將 ABORT 寫入 WAL buffer
+2. 按照由 LSN|prevLSN 的 linked list，倒序回滾所有的 log
+3. 為了防止回滾再次故障，需要將回滾的 log 寫入 WAL
+4. 回滾完之後，寫入 TXN-END 紀錄
 
-- 應用程式如何獲取資料
-- 如何在分散式系統中進行查詢
-- 如何保證正確性
+![Transaction Abort](/img/cmu15-445/c20/image-3.png)
 
-對於 distributed DBMS 的使用者來說，他們不需要知道資料是如何分散的，只需要知道如何訪問資料。
+### Compensation Log Record
 
-### Homogeneous VS Heterogeneous
+CLR 是一種描述撤銷前一次更新操作的日誌記錄。
+它包含更新日誌記錄的所有字段，並額外包含一個 undoNext 指針，指向下一個需要撤銷的 LSN。
 
-在分散式系統中，我們需要先決定節點與節點之間的關係，可以分為兩種 :
+需要注意的是，CLR 不會被撤銷，因為它們是用來撤銷其他日誌記錄的。
 
-- Homogeneous (同質節點) : 每個節點在叢集中能夠執行相同的任務，在擴容以及故障恢復比較簡單
-- Heterogeneous (異質節點): 節點被分配特定的任務，因此不同節點之間需要進行通信才能完成任務，可以在一個物理節點上執行多個虛擬節點
+![Compensation Log Record](/img/cmu15-445/c20/image-4.png)
 
-![Homogeneous VS Heterogeneous](/img/cmu15-445/c21/image-5.png)
+## Checkpoint
 
-以 MongoDB 為例，它的集群有三種節點，分別是 Router、Config Server、Shard。
-使用者會發送請求給 Router，Router 會根據 Config Server 的設定來將請求轉發給 Shard。
+在 DBMS 中，checkpoint 可以用於減少系統崩潰後需要回放的日誌量，以加速恢復過程。
 
-## Partitioning Schemes
+### Non-Fuzzy Checkpoint
 
-Partitioning Schemes 是一種把資料庫分散到多個節點上的方法，也常被稱作 sharding。
+在 non-fuzzy checkpoint 中，DBMS 會暫停所有交易的執行，以確保能夠將一致性快照寫入硬碟中，具體步驟如下 :
 
-### Naive Table Partitioning
+1. 暫停新的交易啟動
+2. 等待所有活躍交易執行完畢
+3. 將所有 dirty page 寫入硬碟
 
-假設一個節點有足夠的容量，我們可以讓一個節點儲存一張表，缺點是可能導致資料不均勻。
+這種方式可以保證資料的一致性，但是會導致系統暫停，因此顯然不是個好方法。
 
-### Vertical Partitioning
+### Slightly Better Checkpoints
 
-將表格的屬性拆分成不同的分區。每個分區還必須存儲元組信息，以便能夠重建原始記錄。
+non-fuzzy checkpoint 的問題在於暫停所有交易並且等待所有活躍交易執行完畢，而在 slightly better checkpoint 中，我們只暫停需要 write latch 的交易，並且不需要等待所有活躍交易執行完畢。
 
-![Vertical Partitioning](/img/cmu15-445/c21/image-7.png)
+![Slightly Better Checkpoints](/img/cmu15-445/c20/image-5.png)
 
-### Horizontal Partitioning
+在 checkpoint 開始的時候，txn 已經獲取了 page3 的 write latch，因此它可以繼續執行，但是不能再獲取新的 write latch。
+此時 DBMS 會掃描一遍 buffer pool，將所有 dirty page 寫入硬碟，這時有可能 page3 的資料也被寫入硬碟，造成硬碟中的 snapshot 處於不一致的狀態。
 
-將表的資料切成多個不相關的子集，並且找到一個 key 來將資料平均分配到不同的節點上，常見的分配方式有 :
+![Slightly Better Checkpoints](/img/cmu15-445/c20/image-5.png)
 
-- Range Partitioning
-- Hash Partitioning
-- Predicate Partitioning
+我們可以記錄在 checkpoint 時那些交易是活躍的，那些資料是 dirty 的，並透過 WAL 來回復這些資料。
 
-![Horizontal Partitioning](/img/cmu15-445/c21/image-8.png)
+在這個過程中，我們需要以下兩個資訊 :
 
-通常會使用 partitionKey 來查詢資料，並使用 consistent Hashing 來決定資料應該存儲在哪個節點上。
+- Active Transaction Table (ATT) : 追蹤當前正在運行的交易，每個交易的條目包括 txnId、status (Running、Committing、Candidate for Undo)、lastLSN
+- Dirty Page Table (DPT) : 記錄緩衝池中已被修改但尚未寫入硬碟的頁面，包括 page info 和 recLSN
 
-![Consistent Hashing](/img/cmu15-445/c21/image-11.png)
+這種方法比第一個方法更好，但是需要暫停寫的交易。
 
-將每個 hash 值到邏輯環上的一個位置，然後由最接近該位置的節點 (順時針方向) 負責該鍵。
-當一個節點被添加或移除時，只有相鄰的節點之間的鍵會被移動，並且只有 1/n 的鍵會被重新分配。
-除此之外，我們也可以利用 consistent hashing 來做 replication 。
+### Fuzzy Checkpoint
 
-在 shared nothing 的架構下，通常使用物理分片
+fuzzy checkpoint 允許在檢查期間繼續執行其他交易，不會中斷系統運行。
 
-![Physical Sharding](/img/cmu15-445/c21/image-9.png)
+![Fuzzy Checkpoint](/img/cmu15-445/c20/image-6.png)
 
-在 shared disk 的架構下，通常使用邏輯分片
+在這個模式下，我們需要兩種紀錄來標記區間 :
 
-![Logical Sharding](/img/cmu15-445/c21/image-10.png)
+- CHECKPOINT-BEGIN : 標記 checkpoint 開始
+- CHECKPOINT-END : 標記 checkpoint 結束，同時包含 ATT 和 DPT 的內容
 
-## Distributed Concurrency Control
+檢查點完成後，CHECKPOINT-BEGIN 記錄的 LSN 才會被記錄在 MasterRecord 中。
 
-在分散式系統中，交易會訪問一個或多個分區的資料，就會需要複雜的協調，即所謂的 transaction coordination，通常分為中心化和去中心化兩種方式。
+## ARIES Recovery Phase
 
-### Centralized Coordinator
+ARIES 恢復協議 是一種 DBMS 在崩潰後恢復數據的一個廣泛使用的方法，總共分為三個階段 :
 
-#### Transaction Processing Monitor (TP Monitor)
+1. Analysis
+2. Redo
+3. Undo
 
-要實現中心化的協調就需要有一個元件來管理所有的交易，這個元件被稱作 Transaction Processing Monitor (TP Monitor)，每次發送請求時，都要經過 TP Monitor 來進行協調。
+從 WAL 中找到 MasterRecord，並且找到最後一個 BEGIN-CHECKPOINT 紀錄。
 
-舉例如下所示
+![ARIES Recovery Phase](/img/cmu15-445/c20/image-7.png)
 
-假設一個 DBMS 有四個 partitions，分別是 P1、P2、P3、P4，並且有一個 TP Monitor 來管理所有的交易。
-這時有一個交易需要修改 P1、P3、P4 上的資料，那麼它首先要向 TP Monitor 請求 P1、P3、P4 上的鎖
+### Analysis Phase
 
-![Centralized Coordinator](/img/cmu15-445/c21/image-12.png)
+從最後一個檢查點開始往前掃描 WAL
 
-拿到鎖之後才能修改資料，修改完畢後再向 coordinator 發送 commit 請求，coordinator 會向所有的分區詢問這個交易是否可以 commit，最後返還 ACK 給使用者。
+- 如果發現 TXN-END，則在 ATT 中移除該交易
+- 遇到其他交易時，將其加入 ATT 並設為 UNDO
+- 如果發現提交紀錄，則設為 COMMIT
+- 如果發現是更新紀錄，則將其加入 DPT，並修改 recLSN
 
-![Centralized Coordinator](/img/cmu15-445/c21/image-13.png)
+### Redo Phase
 
-#### Middleware
+redo phase 的目標是重建資料庫崩潰時的狀態，從 DPT 中最小的 recLSN 對應的日誌記錄開始掃描。
 
-Middleware 是一個位於應用程式和資料庫之間的軟體，負責跟資料庫進行通信，對於應用程式來說，它就是資料庫本身。
+對於每個 CLR，DBMS 會重新應用更新，除非以下情況之一成立 :
 
-![Middleware](/img/cmu15-445/c21/image-14.png)
+- 受影響的頁面不在 DPT 中
+- 受影響的頁面在 DPT 中，但該記錄的 LSN 小於該頁面在 DPT 中的 recLSN
+- 受影響頁面的 pageLSN（在硬碟上）大於或等於 LSN
 
-### Decentralized Coordinator
+redo 時，需要重新執行 log 中的操作，將 pageLSN 更新為 LSN，並且不再新增 CLR，在結束時，DBMS 會將所有狀態為 COMMIT 的交易寫入 TXN-END 日誌記錄，並把它們從 ATT 中移除。
 
-再去中心化的架構中，執行某個交易時會選擇一個節點作為 master，負責協調所有的交易。
+### Undo Phase
 
-![Decentralized Coordinator](/img/cmu15-445/c21/image-15.png)
+在回滾階段，DBMS 會逆轉所有在崩潰時仍未提交的交易，將所有在 ATT 上被標記為 U 的交易進行回滾。
 
-### Federated Database
+DBMS 會使用每個交易的 lastLSN，以逆向 LSN 的順序處理交易，選擇 ATT 中所有交易中最大的 lastLSN 來加速遍歷，在回滾每個交易的更新時，DBMS 會為每個修改寫入一個 CLR。
 
-在前面的範例中，我們都假設資料庫是同一種的，但在實際應用中，我們可能會想要使用不同種類的資料庫，並只暴露一個統一的介面。
+## Additional Topics
 
-這種技術有很多的挑戰，像是 query optimization、data migration、data consistency，目前仍然沒有一個很好的解決方法。
+> Q1 : 如果系統在 recovery 的 analysis 階段崩潰要怎麼辦 ?
 
-![Federated Database](/img/cmu15-445/c21/image-16.png)
+A1 : DBMS 可以重新執行 recovery 即可
 
-### Distributed Concurrency Control
+> Q2 : 如果系統在 recovery 的 redo 階段崩潰要怎麼辦 ?
 
-分散式的併發控制有很多挑戰，比如 :
+A2 : DBMS 可以重新執行 recovery 即可
 
-- Replication
-- Network Communication Overhead
-- Node Failures
-- Clock Skew
+> Q3 : 如何在 redo 階段時提升效能 ?
 
-在下圖的例子中，我們可以看到由於沒有中心化的協調器，一旦發現如圖中的死鎖情況，就很難進行協調。
+A3 : 假設系統不會再次崩潰，則可以用異步的方式將所有變更寫入硬碟
 
-![Distributed Concurrency Control](/img/cmu15-445/c21/image-17.png)
+> Q4 : 如何在 undo 階段時提升效能 ?
+
+A4 : 使用 Lazy Undo，只有在新的交易需要讀取被回滾的頁面時才進行回滾，以及避免使用 long-running 的交易
