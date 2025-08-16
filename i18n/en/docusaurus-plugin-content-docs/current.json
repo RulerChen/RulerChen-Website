@@ -1,0 +1,14 @@
+{
+  "version.label": {
+    "message": "Next",
+    "description": "The label for version current"
+  },
+  "sidebar.tutorialSidebar.category.CMU 15-445/645": {
+    "message": "CMU 15-445/645",
+    "description": "The label for category CMU 15-445/645 in sidebar tutorialSidebar"
+  },
+  "sidebar.tutorialSidebar.category.Security": {
+    "message": "Security",
+    "description": "The label for category Security in sidebar tutorialSidebar"
+  }
+}

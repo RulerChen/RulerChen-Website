@@ -31,7 +31,19 @@ module.exports = async function createConfigAsync() {
     // to replace "en" with "zh-Hans".
     i18n: {
       defaultLocale: 'zh-Hant',
-      locales: ['zh-Hant'],
+      locales: ['zh-Hant', 'en'],
+      localeConfigs: {
+        'zh-Hant': {
+          label: '繁體中文',
+          direction: 'ltr',
+          htmlLang: 'zh-Hant',
+        },
+        en: {
+          label: 'English',
+          direction: 'ltr',
+          htmlLang: 'en',
+        },
+      },
     },
 
     trailingSlash: true,
@@ -133,11 +145,15 @@ module.exports = async function createConfigAsync() {
               label: 'Linkdin',
               position: 'right',
             },
+            {
+              type: 'localeDropdown',
+              position: 'right',
+            },
           ],
         },
         colorMode: {
           defaultMode: 'dark',
-          // disableSwitch: true
+          disableSwitch: true,
         },
         // footer: {
         //   style: 'dark',

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Typewriter } from 'react-simple-typewriter';
-import { FaEnvelope, FaFacebookSquare, FaGithubSquare, FaLinkedin, FaGraduationCap } from 'react-icons/fa';
+import { Mail, Facebook, Github, Linkedin } from 'lucide-react';
 
 import Info from '../../data/Info.json';
 import styles from './styles.module.css';
@@ -39,20 +39,17 @@ const Home = () => {
           </div>
           <div className={styles.socialMedia}>
             <a href={'mailto:' + Info.SELF_INFO.EMAIL} target="_blank" aria-label="email">
-              <FaEnvelope />
+              <Mail size={36} />
             </a>
             <a href={Info.SELF_INFO.FACEBOOK} target="_blank" aria-label="facebook">
-              <FaFacebookSquare />
+              <Facebook size={36} />
             </a>
             <a href={Info.SELF_INFO.GITHUB} target="_blank" aria-label="github">
-              <FaGithubSquare />
+              <Github size={36} />
             </a>
-            <a href={Info.SELF_INFO.LINKEDIN} target="_blank" aria-label="linkdin">
-              <FaLinkedin />
+            <a href={Info.SELF_INFO.LINKEDIN} target="_blank" aria-label="linkedin">
+              <Linkedin size={36} />
             </a>
-            {/* <a href={Info.SELF_INFO.GOOGLESCHOLAR} target="_blank">
-                  <FaGraduationCap />
-                </a> */}
           </div>
         </div>
       </div>
