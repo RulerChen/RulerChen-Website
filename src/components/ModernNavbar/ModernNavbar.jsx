@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from '@docusaurus/router';
 import Link from '@docusaurus/Link';
-import { Github, Menu, X, Code, BookOpen, User, Mail } from 'lucide-react';
+import { Github, Menu, X, NotebookPen, Rss, User, Mail } from 'lucide-react';
 import styles from './styles.module.css';
 
 const ModernNavbar = () => {
@@ -20,8 +20,8 @@ const ModernNavbar = () => {
   }, []);
 
   const navItems = [
-    { name: 'Docs', href: '/docs/intro', icon: <BookOpen size={18} /> },
-    { name: 'Blog', href: '/blog', icon: <Code size={18} /> },
+    { name: 'Note', href: '/docs/intro', icon: <NotebookPen size={18} /> },
+    { name: 'Blog', href: '/blog', icon: <Rss size={18} /> },
   ];
 
   return (
