@@ -9,12 +9,11 @@ export default function BlogPostItemWrapper(props) {
   const isBrowser = useIsBrowser();
 
   const { frontMatter, slug, title } = metadata;
-  const { enableComments } = frontMatter;
 
   return (
     <>
       <BlogPostItem {...props} />
-      {enableComments && isBlogPostPage && <GiscusComponent />}
+      {isBlogPostPage && <GiscusComponent />}
     </>
   );
 }
