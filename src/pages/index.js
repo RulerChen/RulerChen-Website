@@ -9,7 +9,7 @@ import './index.css';
 export default function Home() {
   const { siteConfig } = useDocusaurusContext();
   return (
-    <Layout title={`${siteConfig.title}`} wrapperClassName="Layout" noFooter>
+    <Layout title={`${siteConfig.title}`} wrapperClassName="homepage-container" noFooter>
       <ModernNavbar />
       <main>
         <Banner />
