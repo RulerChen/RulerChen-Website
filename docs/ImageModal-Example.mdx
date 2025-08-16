@@ -1,0 +1,43 @@
+# ImageModal Component Usage Examples
+
+This document shows how to use the ImageModal component in your MDX files.
+
+## Basic Usage
+
+Display an image with click-to-expand functionality:
+
+<ImageModal src="/img/profile.png" alt="Profile picture" width={400} />
+
+## With Caption
+
+Display an image with a caption:
+
+<ImageModal src="/img/ntu.png" alt="NTU Logo" caption="National Taiwan University Logo - Click to view full size" />
+
+## With Custom Size
+
+Display an image with specific dimensions:
+
+<ImageModal src="/img/pchome.jpg" alt="PChome" caption="PChome company logo" width={400} height={200} />
+
+## Features
+
+- **Center Alignment**: Images are automatically centered
+- **Responsive**: Works on all screen sizes
+- **Click to Expand**: Click any image to view it in full screen
+- **Optional Caption**: Add descriptive text below images
+- **Keyboard Support**: Press Escape to close the modal
+- **Custom Sizing**: Set width and height as needed
+- **Hover Effects**: Subtle animations on hover
+- **Dark Mode Support**: Automatically adapts to your site's theme
+
+## Props
+
+| Prop        | Type          | Required | Description                            |
+| ----------- | ------------- | -------- | -------------------------------------- |
+| `src`       | string        | Yes      | Image source URL                       |
+| `alt`       | string        | No       | Alternative text for accessibility     |
+| `caption`   | string        | No       | Caption text displayed below the image |
+| `width`     | string/number | No       | Image width                            |
+| `height`    | string/number | No       | Image height                           |
+| `className` | string        | No       | Additional CSS classes                 |

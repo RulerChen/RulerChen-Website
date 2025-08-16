@@ -1,0 +1,200 @@
+.image-modal-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 2rem auto;
+  max-width: 100%;
+  padding: 1rem;
+}
+
+.image-modal-thumbnail {
+  max-width: 100%;
+  height: auto;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  padding: 8px;
+  background: var(--ifm-background-color);
+  border: 1px solid var(--ifm-color-emphasis-200);
+  transition:
+    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    filter 0.3s ease;
+  cursor: pointer;
+}
+
+.image-modal-thumbnail:hover {
+  transform: scale(1.05);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+  filter: brightness(1.05);
+}
+
+.image-modal-thumbnail:active {
+  transform: scale(0.98);
+  transition: transform 0.1s ease;
+}
+
+.image-modal-caption {
+  margin-top: 0.75rem;
+  font-style: italic;
+  color: var(--ifm-color-emphasis-700);
+  text-align: center;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  max-width: 80%;
+}
+
+.image-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.95);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  padding: 2rem;
+  box-sizing: border-box;
+  animation: modalFadeIn 0.3s ease-out;
+  backdrop-filter: blur(5px);
+  overflow: auto;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    background-color: rgba(0, 0, 0, 0);
+  }
+  to {
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0.95);
+  }
+}
+
+.image-modal-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: modalZoomIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width: auto;
+  min-height: auto;
+}
+
+@keyframes modalZoomIn {
+  from {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.image-modal-close {
+  position: fixed;
+  top: 2rem;
+  right: 2rem;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  font-size: 2rem;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(10px);
+  transition: background-color 0.2s ease;
+  z-index: 10000;
+}
+
+.image-modal-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.image-modal-fullscreen {
+  width: auto;
+  height: auto;
+  max-width: calc(95vw / 1.5);
+  max-height: calc(90vh / 1.5);
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  filter: brightness(1.1) contrast(1.05) saturate(1.1);
+  transition: all 0.3s ease;
+  display: block;
+  transform: scale(1.5);
+}
+
+.image-modal-fullscreen:hover {
+  filter: brightness(1.15) contrast(1.08) saturate(1.15);
+}
+
+/* Dark mode adjustments */
+[data-theme='dark'] .image-modal-thumbnail {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--ifm-color-emphasis-300);
+  background: var(--ifm-background-color);
+}
+
+[data-theme='dark'] .image-modal-thumbnail:hover {
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .image-modal-container {
+    padding: 0.75rem;
+    margin: 1.5rem auto;
+  }
+
+  .image-modal-thumbnail {
+    padding: 6px;
+  }
+
+  .image-modal-overlay {
+    padding: 1rem;
+  }
+
+  .image-modal-close {
+    top: 1rem;
+    right: 1rem;
+    width: 2.5rem;
+    height: 2.5rem;
+    font-size: 1.5rem;
+  }
+
+  .image-modal-fullscreen {
+    /* Constrain amplified image to mobile viewport */
+    max-width: calc((100vw - 2rem) / 1.2);
+    max-height: calc((100vh - 4rem) / 1.2);
+    width: auto;
+    height: auto;
+    transform: scale(1.2);
+  }
+
+  .image-modal-caption {
+    font-size: 0.85rem;
+    max-width: 90%;
+  }
+
+  .image-modal-fullscreen-caption {
+    font-size: 0.9rem;
+    padding: 0.4rem 0.8rem;
+  }
+}
+
+/* Keyboard focus styles */
+.image-modal-thumbnail:focus,
+.image-modal-close:focus {
+  outline: 2px solid var(--ifm-color-primary);
+  outline-offset: 2px;
+}
+
+.image-modal-overlay:focus {
+  outline: none;
+}
