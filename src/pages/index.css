@@ -1,20 +1,87 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
+/* Prevent scrolling when homepage is active */
+html:has(.homepage-container) {
+  overflow: hidden !important;
+  height: 100% !important;
+}
+
+body:has(.homepage-container) {
+  overflow: hidden !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
 /* Homepage container styles */
 .homepage-container {
   font-family: 'Noto Sans TC', sans-serif !important;
-  height: 100vh;
-  overflow: hidden;
-  position: relative;
+  height: 100vh !important;
+  width: 100vw !important;
+  overflow: hidden !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
 }
 
-/* Hide default Docusaurus navbar ONLY on homepage */
-.homepage-container .navbar {
+/* Hide default Docusaurus navbar ONLY on homepage - with maximum specificity */
+.homepage-container .navbar,
+.homepage-container nav.navbar,
+.homepage-container .navbar--fixed-top,
+.homepage-container .navbar__inner,
+.homepage-container [class*='navbar']:not([class*='modern']),
+.homepage-container > div .navbar,
+body .homepage-container .navbar,
+html .homepage-container .navbar,
+div.homepage-container .navbar {
   display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  height: 0 !important;
+  width: 0 !important;
+  overflow: hidden !important;
+  position: absolute !important;
+  top: -9999px !important;
+  left: -9999px !important;
+  z-index: -1 !important;
 }
 
-.homepage-container .navbar__inner {
+/* Ensure our custom navbar is always visible on homepage */
+.homepage-container nav[class*='modern'] {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  height: auto !important;
+  width: auto !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 1000 !important;
+}
+
+/* Ensure no top margin/padding from default layout - only on homepage */
+.homepage-container .main-wrapper {
+  padding-top: 0 !important;
+  height: 100vh !important;
+  overflow: hidden !important;
+}
+
+/* Prevent any child elements from causing scroll */
+.homepage-container * {
+  box-sizing: border-box !important;
+}
+
+.homepage-container main {
+  height: 100vh !important;
+  overflow: hidden !important;
+}
+
+/* FINAL OVERRIDE - Nuclear option to hide default navbar on homepage */
+.homepage-container nav:not([class*='modern']) {
   display: none !important;
 }
 
@@ -22,29 +89,11 @@
   display: none !important;
 }
 
-/* Ensure our custom navbar is always visible on homepage */
-.homepage-container nav[class*='modern'] {
-  display: block !important;
-}
-
-/* Global reset for better control - only on homepage */
-.homepage-container * {
-  box-sizing: border-box;
-}
-
-.homepage-container body {
-  margin: 0;
-  padding: 0;
-  overflow-x: hidden;
-}
-
-/* Only apply no-scroll to homepage */
-.homepage-container {
-  height: 100vh;
-  overflow: hidden;
-}
-
-/* Ensure no top margin/padding from default layout - only on homepage */
-.homepage-container .main-wrapper {
-  padding-top: 0 !important;
+/* Force hide any Docusaurus navbar elements on homepage */
+body:has(.homepage-container) nav.navbar,
+body:has(.homepage-container) .navbar--fixed-top,
+html:has(.homepage-container) nav.navbar,
+html:has(.homepage-container) .navbar--fixed-top {
+  display: none !important;
+  visibility: hidden !important;
 }

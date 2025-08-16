@@ -136,16 +136,6 @@ module.exports = async function createConfigAsync() {
             },
             { to: 'blog', label: 'Blog', position: 'left' },
             {
-              href: 'https://github.com/RulerChen',
-              label: 'GitHub',
-              position: 'right',
-            },
-            {
-              href: 'https://www.linkedin.com/in/rulerchen/',
-              label: 'Linkdin',
-              position: 'right',
-            },
-            {
               type: 'localeDropdown',
               position: 'right',
             },
