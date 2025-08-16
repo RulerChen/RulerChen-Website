@@ -20,7 +20,6 @@ const ModernNavbar = () => {
   }, []);
 
   const navItems = [
-    { name: 'Home', href: '/', icon: <User size={18} /> },
     { name: 'Docs', href: '/docs/intro', icon: <BookOpen size={18} /> },
     { name: 'Blog', href: '/blog', icon: <Code size={18} /> },
   ];
