@@ -1,5 +1,52 @@
-@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap");
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 .Layout {
-  font-family: "Noto Sans TC", sans-serif !important;
+  font-family: 'Noto Sans TC', sans-serif !important;
+}
+
+/* Hide default Docusaurus navbar completely */
+.navbar {
+  display: none !important;
+}
+
+.navbar__inner {
+  display: none !important;
+}
+
+[class*='navbar'] {
+  display: none !important;
+}
+
+/* Ensure our custom navbar is always visible */
+.Layout nav[class*='navbar'] {
+  display: block !important;
+}
+
+/* Override default body styles for better dark theme */
+html[data-theme='dark'] {
+  --ifm-background-color: #0f172a;
+  --ifm-background-surface-color: #1e293b;
+}
+
+/* Global reset for better control */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* Only apply no-scroll to homepage */
+.Layout {
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Ensure no top margin/padding from default layout */
+.main-wrapper {
+  padding-top: 0 !important;
 }
