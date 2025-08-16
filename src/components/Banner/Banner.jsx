@@ -159,14 +159,14 @@ const Home = () => {
 
                 <div className={styles.ctaButtons}>
                   <a href="mailto:a20196780@gmail.com" className={styles.secondaryBtn}>
-                    <Mail size={18} />
+                    <Mail size={24} />
                     Get In Touch
                   </a>
                   <a href={Info.SELF_INFO.GITHUB} target="_blank" aria-label="github" className={styles.secondaryBtn}>
-                    <Github size={32} />
+                    <Github size={24} />
                   </a>
                   <a href={Info.SELF_INFO.LINKEDIN} target="_blank" aria-label="linkedin" className={styles.secondaryBtn}>
-                    <Linkedin size={32} />
+                    <Linkedin size={24} />
                   </a>
                 </div>
 
