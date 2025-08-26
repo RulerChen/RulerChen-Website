@@ -24,7 +24,7 @@
     "@docusaurus/preset-classic": "^3.8.1",
     "@mdx-js/react": "^3.1.0",
     "clsx": "^1.2.1",
-    "lucide-react": "^0.539.0",
+    "lucide-react": "^0.542.0",
     "prism-react-renderer": "^2.1.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
