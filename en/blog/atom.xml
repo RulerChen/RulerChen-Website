@@ -49,6 +49,7 @@
             <email>a20196780@gmail.com</email>
             <uri>https://github.com/RulerChen</uri>
         </author>
+        <category label="Internship" term="Internship"/>
     </entry>
     <entry>
         <title type="html"><![CDATA[Carousell 後端實習心得]]></title>
@@ -115,5 +116,6 @@
             <email>a20196780@gmail.com</email>
             <uri>https://github.com/RulerChen</uri>
         </author>
+        <category label="Internship" term="Internship"/>
     </entry>
 </feed>
