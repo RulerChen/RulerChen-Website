@@ -8,10 +8,9 @@ interface ImageModalProps {
   caption?: string;
   width?: string | number;
   height?: string | number;
-  className?: string;
 }
 
-const ImageModal: React.FC<ImageModalProps> = ({ src, alt = '', caption, width, height, className = '' }) => {
+const ImageModal: React.FC<ImageModalProps> = ({ src, alt = '', caption, width = '100%', height }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const imageUrl = useBaseUrl(src);
 
@@ -32,7 +31,7 @@ const ImageModal: React.FC<ImageModalProps> = ({ src, alt = '', caption, width, 
 
   return (
     <>
-      <figure className={`image-modal-container ${className}`}>
+      <figure className={`image-modal-container`}>
         <img
           src={imageUrl}
           alt={alt}
