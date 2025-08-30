@@ -55,10 +55,10 @@ const ImageModal: React.FC<ImageModalProps> = ({ src, alt = '', caption, width =
           aria-modal="true"
           aria-label="Full screen image view"
         >
+          <button className="image-modal-close" onClick={closeModal} aria-label="Close modal">
+            ×
+          </button>
           <div className="image-modal-content">
-            <button className="image-modal-close" onClick={closeModal} aria-label="Close modal">
-              ×
-            </button>
             <img src={imageUrl} alt={alt} className="image-modal-fullscreen" />
           </div>
         </div>
