@@ -2,10 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Mail, Facebook, Github, Linkedin, Download, Code2, Terminal } from 'lucide-react';
 import { Typewriter } from '../Typewriter/Typewriter';
 
-import Info from '../../data/Info.json';
 import styles from './styles.module.css';
 import '../Typewriter/Typewriter.css';
-import ProfileImg from '../../../static/img/profile/profileImg.webp';
+import Profile from '../../../static/img/profile/profile.webp';
 
 const Home = () => {
   const [startTyping, setStartTyping] = useState(false);
@@ -125,7 +124,7 @@ const Home = () => {
           <div className={styles.heroRight}>
             <div className={styles.profileSection}>
               <div className={styles.profileImageContainer}>
-                <img className={styles.profileImage} src={ProfileImg} alt="RulerChen" />
+                <img className={styles.profileImage} src={Profile} alt="RulerChen" />
                 <div className={styles.statusIndicator}>
                   <span className={styles.statusDot}></span>
                   <span>Available for work</span>
@@ -162,10 +161,10 @@ const Home = () => {
                     <Mail size={24} />
                     Get In Touch
                   </a>
-                  <a href={Info.SELF_INFO.GITHUB} target="_blank" aria-label="github" className={styles.secondaryBtn}>
+                  <a href="https://github.com/RulerChen" target="_blank" aria-label="github" className={styles.secondaryBtn}>
                     <Github size={24} />
                   </a>
-                  <a href={Info.SELF_INFO.LINKEDIN} target="_blank" aria-label="linkedin" className={styles.secondaryBtn}>
+                  <a href="https://www.linkedin.com/in/rulerchen/" target="_blank" aria-label="linkedin" className={styles.secondaryBtn}>
                     <Linkedin size={24} />
                   </a>
                 </div>
