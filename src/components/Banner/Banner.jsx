@@ -5,7 +5,7 @@ import { Typewriter } from '../Typewriter/Typewriter';
 import Info from '../../data/Info.json';
 import styles from './styles.module.css';
 import '../Typewriter/Typewriter.css';
-import ProfileImg from '../../../static/img/profileImg.webp';
+import ProfileImg from '../../../static/img/profile/profileImg.webp';
 
 const Home = () => {
   const [startTyping, setStartTyping] = useState(false);

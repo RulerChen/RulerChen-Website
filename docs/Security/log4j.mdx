@@ -19,7 +19,7 @@ keywords: ['CVE-2021-44228', 'log4j', 'log4j 漏洞']
 
 在雲端的環境中，我們使用了三台 VM (實際上不需要這麼多，只是為了區分功能)，特別要注意的是有關防火牆的設定，有使用到的 port 記得都要開啟輸入 / 輸出的防火牆。
 
-<ImageModal src="/img/security/log4j/1.png" caption="GCP Architecture" />
+<ImageModal src="/img/security/log4j/1.webp" caption="GCP Architecture" />
 
 有另一點值得注意的是，我們在使用時都是使用本地 windows 的 powershell 來連線 gce，我在操作時發現使用 cloud shell 似乎沒辦法正常接收 reverse shell，建議如果有要進行操作的話可以在 Compute Engine -> 中繼資料 -> 安全殼層金鑰 中加入自己的金鑰來進行 ssh。
 

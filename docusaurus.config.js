@@ -10,7 +10,7 @@ module.exports = async function createConfigAsync() {
   return {
     title: 'RulerChen',
     tagline: 'RulerChen Site',
-    favicon: '/img/profile.png',
+    favicon: '/img/profile/profile.webp',
 
     // Set the production url of your site here
     url: 'https://RulerChen.github.io',
@@ -119,12 +119,12 @@ module.exports = async function createConfigAsync() {
           },
         ],
         // Replace with your project's social card
-        image: 'img/profile.png',
+        image: 'img/profile/profile.webp',
         navbar: {
           title: 'RulerChen',
           logo: {
             alt: 'My Site Logo',
-            src: 'img/profile.png',
+            src: 'img/profile/profile.webp',
           },
 
           items: [
