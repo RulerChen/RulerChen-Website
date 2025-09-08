@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkmy_website=self.webpackChunkmy_website||[]).push([["1723"],{8528:function(e){e.exports=JSON.parse('{"tags":[{"label":"CMU15-445","permalink":"/RulerChen-Website/en/docs/tags/cmu-15-445","count":27},{"label":"CMU15-445 Projects","permalink":"/RulerChen-Website/en/docs/tags/cmu-15-445-projects","count":5}]}')}}]);

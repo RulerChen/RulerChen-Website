@@ -4,7 +4,7 @@
   <ShortName>RulerChen</ShortName>
   <Description>Search RulerChen</Description>
   <InputEncoding>UTF-8</InputEncoding>
-  <Image width="16" height="16" type="image/x-icon">https://RulerChen.github.io/RulerChen-Website/img/profile.png</Image>
+  <Image width="16" height="16" type="image/x-icon">https://RulerChen.github.io/RulerChen-Website/img/profile/profile.webp</Image>
   <Url type="text/html" method="get" template="https://RulerChen.github.io/RulerChen-Website/search?q={searchTerms}"/>
   <Url type="application/opensearchdescription+xml" rel="self" template="https://RulerChen.github.io/RulerChen-Website/opensearch.xml" />
   <moz:SearchForm>https://RulerChen.github.io/RulerChen-Website/</moz:SearchForm>
