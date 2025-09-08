@@ -35,9 +35,10 @@ Relational Algebra 是一種程序性語言 (Procedural Language)，使用者需
 Relational Calculus 則是一種宣告式語言 (Non-Procedural Language)，使用者只需描述想要什麼 (What) 資料，由系統自行決定最佳的執行計畫。
 
 SQL 就是綜合了這兩種模式的語言，它在語法上是宣告式的，但在系統內部，查詢通常會被轉換為關聯代數運算，進而生成最佳化的執行計畫。
+
 與理論不同的是，SQL 使用的是 bag (multiset) 而非 set，這意味著 SQL 中的結果可以包含重複的資料列。
 
-SQL 主要分為幾種 :
+SQL 可以被細分為幾種子類 :
 
 - DML (Data Manipulation Language) : 查詢、插入、更新、刪除資料，例如 SELECT, INSERT, UPDATE, DELETE
 - DDL (Data Definition Language) : 定義 table, view, index 等等，例如 CREATE, ALTER, DROP
@@ -276,7 +277,7 @@ HAVING AVG(s.gpa) > 3.8;
 
 ### String Operations
 
-不同的資料庫有不同的比較字串以及大小寫敏感度，如下圖所示 :
+不同的資料庫有不同的比較字串以及大小寫的方式，具體如下圖所示 :
 
 <ImageModal src="/img/cmu15-445/c02/image-1.webp" caption="String Operations in Different DBMS" />
 

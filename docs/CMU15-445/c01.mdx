@@ -55,10 +55,10 @@ for line in file.readlines():
 
 ## DBMS
 
-DBMS 是一個通用軟體，它允許應用程式根據特定的資料模型 (Data Model) 來定義、創建、查詢、更新和管理資料庫。
+DBMS 是一個通用軟體，它允許應用程式根據特定的資料模型來定義、創建、查詢、更新和管理資料庫。
 
-- 資料模型 (Data Model) : 一套用於描述資料的概念集合。它定義了資料的結構、關係和約束。
-- 綱要 (Schema) : 基於某個資料模型對特定資料集合的描述。它定義了資料庫的結構。
+- 資料模型 (Data Model) : 一套抽象規則，用於描述資料的結構、關係與約束。它決定能如何表達資料與操作資料。
+- 綱要 (Schema) : 基於某一資料模型，對特定資料集合的具體描述。它定義了資料庫的結構 (例如表格、欄位、鍵、索引)。
 
 其中， 資料模型有很多種，常見的有以下幾種 :
 
@@ -94,15 +94,13 @@ IBM 的研究員 Ted Codd 在 1969 年發現了以上這個問題後，提出了
 Document Model 的資料庫會將資料儲存為文件形式，並以 hierarchical 的 key-value pair 來表示資料。
 文件的欄位值可以是數字、字串、陣列，或者是嵌套的文件，這種類型的資料庫最常使用的方式是 JSON 格式，而舊系統則可能使用 XML 或自訂的物件表示。
 
-常見的 Document Model 資料庫有 MongoDB、DynamoDB、CouchDB、Firebase 等等。
+常見的 Document Model 資料庫有 MongoDB、CouchDB 等等。
 
 <ImageModal src="/img/cmu15-445/c01/image-1.webp" caption="Document Model" />
 
 ### Vector Model
 
 Vector Model 的資料庫是一種專門處理高維度向量 (如由機器學習模型生成的嵌入向量) 而設計的資料庫系統，可以有效執行 Nearest Neighbor 搜尋，適合用於如近似語義搜尋、推薦系統等應用。
-
-常見的 Vector Model 資料庫有 Meta Faiss、Milvus、Spotify Annoy 等等。
 
 <ImageModal src="/img/cmu15-445/c01/image-2.webp" caption="Vector Model" />
 
@@ -111,7 +109,7 @@ Vector Model 的資料庫是一種專門處理高維度向量 (如由機器學�
 DML 是用來操作資料庫中資料的語言，主要分為兩種 :
 
 - 程序性語言 (Procedural) : 使用者明確指定如何 (How) 獲取資料的步驟。例如指定使用迴圈來遍歷資料。
-- 宣告式語言 (Non-Procedural / Declarative) : 使用者只描述想要什麼 (What) 資料，由 DBMS 自行決定最佳的執行計畫。例如 SQL。
+- 宣告式語言 (Non-Procedural / Declarative) : 使用者只描述想要什麼 (What) 資料，由 DBMS 自行決定最佳的執行計畫。
 
 ## Relational Algebra
 
