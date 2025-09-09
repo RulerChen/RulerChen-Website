@@ -37,9 +37,9 @@ tags: [CMU15-445]
 
 ## Disk-Oriented DBMS Overview
 
-在資料庫中，所有的資料都會被存在固定大小的 page 中 (包括 table、index、log 等等)，而這些 page 會被存在硬碟上。
+在資料庫中，所有的資料都會被存在固定大小的 page 中，而這些 page 會被存在硬碟上。
 
-當 execution engine 需要存取某個資料時， buffer pool 會先從 disk 中讀取目錄，並且依據目錄中的資訊把 page 讀進記憶體中，最後再返還給 execution engine 這個 page 的 pointer。
+當 execution engine 需要存取某個資料時， buffer pool 會先從讀取目錄，並且依據目錄中的資訊把 page 讀進記憶體中，最後再返還給 execution engine 這個 page 的指標。
 
 <ImageModal src="/img/cmu15-445/c03/image-2.webp" caption="Disk-Oriented DBMS Overview" />
 
@@ -75,9 +75,9 @@ DBMS 會將一個固定大小的區域稱為頁面 (page)，這是硬碟與記�
 不同的 DBMS 有不同的頁面大小，像是 PostgreSQL 使用 8kb。
 page 可以包含不同種類的資料，像是 tuple、index、log 等等，不同種類的資料通常不會被存在一個 page 中。
 
-通常來說，一個檔案會包含多個 page，而每個 page 都有一個獨立的 PageID，DBMS 會透過 indirection layer 將 PageID 與 file path 跟 offset 對應起來。
+通常來說，一個檔案會包含多個 page，而每個 page 都有一個獨立的 page_id，DBMS 會透過 indirection layer 將 page_id 與 file path 跟 offset 對應起來。
 
-為了滿足各種需求，DBMS 也有不同的儲存頁面的方式，像是 :
+為了滿足各種需求，DBMS 有不同的儲存頁面的方式，像是 :
 
 - Heap File Organization
 - Tree File Organization
@@ -110,27 +110,23 @@ Heap file 是一個無序的集合 (unordered_set)，裡面的 page 都是隨機
 
 ## Page Layout
 
-接下來會介紹資料在 page 中的儲存方式。
-
-每個 page 會被分成 header 跟 data 兩個部分，如下圖所示 :
-
-<ImageModal src="/img/cmu15-445/c03/image-5.webp" caption="Page Layout Example" width="300" />
+接下來會介紹資料在 page 中的儲存方式，每個 page 會被分成 header 跟 data 兩個部分。
 
 ### Page Header
 
-在 header 中會包含以下資訊 :
+header 中會包含一些 metadata，像是 :
 
-- page size
+- Page size
 - DBMS version
-- checksum
-- transaction visibility
-- compression information
+- Checksum
+- Transaction visibility
+- Compression information
 
 有些資料庫也會儲存一些統計值等等。
 
 ### Page Data
 
-對於 row-based 的 DB 來說，data 的部分有以下幾種儲存方式 :
+對於 row-based 的 DBMS 來說，page data 有以下幾種常見的儲存方式 :
 
 - Tuple-oriented storage
 - Log-structured storage
@@ -140,59 +136,81 @@ Heap file 是一個無序的集合 (unordered_set)，裡面的 page 都是隨機
 
 Tuple-oriented storage 是一種最常見的儲存方式，它會以 tuple 為單位來儲存資料，常見的實作方式有兩種 :
 
+- Strawman Idea
+- Slotted Page
+
 **Strawman Idea**
 
-在 header 中記錄 tuple 的數量，並持續往下寫入 tuple，但這個方法有兩個明顯的缺點 :
+在 header 中記錄 tuple 的數量，並持續往下寫入 tuple。
 
-- 當刪除 tuple 時，每次新增新的 tuple 就需要遍歷整個 page
-- 當欄位有可變長度的時會無法處理
+這個方法有不少缺點，第一個缺點是刪除 tuple 後，每次新增新的 tuple 就需要遍歷整個 page 來找到空位，且當欄位有可變長度的時會無法處理。
 
 <ImageModal src="/img/cmu15-445/c03/image-6.webp" caption="Strawman Idea" width="400" />
 
 **Slotted Page**
 
-在 header 中會有一個 slot array，記錄每個 tuple 的 offset 以及長度
+在 header 中會紀錄當前有幾個 slot 已經被使用，同時記錄 free space 的起始位置，並且有一個 slot array 來記錄每個 slot 的 offset 跟 length。
 
-- 新增 tuple 時，先新增一個 slot 到 slotted array 中，然後再寫入 tuple，並由兩端向中間生長，這樣當兩者相遇的時候就知道 page 已經滿了
-- 刪除 tuple 時，只需要將 slot array 中的 slot 移除即可
-- 如果我們要進行壓縮，可以將所有的 tuple 移到一端，然後更新 slot array
+要新增 tuple 時，先新增一個 slot 到 slotted array 中 (可以重用被刪除的 slot)，然後再寫入 tuple，並由兩端向中間生長，這樣當兩者相遇的時候就知道 page 已經滿了。
+要刪除 tuple 時，只需要將 slot array 中的 slot 標記為刪除即可。
+進行壓縮 (如 VACUUM) 時，可以將所有的 tuple 移到一端，然後更新 slot array 的 offset 跟 length 即可。
+
+是目前最常見的儲存方式。
 
 <ImageModal src="/img/cmu15-445/c03/image-7.webp" caption="Slotted Page" width="400" />
 
 #### Log-structured Storage
 
-在 tuple-oriented storage 中，有一些問題無法被解決 :
+在傳統的資料庫系統中，資料通常以 slotted page 的方式存在硬碟中。
+這種設計有一個核心假設是硬碟要可以就地更新 (in-place update)。
+也就是說，如果某個 tuple 的欄位需要更新，系統只要找到它所在的頁面，把該區塊載入記憶體，修改 tuple，再將頁面寫回磁碟即可。
 
-- fragmentation : 當 tuple 被刪除時，會造成空洞，或者是只有一個 tuple 的 page
-- useless disk IO : 當更新 tuple 時，會需要 load 一整個 page
-- random disk IO : 當一次要更新很多 tuple 時，會需要讀取很多個不同的 page
+然而，這種方式有幾個問題：
 
-log-structured storage 是一種解決這些問題的方式，它不會更新原本的 page，而是將更新的內容寫到新的 page 上，這種方式原本被稱作 log-structured merge tree (LSM tree)。
+- Fragmentation : 刪除 tuple 之後會留下空洞，頁面無法被充分利用
+- Useless disk IO : 即使只改動一筆 tuple，也要將整個頁面載入並寫回
+- Random disk IO : 當一次要更新很多 tuple 時，會需要讀取很多個不同的頁面，導致大量的隨機 IO
 
-在這個儲存模式下，DBMS 不會再維護 tuple，而是將所有的變更按照時間順序寫到 log 中，然後再依照順序寫到 disk 上，要注意的是，一旦寫到 disk 上，就無法再更改，一般情況下會在 page 被填滿時才會寫到 disk 上，但在 transaction commit 時也會直接寫到 disk 上。
+除此之外，也有一些系統 (如 HDFS) 根本不允許覆寫舊檔案，這使得傳統的儲存方式無法使用。
 
-<ImageModal src="/img/cmu15-445/c03/image-9.webp" caption="Log-Structured Storage" width="400" />
+為了解決這些限制，研究者從 Log-Structured File System (LFS) 與 Log-Structured Merge Tree (LSM-tree) 中獲得啟發，提出了 Log-Structured Storage。
+在這個儲存模式下，DBMS 不會直接修改舊的頁面，而是將更新的資料以 log 的形式附加 (append-only) 到檔案的末尾，並且定期進行壓縮 (compaction) 來整理資料。
 
-這種方式的優點在於更新、刪除的速度都很快，但是如果遇到查詢的話，就需要從頭開始讀取 log，因此通常會搭配 index 來使用。
+:::note
+LSM Tree 是一種設計架構，它會協調 Memtable 跟 SSTable 來將隨機寫入轉換成順序寫入，並且定期將 MemTable 的資料寫入 SSTable 中並進行壓縮，從而最大化寫入效能。
 
-<ImageModal src="/img/cmu15-445/c03/image-10.webp" caption="Log-Structured Storage Example" width="400" />
+當資料寫入時，它會先記錄 WAL (Write-Ahead Log) 以確保交易的持久性，然後將資料寫入 Memtable 中。當 Memtable 滿了之後，會將其內容寫入 SSTable 中，並且清空 Memtable。
+
+MemTable 是一個存在記憶體中的資料結構，通常是使用跳表 (skip list) 或是平衡樹 (AVL、RBT) 來實作。
+
+SSTable 是一個存在硬碟上的資料結構，指的是排序的字串表 (sorted string table)，只要被寫入就不會再被更改。
+:::
+
+<ImageModal src="/img/cmu15-445/c03/image-22.webp" caption="MemTable and SSTable Example - 1" />
+<ImageModal src="/img/cmu15-445/c03/image-21.webp" caption="MemTable and SSTable Example - 2" />
 
 為了減少所需的空間，DBMS 會定期將 log 進行壓縮，並且將相同的操作合併在一起。
-在經過合併後，我們就不需要維護原本的時間順序了 (因為每個 key 都只剩下一個 value)，DBMS 會將其依照 id 來進行排序，這種資料結構叫做 Sorted String Table (SSTables)。
+在經過合併後，我們就不需要維護原本的時間順序了 (因為每個 key 都只剩下一個 value)，DBMS 會將其依照 id 來進行排序並存入硬碟，也就是上面提到的 SSTable。
 
-<ImageModal src="/img/cmu15-445/c03/image-11.webp" caption="Log-Structured Storage After Compaction" />
+<ImageModal src="/img/cmu15-445/c03/image-11.webp" caption="Log-Structured Storage Compaction" />
 
 壓縮的方法有兩種 :
 
-- universal compaction
-- level compaction
+- Universal compaction : 將大小相近的一組 SSTable 合併成一個更大的 SSTable。
+- Level compaction : 將 SSTable 分成多個 level，並且將較小的 level 合併到較大的 level 中。
 
-<ImageModal src="/img/cmu15-445/c03/image-12.webp" caption="Log-Structured Storage Compaction Methods" />
+<ImageModal src="/img/cmu15-445/c03/image-12.webp" caption="Universal Compaction and Level Compaction" />
+
+在查詢時，LSM Tree 的查詢順序如下 :
+
+- 先在 MemTable 中尋找
+- 查詢 L0 層的 SSTable，L0 的 SSTable 通常是直接從 MemTable 刷下來的，檔案之間 key 的範圍可能重疊，所以需要逐一檢查。
+- 查詢 L1, L2, ... 層的 SSTable，這些層級的 SSTable 經過 Compaction，同一層內 key 的範圍互不重疊。因此，系統可以透過 key 的範圍判斷出目標 key 最多只可能存在於其中一個檔案裡，只需對那一個檔案執行上述的查詢流程即可。
 
 Log-structured storage 因為 RockDB 的出現而變得相當常見，但也有一些問題 :
 
-- Write Amplification : 當我們寫入一個資料時，實際上會寫入多次，譬如說 SSTalbe 合併
-- Compaction Overhead
+- Write Amplification : 當我們寫入一個資料時，實際上會寫入多次，譬如說合併 SSTable
+- Compaction Overhead : 壓縮會佔用大量的 CPU 跟 IO 資源
 
 #### Index-organized Storage
 
@@ -203,13 +221,9 @@ Log-structured storage 因為 RockDB 的出現而變得相當常見，但也有�
 
 ## Tuple Layout
 
-<ImageModal src="/img/cmu15-445/c03/image-8.webp" caption="Tuple Layout Overview" width="400" />
-
 在 tuple-oriented storage 中，tuple 也是由 header 和 data 兩個部分組成。
 
-通常情況下，資料擺放的順序會是 create table 時的順序，但是為了提高效能，DBMS 有可能會將關聯的表的內容先 join，這種模式叫做 denormaliza，好處是可以減少 IO 次數，缺點是會增加更新時的複雜度。
-
-DBMS 會將每個 tuple 設定一個 id 代表他在資料庫中的具體位置，通常是由 page_id + offset/slot 組合而成，如 postgres 中的 ctid。
+DBMS 會將每個 tuple 設定一個 id 代表他在資料庫中的具體位置，通常是由 page_id + offset/slot 組合而成，如 PostgreSQL 中的 ctid。
 
 ```SQL
 -- postgres 16
@@ -261,15 +275,18 @@ ctid  | id | name
 
 ### Tuple Header
 
-header 包含了 NULL 的 bitmap 以及 transaction visibility，data 則是真正的資料。
+header 中會包含一些 metadata，像是 :
+
+- Bitmap for NULL columns (哪些欄位是 NULL)
+- Transaction information (transaction id, visibility information)
 
 ### Tuple Data
 
-DBMS 需要保證這些資料是對齊的，以免出現一些非預期的行為。
+DBMS 需要保證這些資料是對齊的，以免出現一些非預期的行為並且提升存取效率。
 
 <ImageModal src="/img/cmu15-445/c03/image-14.webp" caption="Tuple Data Alignment" />
 
-如果讀到邊界的資料，會依據電腦的架構有不同的處理方式
+一般來說，如果讀到邊界的資料，會依據電腦的架構有不同的處理方式 :
 
 - Perform Extra Reads : 執行兩次讀取並且合併
 - Random Reads : 隨機返回不正確的結果
@@ -277,8 +294,8 @@ DBMS 需要保證這些資料是對齊的，以免出現一些非預期的行為
 
 要處理這個問題，有兩種解決方式 :
 
-- padding
-- reordering
+- Padding
+- Reordering
 
 #### Padding
 
@@ -294,6 +311,8 @@ DBMS 需要保證這些資料是對齊的，以免出現一些非預期的行為
 
 ## Data Representation
 
+最後就來介紹不同的資料型態是如何被儲存的。
+
 <ImageModal src="/img/cmu15-445/c03/image-17.webp" caption="Data Representation Overview" />
 
 ### Integer
@@ -304,7 +323,7 @@ DBMS 需要保證這些資料是對齊的，以免出現一些非預期的行為
 
 ### Variable Precision Number
 
-同樣使用 C/C++ 原生的 type 來表示，也是固定長度，但是跟 C/C++ 一樣，會遇到精確度的問題。
+同樣使用 C/C++ 原生的 type 來表示，也是固定長度，但是跟 C/C++ 一樣，會遇到精確度的問題，如 `FLOAT`、`DOUBLE`。
 
 ```c
 #include <stdio.h>
@@ -321,11 +340,9 @@ int main(int argc, char* argv[]) {
 // 0.3 = 0.29999999999999998890
 ```
 
-如 `FLOAT`
-
 ### Fixed Precision Number
 
-如果需要精確的數字，可以使用 fixed precision number，但是在計算上會比較慢，通常每個 DBMS 都會自己實作 (如加減法和儲存方式)，所需的空間會依照精確度而有所不同。
+如果需要精確的數字，可以使用 fixed precision number，但是在計算上會比較慢，通常每個 DBMS 都會自己實作 (如加減法和儲存方式)，所需的空間會依照精確度而有所不同，如 `NUMERIC`、`DECIMAL`。
 
 ```c
 // postgresql NUMERIC
@@ -339,14 +356,12 @@ typedef struct {
 } numeric;
 ```
 
-如 `NUMERIC`、`DECIMAL`
-
 ### NULL Data Type
 
 有三個常見的方式來表示 NULL :
 
 - NULL column bitmap header : 在 header 中有一個 bitmap 來表示哪些 column 是 NULL (最常見)
-- special value : 用一個特殊的值來表示 NULL 如 INT32_MIN
+- Special value : 用一個特殊的值來表示 NULL 如 INT32_MIN
 - Per attribute NULL flag : 在每一個屬性前加入一個 flag 來表示是否為 NULL，會破壞 alignment (非常少見)
 
 ### Large Value
