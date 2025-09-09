@@ -10,88 +10,56 @@ tags: [CMU15-445]
   <title>CMU 15-445 Memory & Disk I/O Management</title>
 </head>
 
-這節會討論 DBMS 如何管理在記憶體和硬碟中移動的資料，主要分為兩個部分 :
+這節會討論 DBMS 如何讓資料在硬碟跟記憶體中移動，主要分為兩個部分 :
 
 - Spatial Control : 決定把 page 寫到硬碟中的哪個位置，目標是將常常需要一起用到的 page 放在一起來提高 I/O 效率
 - Temporal Control : 決定甚麼時候要把 page 讀進記憶體或是寫回硬碟，目標是降低 I/O 的停頓時間
 
-![Buffer Pool](/img/cmu15-445/c06/image.png)
-
-需要注意的是，與 mmap 不同，buffer pool 不保證兩次讀取同一個 page 會得到相同的記憶體位置。
+<ImageModal src="/img/cmu15-445/c06/image.webp" caption="Disk-oriented DBMS workflow" />
 
 ## Buffer Pool Management
 
-在啟動 DBMS 時，DBMS 會向 OS 申請一塊記憶體，這塊記憶體就是 buffer pool。
-DBMS 會將這塊記憶體分成相同大小的 frame，當需要讀取 page 時，就把 page 讀進 frame 中。
+在啟動 DBMS 時，DBMS 會向 OS 申請一塊記憶體來存放 page，這塊記憶體就是 buffer pool。
+DBMS 會將這塊記憶體分成多個 frame，每個 frame 就可以對應到一個 page，當需要讀取 page 時，就把 page 讀進 frame 中。
 
-同時 DBMS 會維護一個 page table 來記錄每個 page 在記憶體中的位置，也會記錄一些 metadata，比如 dirty flag (是否被修改過)、Pin / Reference Counter (是否被使用中)。
+同時 DBMS 會維護一個 page table 來記錄每個 page 在記憶體中的位置，也會記錄一些 metadata，比如 dirty flag (是否被修改過)、Pin / Reference Counter (是否被使用中) 來幫助管理 page。
 
-![Buffer Pool Management](/img/cmu15-445/c06/image-1.png)
+<ImageModal src="/img/cmu15-445/c06/image-1.webp" caption="Buffer Pool Metadata" />
 
-當 page 被引用時，DBMS 會將這個 page 的 reference counter +1 表示這個 page 正在被使用中，不能被移出記憶體。當我們要請求不在記憶體中的 page 時，DBMS 會先請求一個 latch，然後把 page 讀進 buffer pool 中，再釋放 latch，這樣可以避免多個 thread 同時修改同一個 entry。
+當 page 被引用時，DBMS 會將這個 page 的 reference counter +1 表示這個 page 正在被使用中，不能被移出記憶體。
+當我們要請求不在記憶體中的 page 時，DBMS 會先請求一個 latch，然後把 page 讀進 buffer pool 中，再釋放 latch，這樣可以避免多個 thread 同時修改同一個 entry。
 
-latch 跟 lock 的差別如下 :
+## DBMS vs OS
 
-- lock
-  - 保護資料庫不受其他 transaction 的干擾
-  - 通常是在 transaction 進行時才會被使用
-  - 可以進行 rollback
-- latch
-  - 保護資料庫不受其他 thread 的干擾
-  - 無法 rollback
+DBMS 與 OS 都涉及記憶體與硬碟的管理，但兩者的設計目標跟方向都不太一樣。
+DBMS 希望能處理比記憶體大很多的資料，並在讀取時保持低延遲，而作業系統提供的機制主要是通用且保護整個系統的安全性與穩定性。
 
-在 DBMS 中，記憶體的分配會依據兩個原則 (Memory Allocation Policies) 來進行分配 :
+DBMS 可以被理解為一個擁有虛擬地址空間的系統，它決定何時將硬碟上的資料 (page) 載入記憶體，類似 OS 的虛擬記憶體概念。
+但如果直接使用 OS 提供的機制 (例如 mmap)，會帶來幾個問題 :
 
-- Global Policies : 考慮所有查詢來分配記憶體
-- Local Policies : 只考慮單一查詢來分配記憶體
+- 交易安全性 : OS 會在任何時間點把 dirty page 寫回硬碟，破壞 DBMS 的 ACID 保證
+- IO 停頓 : DBMS 不知道哪些頁面在內存中，在 page fault 時，OS 會使線程停頓
+- 錯誤處理 : 難以驗證頁面，任何訪問都可能導致 DBMS 必須處理 SIGBUS 信號
+- 性能問題 : OS 根據查詢需求來管理頁面，無法進行預取或是最佳化 IO
 
-## Buffer Pool Optimization
+因此，DBMS 通常會使用較為低階的 system call 來管理資料，像是 :
 
-### Multiple Buffer Pools
+- `madvise` : 告訴 OS 我們需要哪些頁面
+- `mlock` : 告訴 OS 哪些頁面不能被寫入
+- `msync` : 通知 OS 將某些記憶體寫到硬碟上
 
-DBMS 可以維護多個 buffer pool，每個 buffer pool 有不同的大小和替換策略，這麼做可以減少 latch 的競爭，並提升 locality。
-
-例如可以有以下幾種 buffer pool :
-
-- Multiple buffer pool instances
-- Per-database buffer pool
-- Per-page type buffer pool
-
-常見的分配方式有兩種 :
-
-- Object Id : 在 record 中產生一個 object id，然後根據 object id 來決定放在哪個 buffer pool
-- Hashing : 根據 page id 的 hash 來決定放在哪個 buffer pool
-
-### Prefetching
-
-DBMS 可以透過 query plan 來預測未來可能會用到的 page，然後提前把這些 page 讀進 buffer pool 中。
-這其中包含 sequential scan 和 index scan，與 OS 不同的是，OS 無法預測像 index scan 會使用到的 page。
-
-### Scan Sharing (Synchronized Scans)
-
-scan sharing 主要是在有多個查詢同時進行 sequential scan 時，可以共享同一個 scan 的結果。
-舉例來說，如果有 A 和 B 兩個查詢先後進行，當 B 開始查詢時，可以先跟 A 一起掃描，等到 A 結束時，自己再重新掃描一開始缺少的部分。
-
-### Buffer Pool Bypass
-
-當需要使用 sequential scan 來掃描資料量很大的表時，如果 DBMS 將每個 page 都讀進 buffer pool 中，會導致 buffer pool 被汙染，因為這些 page 大都只用一次，會排擠到其他常用的 page，因此我們可以單獨分配一塊記憶體來存放這些 page，這樣可以避免 buffer pool 被汙染。
+透過這些 system call，DBMS 可以更有效率的管理記憶體與硬碟。
 
 ## Buffer Replacement Policies
 
-當 buffer pool 被填滿時，DBMS 需要決定要替換哪些 page，這個決定是根據替換策略 (Replacement Policy) 來決定的。
-
-替換策略的目標如下 :
-
-- Correctness : 確保 page 在被替換前被寫回硬碟
-- Accuracy : 確保替換的 page 是最不可能再被使用的
-- Speed : 快速找到要被替換的 page，因為每次移除都要使用 latch
-- Metadata Overhead : 策略所需的 metadata 越少越好
+當 buffer pool 被填滿時，DBMS 需要透過演算法來決定要將哪個 page 移出記憶體，這個演算法稱為 replacement policy。
 
 ### Least Recently Used (LRU)
 
-使用 linked list 來記錄每個 page 最後一次被使用的時間，如果滿了，就把最久沒被使用的 page 替換掉。
+LRU 會將最近最少被使用的 page 移除，這個策略的假設是最近被使用過的 page 在未來也會被使用到。
+通常會使用 linked list 來記錄每個 page 最後一次被使用的時間，如果滿了，就把最久沒被使用的 page 替換掉。
 
-![LRU](/img/cmu15-445/c06/image-2.png)
+<ImageModal src="/img/cmu15-445/c06/image-2.webp" caption="LRU" />
 
 ### Clock
 
@@ -102,37 +70,66 @@ scan sharing 主要是在有多個查詢同時進行 sequential scan 時，可�
   如果 reference bit 是 1，則將 reference bit 設為 0，然後繼續往下找。
   如果 reference bit 是 0，則將這個 page 移除。
 
-![Clock](/img/cmu15-445/c06/image-3.png)
+<ImageModal src="/img/cmu15-445/c06/image-3.webp" caption="Clock" />
 
 ### LRU-K
 
-不管是 LRU 還是 clock，都會遇到 sequential flooding 的問題，最新讀取的 page 反而是最不需要的 page，因此有了 LRU-K 來解決這個問題。
+不管是 LRU 還是 clock，都會遇到 sequential flooding 的問題，也就是指最新讀取的 page 反而是最不需要的 page，也因此有了 LRU-K 來解決這個問題。
 
 LRU-K 會保存每個 page 最後 k 次被訪問的時間，然後根據這個時間來預估下次被訪問的時間，如果 k = 1 就是 LRU，通常會使用 k = 2。
 
-不過這種方式也有可能導致有些 page 會一直被排出 buffer pool，所以我們會在記憶體中維護一個 hash table，紀錄一些被排出的頁面被訪問的時間，這樣就不會讓這些 page 一直被排出 buffer pool。
+MySQL 就是採用了類似的概念叫做 midpoint insertion strategy。
+這種方法會將 list 分成 young list 跟 old list，當新的 page 被訪問時，會被放到 old list 的最前面，而當 old list 裡面的 page 被訪問到時，會被放到 young list 的最前面。
 
-這種方式被 PostgreSQL 以及 SQL Server 所使用。
+<ImageModal src="/img/cmu15-445/c06/image-4.webp" caption="LRU-K" />
 
-而 MySQL 則是使用了一種類似的 midpoint insertion strategy 方法，這種方法會將 list 分成 young list 跟 old list，當新的 page 被訪問時，會被放到 old list 的最前面，而當 old list 裡面的 page 被訪問到時，會被放到 young list 的最前面。
+## Buffer Pool Optimization
 
-![LRU-K](/img/cmu15-445/c06/image-4.png)
+除了選擇適合的 replacement policy 外，DBMS 也會透過其他方式來優化 buffer pool。
+
+### Multiple Buffer Pools
+
+DBMS 可以維護多個 buffer pool，每個 buffer pool 有不同的大小和替換策略，這麼做可以減少 latch 的競爭，並且可以為不同型態的 page 選擇不同的存取策略。
+
+例如可以有以下幾種 buffer pool :
+
+- Multiple buffer pool instances
+- Per-database buffer pool
+- Per-page type buffer pool
+
+常見的分配方式有兩種 :
+
+- Object_id : 在 record 中產生一個 object_id，然後維護一個 hash table 來記錄 object_id 對應到哪個 buffer pool
+- Hashing : 根據 page_id 的 hash 來決定放在哪個 buffer pool
+
+### Prefetching
+
+DBMS 可以透過 query plan 來預測未來可能會用到的 page，然後提前把這些 page 讀進 buffer pool 中。
+
+### Scan Sharing (Synchronized Scans)
+
+Scan sharing 主要是在有多個查詢同時進行 sequential scan 時，可以共享同一個 scan 的結果。
+舉例來說，如果有 A 和 B 兩個查詢先後進行，當 B 開始查詢時，可以先跟 A 一起掃描，等到 A 結束時，自己再重新掃描一開始缺少的部分。
+
+### Buffer Pool Bypass
+
+當需要使用 sequential scan 來掃描資料量很大的表時，如果 DBMS 將每個 page 都讀進 buffer pool 中，就會導致 buffer pool 被汙染，因此我們可以單獨分配一塊記憶體來存放這些 page。
 
 ### Localization
 
-DBMS 會根據每個查詢來選擇要被移除的 page，這樣可以盡量減少對 buffer pool 的汙染。
+在 DBMS 中，如果有大型的查詢 (`SELECT * FROM large_table`)，會需要讀取大量的 page，這樣會導致 buffer pool 被汙染，因為這些 page 大多只會被使用一次。
 
-如 PostgreSQL 會對每個查詢維護一個 ring buffer。
+而 localization 就是用來處理這個問題的，它的意思是系統不會全局共享一個 buffer pool，而是根據每個查詢來分配 buffer pool 的空間，當要替換時就優先移除這個查詢所使用的 page。
 
-### Priority Hints
+以 PostgreSQL 為例，它會對每個查詢維護一個 ring buffer 用於限制查詢可使用的 buffer 數量，當查詢繼續讀取新的 page 時，會將 ring buffer 中最舊的 page 替換掉。
 
-有時候 DBMS 可以知道每個 page 在執行期間的上下文訊息，可以幫助 DBMS 選擇要被移除的 page。
+### Dirty Page Flushing
 
-### Dirty Page
+當 buffer pool 中的 page 被修改後，該頁會被標記為 dirty page，表示記憶體中的內容已經和磁碟上的版本不一致。
+在淘汰 dirty page 之前，DBMS 必須先將其寫回磁碟，否則會造成資料遺失或不一致。
 
-移除一個 dirty page 的成本是非常高的，因為還要將其先寫入硬碟。
-
-除了在 replacement policy 中考慮 dirty page 外，DBMS 也會在後台定期將 dirty page 寫入硬碟。
+由於寫入磁碟的成本高，若在淘汰時才同步，會導致延遲。
+因此 DBMS 會使用 background writer，週期性地將 dirty page 刷回磁碟，清除 dirty 標記。
 
 ## OS problem
 
@@ -140,20 +137,16 @@ DBMS 會根據每個查詢來選擇要被移除的 page，這樣可以盡量減�
 
 ### Scheduler
 
-OS 會嘗試透過重新排序以及合併 I/O 來提高效率，但 OS 並不會知道那些 IO 對 DBMS 來說是重要的，所以許多 DBMS 會建議使用 deadline 或 noop scheduler (FIFO)，如 MySQL、Oracle。
+硬碟 I/O (特別是 HDD)，是需要非常久的時間來完成的，因此 OS 為了提高整體系統的效能，會透過 I/O Scheduler 來合併及管理 I/O 請求。
 
-同時，DBMS 會自己有一個 scheduler 來管理讀寫請求，它會根據 I/O 方式、table / index / log、sequential / random 等等來決定讀寫的順序。
+但問題在於 OS 並不會知道那些東西對 DBMS 來說是重要的，譬如說 WAL 肯定比其他資料重要，而 VACUUM 相對來說就不那麼重要。
+所以許多 DBMS 會建議使用 deadline 或 noop scheduler (FIFO) 來盡量減少 scheduler 的影響，如 MySQL、Oracle。
+
+同時，DBMS 會自己有一個 scheduler 來管理讀寫請求，它會根據請求的類型來自己決定讀寫的順序。
 
 ### Page Cache
 
-OS 會維護一個 page cache 來存放最近被讀取的 page，但這有可能會跟 DBMS 衝突，因此通常會使用 `O_DIRECT` 來避免這個問題，除了 PostgreSQL 以外。
+OS 會維護一個 page cache 來存放最近被讀取的 page，但這有可能會跟 DBMS 衝突，並導致雙重快取或是不一致的問題。
+因此通常會使用 `O_DIRECT` 來避免這個問題，除了 PostgreSQL 以外。
 
-![Page Cache](/img/cmu15-445/c06/image-5.png)
-
-### fsync
-
-當我們執行 `fwrite` 的時候，OS 並不會立即將資料寫入硬碟，而是會先寫入 page cache，然後再由 OS 來決定什麼時候寫入硬碟。
-
-當我們執行 `fsync` 的時候，OS 會強制將 page cache 的資料寫入硬碟，並且會 block 住這個 thread 直到寫入完成，並告訴你已經完成寫入。但如果 fsync 失敗，它依然會將 dirty page 標記為 clean，這樣當下次使用這個 page 時，會導致錯誤。
-
-這是 linux 針對 USB 的一個設計，導致 postgresql 之前有發生過嚴重問題，可以參考 [PostgreSQL Fsync Errors](https://wiki.postgresql.org/wiki/Fsync_Errors)。
+<ImageModal src="/img/cmu15-445/c06/image-5.webp" caption="OS Page Cache" />
