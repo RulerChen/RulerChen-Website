@@ -10,19 +10,23 @@ tags: [CMU15-445]
   <title>CMU 15-445 Storage Models & Compression</title>
 </head>
 
+這篇筆記會探討資料庫的儲存模型以及壓縮技術。
+
 ## Database Workloads
 
-![Database Workloads](/img/cmu15-445/c05/image.png)
+在選擇儲存模型之前，我們必須先理解資料庫面臨的主要工作負載類型。
+
+<ImageModal src="/img/cmu15-445/c05/image.webp" alt="Database Workloads" caption="Database Workloads" />
 
 資料庫可以依據查詢複雜度以及讀寫比例來進行分類 :
 
-- OLTP (Online Transaction Processing) : 一些簡單的讀寫操作，且通常只包含一小部分的資料
-- OLAP (Online Analytical Processing) : 一些複雜的查詢，且有大量的資料聚合
-- HTAP (Hybrid Transaction/Analytical Processing) : 同時支持 OLTP 和 OLAP
+- OLTP (Online Transaction Processing) : 大量、快速、簡短的交易。系統會注重低延遲以及高併發，譬如說電商的交易系統
+- OLAP (Online Analytical Processing) : 主要用於複雜的查詢和分析，通常涉及大量的資料聚合和計算，常用於分析歷史數據以支援決策制定
+- HTAP (Hybrid Transaction/Analytical Processing) : 同時支持 OLTP 和 OLAP 的工作負載
 
 ## Storage Models
 
-relational model 並沒有強調同一個 tuple 的所有屬性都要被儲存在同一個 page 中，在不同的應用場景下可以有不一樣的做法。
+理解了負載類型後，我們就可以探討如何組織資料的物理儲存，以最高效地服務特定負載。
 
 常見的儲存模型有以下幾種 :
 
@@ -32,17 +36,17 @@ relational model 並沒有強調同一個 tuple 的所有屬性都要被儲存�
 
 ### N-ary Storage Model (NSM)
 
-如同我們之前所學的一樣，NSM 會將一個 tuple 的屬性在 page 中連續儲存，這種儲存方式較為適合 OLTP 的應用場景。
+將同一筆 tuple 的所有屬性在 page 中連續儲存。這是最傳統、最直觀的儲存方式。
 
-![N-ary Storage Model (NSM)](/img/cmu15-445/c05/image-3.png)
+<ImageModal src="/img/cmu15-445/c05/image-3.webp" alt="N-ary Storage Model (NSM)" caption="N-ary Storage Model (NSM)" />
 
-如圖所示，一般的 OLTP 應用場景中，我們會有大量的查詢，我們可以直接透過 index 之後返還所有資料。
+一般的 OLTP 應用場景中，我們會有大量針對單一 tuple 的查詢，我們可以直接透過 index 之後返還所有資料。
 
-![N-ary Storage Model (NSM)](/img/cmu15-445/c05/image-2.png)
+<ImageModal src="/img/cmu15-445/c05/image-2.webp" alt="N-ary Storage Model (NSM)" caption="N-ary Storage Model (NSM)" />
 
 但對於 OLAP 應用場景，即使我們只需要一個 tuple 的部分屬性，我們也需要讀取整個 page。
 
-![N-ary Storage Model (NSM)](/img/cmu15-445/c05/image-4.png)
+<ImageModal src="/img/cmu15-445/c05/image-4.webp" alt="N-ary Storage Model (NSM)" caption="N-ary Storage Model (NSM)" />
 
 總結來說，NSM 的優缺點如下 :
 
@@ -53,25 +57,24 @@ relational model 並沒有強調同一個 tuple 的所有屬性都要被儲存�
 - 缺點
   - 不適合需要 table 中大量 tuple 或是一部分屬性的查詢
   - 記憶體使用效率較低 (需要讀取整個 page)
-  - 不適合進行壓縮
+  - 不適合進行壓縮 (因為 tuple 的屬性不在一起)
 
 ### Decomposition Storage Model (DSM)
 
 DSM 會將所有 tuple 的同一個屬性儲存在一起，這種儲存方式較為適合 OLAP 的應用場景。
 
-![Decomposition Storage Model (DSM)](/img/cmu15-445/c05/image-5.png)
+<ImageModal src="/img/cmu15-445/c05/image-5.webp" alt="Decomposition Storage Model (DSM)" caption="Decomposition Storage Model (DSM)" />
 
-![Decomposition Storage Model (DSM)](/img/cmu15-445/c05/image-6.png)
+<ImageModal src="/img/cmu15-445/c05/image-6.webp" alt="Decomposition Storage Model (DSM)" caption="Decomposition Storage Model (DSM)" />
 
 透過這種方式，我們就可以減少不必要的 I/O，只讀取我們需要的部分屬性，但這樣也會造成新的問題，例如要如何存取同一個 tuple 的不同屬性，通常這個問題有兩種解決方式 :
 
 - Fixed-length Offsets : 每個屬性都是固定長度，透過 offset 來存取 (常見)
-- Embedded Tuple Ids : 在每個屬性前都加上 tuple id，透過 tuple id 來存取
+- Embedded Tuple Ids : 在每個屬性前都加上 tuple_id，透過 tuple_id 來存取
 
-![Decomposition Storage Model (DSM)](/img/cmu15-445/c05/image-7.png)
+對 fixed-length offsets 來說，padding 會造成空間浪費，因此我們可以考慮使用接下來會介紹的 dictionary compression。
 
-對 fixed-length offsets 來說，padding 會造成空間浪費，
-因此我們可以考慮使用 dictionary compression。
+<ImageModal src="/img/cmu15-445/c05/image-7.webp" alt="Decomposition Storage Model (DSM)" caption="Decomposition Storage Model (DSM)" />
 
 總結來說，DSM 的優缺點如下 :
 
@@ -86,18 +89,19 @@ DSM 會將所有 tuple 的同一個屬性儲存在一起，這種儲存方式較
 
 PAX 是一種混合式的儲存模型，目標是將 column store 的優點 (處理速度) 和 row store 的優點 (空間) 結合在一起。
 
-![Partition Attributes Across (PAX)](/img/cmu15-445/c05/image-8.png)
-
 這種儲存方式會先將 tuple 分成幾個 group，在每個 group 中，資料會以 column store 的方式儲存，同時在 global header 中儲存每個 tuple 的 offset，且每個 group 也都有自己的 header 來儲存 metadata。
+
+<ImageModal src="/img/cmu15-445/c05/image-8.webp" alt="Partition Attributes Across (PAX)" caption="Partition Attributes Across (PAX)" />
 
 ## Compression
 
-由於 disk I/O 是資料庫中最耗時的操作，因此壓縮被廣泛的使用在 disk-oriented 的資料庫中，特別是在一些 read-only 的 OLAP 應用場景下，可以幫助我們提升 I/O 的效率。
+壓縮的核心目標是用 CPU 時間換取 I/O 時間。
+由於 I/O 是資料庫中最耗時的操作，因此壓縮被廣泛的使用在 disk-oriented 的資料庫中。
 
-在 DBMS 中，我們希望壓縮之後可以達到以下幾個目標 :
+在 DBMS 中，壓縮之後要可以達到以下目標 :
 
-- 產生 fixed-length 的值
-- 只有當需要的時候才解壓縮
+- 產生 fixed-length 的值 (DBMS 需要 follow word alignment)
+- 只有當需要的時候才解壓縮 (late materialization)
 - 無損壓縮
 
 針對壓縮的粒度，大致分為以下幾種 :
@@ -109,72 +113,59 @@ PAX 是一種混合式的儲存模型，目標是將 column store 的優點 (處
 
 ### Naive Compression (Block-level)
 
-大多數的 DBMS 都會使用一般的壓縮算法，如 gzip、snappy、lz4、Zstd 等，主要考量的點是壓縮率和壓縮 / 解壓縮速度。
+大多數的 DBMS 都會使用一般的壓縮算法，如 gzip、snappy、lz4、Zstd 等，主要考量的點是壓縮率和壓縮跟解壓縮的速度。
 
-![Naive Compression](/img/cmu15-445/c05/image-9.png)
+一個例子是 MySQL InnoDB 引擎的壓縮方法。
+InnoDB 預設的 page size 是 16 KB，但它會將 page 壓縮並填充成 1、2、4、8 KB (其中之一) 再儲存在硬碟中。
+當我們需要這筆資料時，InnoDB 會把被壓縮過後的 page 讀到 buffer pool 中，並且解壓縮成原本的 page。
 
-一個有名的壓縮例子是 MySQL 的 InnoDB，InnoDB 會將 page 壓縮或填充成 1、2、4、8 KB (其中之一) 再傳送到 buffer pool 中，如果我們需要寫入資料，InnoDB 會將資料寫入到 mod log 中而不需要直接修改壓縮檔。
+但這樣的問題是，如果每次都要解壓縮整個 page，會造成 CPU 的浪費。
+因此，InnoDB 會將修改的資料寫入到一個稱為 mod log 的地方，並且延遲更新 page，直到 page 被換出 buffer pool 時才會重新壓縮並寫回硬碟。
+
+<ImageModal src="/img/cmu15-445/c05/image-9.webp" alt="Naive Compression" caption="Naive Compression" />
 
 Naive Compression 的缺點在於，如果我們需要修改，我們就會需要解壓縮資料，這限制了壓縮的範圍，使得我們必須要資料分成較小的 block 來進行壓縮。
 另一個問題是壓縮不會考慮資料的結構，也不會知道 query plan 如何訪問資料，因此 DBMS 不會知道要怎麼延遲解壓縮。
 
 ### Columnar Compression (Column-level)
 
-在理想請況下，我們希望可以在讀資料的時候不需要對整個 page 解壓縮，因此我們可以對查詢的 query 進行一些轉換。
-
-![Columnar Compression](/img/cmu15-445/c05/image-10.png)
+由於列式儲存中，同一欄位的資料是同質的，壓縮算法可以針對這些資料進行優化，讓 DBMS 可以在不完全解壓縮的情況下對資料進行操作。
 
 #### Run-Length Encoding (RLE)
 
-我們可以將一樣的值壓縮成三元組 (value, offset, length)。
+將連續出現的相同值壓縮成 (值, 起始位置, 連續長度) 的三元組。
+適用於低基數 (cardinality) 或已經排序過的 column。
 
-![Run-Length Encoding (RLE)](/img/cmu15-445/c05/image-11.png)
-
-也可以排序來減少空間。
-
-![Run-Length Encoding (RLE)](/img/cmu15-445/c05/image-12.png)
+<ImageModal src="/img/cmu15-445/c05/image-11.webp" alt="Run-Length Encoding (RLE)" caption="Run-Length Encoding (RLE)" />
 
 #### Bit-Packing Encoding
 
 如果整數的值小於給定類型的值的位數，我們可以將整數壓縮成較小的位數。
 
-![Bit-Packing Encoding](/img/cmu15-445/c05/image-13.png)
+<ImageModal src="/img/cmu15-445/c05/image-13.webp" alt="Bit-Packing Encoding" caption="Bit-Packing Encoding" />
 
 #### Mostly Encoding
 
 當大部分的值的位數小於最大的大小時，我們可以對大部分的值進行壓縮。
 
-![Mostly Encoding](/img/cmu15-445/c05/image-14.png)
+<ImageModal src="/img/cmu15-445/c05/image-14.webp" alt="Mostly Encoding" caption="Mostly Encoding" />
 
 #### Bitmap Encoding
 
 對於每個不同的值，我們可以建立一個 bitmap 來表示是否有這個值，不適合用在高 cardinality 的 column。
 
-![Bitmap Encoding](/img/cmu15-445/c05/image-15.png)
+<ImageModal src="/img/cmu15-445/c05/image-15.webp" alt="Bitmap Encoding" caption="Bitmap Encoding" />
 
 #### Delta Encoding
 
-紀錄差的值，適合用在有序的 column。
+儲存相鄰值之間的差值，適合用在有序或變化平緩的欄位中，如時間戳、遞增 ID 等。
+也可以搭配 RLE 使用。
 
-![Delta Encoding](/img/cmu15-445/c05/image-16.png)
+<ImageModal src="/img/cmu15-445/c05/image-16.webp" alt="Delta Encoding" caption="Delta Encoding" />
 
 #### Dictionary Compression
 
-![Dictionary Compression](/img/cmu15-445/c05/image-18.png)
-![Dictionary Compression](/img/cmu15-445/c05/image-17.png)
+最常見的壓縮方式，將常見的值轉換成一個較小且固定長度的值，並且維護一個 dictionary 來對應原本的值。
+由於需要加解碼，因此無法使用 hash function 來對應原本的值，除此之外，最好還需要注意壓縮前跟壓縮後的順序一致性 (如排序、範圍查詢等等)，這樣 DBMS 就可以在不完全解壓縮的情況下對資料進行比較操作。
 
-最常見的壓縮方式，將常見的值轉換成一個較小且固定長度的值，並且維護一個 dictionary 來對應原本的值，由於需要加解碼，因此無法使用 hash function 來對應原本的值，除此之外，還需要注意順序來確保使用壓縮和未壓縮的結果是一樣的 (如排序、範圍查詢等等)。
-
-有三種方式可以用來儲存 dictionary :
-
-- Array
-  - 一個陣列儲存長度和字串，另一個陣列儲存 offset
-  - update、delete 較慢
-- Hash Table
-  - 速度較快
-  - 無法支持 range query
-- B+ Tree
-  - 比 hash table 慢，且需要消耗記憶體
-  - 支持 range query
-
-![Dictionary Compression](/img/cmu15-445/c05/image-19.png)
+<ImageModal src="/img/cmu15-445/c05/image-18.webp" alt="Dictionary Compression" caption="Dictionary Compression" />
