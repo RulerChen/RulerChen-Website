@@ -43,27 +43,6 @@ tags: [CMU15-445]
 
 <ImageModal src="/img/cmu15-445/c03/image-2.webp" caption="Disk-Oriented DBMS Overview" />
 
-## DBMS vs OS
-
-DBMS 與 OS 都涉及記憶體與硬碟的管理，但兩者的設計目標跟方向都不太一樣。
-DBMS 希望能處理比記憶體大很多的資料，並在讀取時保持低延遲，而作業系統提供的機制主要是通用且保護整個系統的安全性與穩定性。
-
-DBMS 可以被理解為一個擁有虛擬地址空間的系統，它決定何時將硬碟上的資料 (page) 載入記憶體，類似 OS 的虛擬記憶體概念。
-但如果直接使用 OS 提供的機制 (例如 mmap)，會帶來幾個問題 :
-
-- 交易安全性 : OS 會在任何時間點把 dirty page 寫回硬碟，破壞 DBMS 的 ACID 保證
-- IO 停頓 : DBMS 不知道哪些頁面在內存中，在 page fault 時，OS 會使線程停頓
-- 錯誤處理 : 難以驗證頁面，任何訪問都可能導致 DBMS 必須處理 SIGBUS 信號
-- 性能問題 : OS 根據查詢需求來管理頁面，無法進行預取或是最佳化 IO
-
-因此，DBMS 通常會使用較為低階的 system call 來管理資料，像是 :
-
-- `madvise` : 告訴 OS 我們需要哪些頁面
-- `mlock` : 告訴 OS 哪些頁面不能被寫入
-- `msync` : 通知 OS 將某些記憶體寫到硬碟上
-
-透過這些 system call，DBMS 可以更有效率的管理記憶體與硬碟。
-
 ## File Storage
 
 DBMS 需要管理大量資料，而這些資料通常遠大於記憶體容量。
