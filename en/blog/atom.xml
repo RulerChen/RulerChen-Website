@@ -52,18 +52,56 @@
         <category label="Internship" term="Internship"/>
     </entry>
     <entry>
-        <title type="html"><![CDATA[Carousell 後端實習心得]]></title>
+        <title type="html"><![CDATA[Carousell 實習心得]]></title>
         <id>https://RulerChen.github.io/RulerChen-Website/en/blog/CarousellBackendIntern/</id>
         <link href="https://RulerChen.github.io/RulerChen-Website/en/blog/CarousellBackendIntern/"/>
         <updated>2025-06-12T00:00:00.000Z</updated>
         <summary type="html"><![CDATA[Carousell 後端實習 2025]]></summary>
-        <content type="html"><![CDATA[<p>English version is ongoing</p>
-]]></content>
+        <content type="html"><![CDATA[<p>2025 Backend Intern @ Carousell</p>
+<!-- -->
+<p>今天應該就是我待在 Carousell 的 last day 了吧，說起來也在這個地方待了快整整六個月，感覺也該久違的寫一下 blog 紀錄一下這段時間的實習生活。</p>
+<p>整體來說感覺這次的實習沒有甚麼很充實的被事情塞滿的感覺，但可以看到一個快要沒落的公司和一個組在經歷 reorg 和裁員之後的變化，同時也能認識到很好的同事跟了解一些公司的 domain know how，感覺也是一個蠻特別的經驗。</p>
+<figure class="image-modal-container"><img src="https://rulerchen.github.io/RulerChen-Website/en/img/blog/carousell-1.jpg" alt="" width="100%" class="image-modal-thumbnail" style="cursor:pointer" loading="lazy"><figcaption class="image-modal-caption">Carousell mission in the office</figcaption></figure>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="前情提要">前情提要<a href="https://rulerchen.github.io/RulerChen-Website/en/blog/CarousellBackendIntern/#%E5%89%8D%E6%83%85%E6%8F%90%E8%A6%81" class="hash-link" aria-label="Direct link to 前情提要" title="Direct link to 前情提要">​</a></h2>
+<p>從大三下開始我就在找我的下一份實習，但由於之前的履歷我把入學日期寫錯了，導致幾乎都沒有收到任何回信，改了之後才成功在大四上找到這份實習。</p>
+<p>在投上一份實習的時候，我其實沒有甚麼特別的期待，就只是單純想要找一份實習來打發時間，當時的我還是個大二的菜鳥，對未來沒有想法，也不知道自己能幹麼，所以有公司讓我去我就也沒想太多就直接去了。
+但在這次投的時候我已經要大四了，由於一些原因，我幾乎已經確定自己會畢業後先工作而不是繼續升學，因此感覺也是時候認真思考一下自己的職涯規劃。
+由於是資管系做不了太偏硬體的東西，也沒有太多經驗跟興趣，也很不喜歡 CSS，因此這次的目標就是 Backend 或是 General 的 SWE。</p>
+<p>在來這間公司之前，感覺這邊福利跟薪水也都蠻不錯，正職可以全遠端工作，再加上當時面試的時候我加入的應該是一個主要位在新加坡的團隊，感覺是一個很不錯的機會可以讓我體驗在跨國公司工作並順便練習英文，所以接到 offer 之後沒什麼猶豫就決定要來了。</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="面試過程">面試過程<a href="https://rulerchen.github.io/RulerChen-Website/en/blog/CarousellBackendIntern/#%E9%9D%A2%E8%A9%A6%E9%81%8E%E7%A8%8B" class="hash-link" aria-label="Direct link to 面試過程" title="Direct link to 面試過程">​</a></h2>
+<p>面試主要分成四個部分，OA、HR 聊天關、技術面試、最後是跟 EM BQ 關。</p>
+<p>首先就是投遞履歷的時候沒過幾天就會收到 OA，我記得是兩題不難的 leetcode 跟一題給你一段 code 叫你 review 的題目，但由於我沒寫過 Go 所以也不知道要 review 甚麼東西，隨便寫了幾個可能的問題之後就過了。</p>
+<p>接下來就是 HR 會找你聊聊天，主要是了解你的背景跟為什麼想來這邊之類的問題，這部分我記得應該是還蠻輕鬆的。</p>
+<p>接下來是技術面試，面試官是後來負責帶我的人，是中文面試。
+第一部分會叫你實作一個 OOXX 的遊戲，然後寫完之後會稍微跟你討論一下你的寫法和複雜度，壓力應該是不大。
+第二部分會是一個小型的 system design，我記得是叫你設計一個排行榜，包含 API design 跟 schema design，同時也會討論一下怎麼優化，scale 跟一些 edge case，這部分我覺得還蠻有趣的，是我第一次經歷這種面試。</p>
+<p>最後就是跟一個新加坡的 EM 用英文進行一些比較像 BQ 的面試，主要就是詢問過去實習跟學校的經驗以及如何跟 PM 溝通，面試官看起來是一個很溫和的人，所以這雖然是我第一次跟別人講英文，但我覺得還是蠻順利的。</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="實習過程">實習過程<a href="https://rulerchen.github.io/RulerChen-Website/en/blog/CarousellBackendIntern/#%E5%AF%A6%E7%BF%92%E9%81%8E%E7%A8%8B" class="hash-link" aria-label="Direct link to 實習過程" title="Direct link to 實習過程">​</a></h2>
+<p>在進來之前，我只查了這家正職的待遇感覺還蠻不錯的，但是我沒有查到這家公司的經營狀況，進來之後才知道公司的營運情況並不是很好。
+在 2024 年底的時候公司又又又進行了一波裁員跟 reorg，導致我當初面試的組被合併，甚至當時面試我的 EM 也被裁員了，也因此我被丟到合併之後的 buyer &amp; seller team，帶我的 mentor 是在 buyer 這邊。</p>
+<p>工作的內容主要是跟著 team 一起做一些小的 task 或是一些公司的 migration，可以讓你有機會體驗完整的開發流程，像是從需求討論、設計、實作、code review、設定 feature flag、deploy、team test party 到真正上線等等。</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="實習心得">實習心得<a href="https://rulerchen.github.io/RulerChen-Website/en/blog/CarousellBackendIntern/#%E5%AF%A6%E7%BF%92%E5%BF%83%E5%BE%97" class="hash-link" aria-label="Direct link to 實習心得" title="Direct link to 實習心得">​</a></h2>
+<p>透過這次實習，技術方面我覺得是有非常大的進步的，了解了許多公司內部的流程跟一些系統設計和 Debug 時的思考方式，也透過跟同事的互動學到了很多東西，甚至還讓我找到了下一份的實習，這些都是我覺得蠻有收穫的地方。</p>
+<p>但我覺得我學到的最多的反而不是技術，是有關於一些有關於公司跟職場的思考。</p>
+<p>首先是一些關於管理上的思考，我記得差不多是到過完年左右，可能是因為不賺錢跟投資方壓力的關係吧，管理層開始持續的把問題甩給下面的人，收先遭殃的就是 marketing team，然後 marketing team 又把壓力持續的向下傳直到工程師這邊，導致整個團隊都覺得很不爽。
+我記得最誇張的是有一個要跑很久的 project 在丟進來討論的時候甚至沒有帶設計稿，在上層壓時間壓得很緊的情況下還要求工程師多幫忙確認需求，我覺得真的是很誇張。</p>
+<p>除了把壓力甩給下面的人外，我覺得對於要如何賺錢這件事情上面根本沒有清楚的方向。
+據同事所說，之前 2022 裁員的時候還會告訴你公司未來每一季的目標，怎麼改變等等，但這次我就只聽到了公司說甚麼要轉動甚麼賺錢的循環還啥的一堆空話，沒有任何具體的內容，唯一讓我有感的是裁員跟砍福利還有叫大家 RTO，感覺上是希望能透過把人逼走省一筆大禮包的錢。</p>
+<p>對於這件事情，我覺得作為底層員工很難改變甚麼，畢竟我覺得公司的營運跟大環境也有關，管理層的決策其實也很難參與，但我覺得作為一個小的主管的話，應該還是能有不少改善的地方。
+首先是我覺得即使是在這種困難的情況下，主管還是要盡量保護自己的團隊，堅持拒絕一些不合理的要求，盡量不要把上面的壓力往下傳，不能覺得就希望大家能一起多分擔一下就好，這種心態反而會讓大家覺得更沒有動力。
+第二點就是要多重視團隊成員的聲音，對大家反饋的意見要認真看待並給予回饋，我覺得這是在困難的情況下還能讓團隊成員覺得被重視的一個很重要的方式。</p>
+<p>雖然我離能成為主管還有不知道多遠，但我覺得這些都是在團隊合作中很重要的事情，有問題要即時反應並且想辦法解決，忽略這些問題並不會讓事情變得更好。</p>
+<p>第二個就是讓我重新思考了一下我對於工作的期待。
+以前，我會覺得工作就是為了錢，只要錢多然後加班不要太誇張的地方似乎都能接受，但經過這次的實習，我覺得我對於工作的期待有了很大的改變。
+我發現到對我來說薪水並不是一切，有時候工作上所獲得的成就感跟內容才是能不能長久待下去的關鍵，就像這裡很多離職的同事甚至都是裸辭去找下一份工作，就是覺得在這邊的倦怠感太重了。
+而對於我這種窮人家的小孩來說，或許買房啥的只是天方夜譚，既然如此好像應該要多花點時間在自己喜歡的事情上面，畢竟工作佔了人生很長的一部份，如果能找到一份自己喜歡的工作應該會讓人生更快樂吧。</p>
+<p>最後就希望我的同事們都能找到下一份更好的工作吧，在離職兩個禮拜之後我就收到了公司要解散臺灣團隊的消息，雖然我已經不在這邊了，但還是祝福在這裡的同事們都能找到更好的工作。</p>]]></content>
         <author>
             <name>RulerChen</name>
             <email>a20196780@gmail.com</email>
             <uri>https://github.com/RulerChen</uri>
         </author>
+        <category label="Internship" term="Internship"/>
     </entry>
     <entry>
         <title type="html"><![CDATA[PChome 實習心得]]></title>
