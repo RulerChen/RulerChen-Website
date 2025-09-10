@@ -26,13 +26,13 @@ B-Tree 中的 B 通常代表 Balanced，而 B-Tree 的變種有很多，例如 :
 - B\* Tree
 - $B^{link}$ Tree
 
-其中最常見的是 B+Tree，各個 DBMS 也會使用不同的 B-Tree 家族的變種。
+其中最常見的是 B+Tree，各個 DBMS 也會使用不同的 B-Tree 家族的變種，如 PostgreSQL 使用了 Lehman and Yao's high-concurrency B-tree management algorithm。
 
 ### B+Tree
 
-B+Tree 是一種 self-balancing tree，在 search、insert、delete 跟 sequential access 時的時間複雜度都是 $O(\log n)$，是一種 BST 的變種。
+B+Tree 是一種 self-balancing 的多路搜尋樹，能在 search、insert、delete 操作中保證 $O(\log n)$ 的時間複雜度，並且在 sequential access（如 range scan）時能有效率地達成 $O(k + \log n)$ 的複雜度，其中 $k$ 為輸出資料量。
 
-<ImageModal src="/img/cmu15-445/c08/image.webp" caption="B+ Tree" />
+<ImageModal src="/img/cmu15-445/c08/image.webp" caption="B+ Tree Example" />
 
 M-way B+Tree 的特點有 :
 
@@ -41,22 +41,27 @@ M-way B+Tree 的特點有 :
 - 除了 root node 以外，每個節點都至少要有 $M / 2 - 1 \leq keys \leq M - 1$ 個 key (半滿)
 - leaf node 會透過 doubly linked list 連接，提高 sequential access 的效率
 
-<ImageModal src="/img/cmu15-445/c08/image-1.webp" caption="B+ Tree" />
+<ImageModal src="/img/cmu15-445/c08/image-1.webp" caption="B+ Tree Leaf Node" />
 
-在每個 node 中都包含了一個經過排序的 key / value 陣列，其中 key 就是 index 的值，而 value 則會根據是 inner node 或 leaf node 而有所不同。
+每個 node 中都包含了一個經過排序的 key / value 陣列，其中 key 就是 index 的值，而 value 則會根據是 inner node 或 leaf node 而有所不同。
 
-其中 inner node 的 value 就是指向下一個節點的 pointer，而 leaf node 的 value 則有兩種不同的實作方式
+其中 inner node 的值就是指向下一個節點的指標，而 leaf node 的值則有兩種不同的實作方式 :
 
 - Record IDs : 直接儲存指向 tuple 的指標
-- Tuple Data : 直接儲存 tuple 的資料，但對於 secondary index 來說，這樣會造成重複儲存，因此要在 leaf node 儲存 Record IDs
+- Tuple Data : 直接儲存 tuple 的資料，但對於 secondary index 來說，這樣會造成重複儲存
 
 ### B+Tree Operations
 
 有關 B+Tree 的操作，可以參考 [這個網站](https://www.cs.usfca.edu/~galles/visualization/BPlusTree.html)。
 
+我們也會在 [Project #2](p2.mdx) 中實作 B+Tree 的各種操作。
+
 ### B+Tree vs B-Tree
 
-B-Tree 不會只把資料儲存在 leaf node 中，而是會把資料儲存在每個節點中，導致每個 node 能存放的資料量較少，也因此 B-Tree 的高度會比 B+Tree 高，導致 B-Tree 的查詢效率較低，並且 B-Tree 因為不會在 left node 中有 doubly linked list，因此 sequential access 的效率也較低。
+B-Tree 的資料分布在 internal 和 leaf node，而 B+Tree 所有資料都存在葉節點，internal node 只存 key，這導致 B+Tree 的高度通常更低，搜尋起來會更穩定。
+
+除此之外，B+Tree 的葉節點有鏈結，所以在 sequential 或 range query 上效率遠高於 B-Tree。
+雖然兩者的 search、insert、delete 複雜度都是 $O(\log n)$，但因為 B+Tree 更適合硬碟存取，所以在實際應用中會比 B-Tree 更有效率。
 
 ### Composite Indexes
 
@@ -92,14 +97,15 @@ SELECT * FROM table_name WHERE key2 = 2 AND key3 = 3;
 - Append Record ID : 把唯一的 Record ID 附加在 key 後面，這樣可以保證每個 key 都是唯一的，但會增加 index 的大小。
 - Overflow Leaf Nodes : 允許節點溢出來儲存 duplicate keys。
 
-<ImageModal src="/img/cmu15-445/c08/image-2.webp" caption="B+ Tree" />
-<ImageModal src="/img/cmu15-445/c08/image-3.webp" caption="B+ Tree" />
+<ImageModal src="/img/cmu15-445/c08/image-2.webp" caption="B+ Tree Append Record ID" />
+<ImageModal src="/img/cmu15-445/c08/image-3.webp" caption="B+ Tree Overflow Leaf Nodes" />
 
 ### Clustered Indexes
 
-Clustered Index 是一種資料實體的排序方式，會讓 資料表的資料 (tuple) 實體上依照某個欄位排序儲存，而不是隨機或插入順序，這對於範圍查詢非常有用，因為可以直接從硬碟上讀取連續的資料頁面，且只會讀取一個 page 一次。
+Clustered Index 是一種資料實體的排序方式，會讓資料表的資料依照某個欄位排序儲存，而不是隨機或插入順序。
+這對於範圍查詢非常有用，因為可以直接從硬碟上讀取連續的資料頁面。
 
-<ImageModal src="/img/cmu15-445/c08/image-8.webp" caption="B+ Tree" />
+<ImageModal src="/img/cmu15-445/c08/image-8.webp" caption="B+ Tree Clustered Index" />
 
 在 PostgreSQL 中，我們可以使用以下的 SQL 指令來做一次 one-time 的 clustering :
 
@@ -109,15 +115,19 @@ CLUSTER table_name USING index_name;
 
 ### Index Scan Page Sorting
 
-由於直接從 unclustered index 中取得資料非常沒效率，因此 DBMS 會把需要的 page id 全部取出來做排序。
+由於直接從 unclustered index 中取得資料非常沒效率，因此 DBMS 可以先把要用的 tuple 都找出來，然後根據 page_id 做排序，這樣就可以減少硬碟的隨機存取。
 
-<ImageModal src="/img/cmu15-445/c08/image-4.webp" caption="B+ Tree" />
+<ImageModal src="/img/cmu15-445/c08/image-4.webp" caption="B+ Tree Index Scan Page Sorting" />
 
 ## B+Tree Design Choices
 
+B+Tree 看似是一個單純的資料結構，但實際上有很多設計上的選擇會影響它的效能。
+
 ### Node Size
 
-通常來說， disk 的讀取速度越慢，node size 就會越大
+一般來說，硬碟 I/O 包含了 seek time 跟 transfer time，對於 HDD 來說，seek time 通常是主要的瓶頸，因此我們希望每次讀取的資料量越多越好，而對於 In-Memory 來說，cache miss 才是主要的瓶頸，因此我們希望每次讀取的資料量剛好能塞進 cache line。
+
+也因此，不同的儲存媒介會有不同的最佳 node size :
 
 - HDD : 1MB
 - SSD : 10KB
@@ -125,7 +135,7 @@ CLUSTER table_name USING index_name;
 
 ### Merge Threshold
 
-由於 B+Tree 的 merge 開銷很大，所以有些 DBMS 並不會在每次插入時都 merge，而是會由其他的 process 來定期處理 merge，也因此 postgres 會叫 B+Tree 為 nbtree (non-balanced tree)。
+由於 B+Tree 的合併開銷很大，所以有些 DBMS 並不會在每次插入時都合併，而是會由其他的 process 來定期處理合併。
 
 ### Variable Length Keys
 
@@ -134,42 +144,54 @@ CLUSTER table_name USING index_name;
 - Pointers : 儲存一個指標指向 tuple
 - Variable-Length Nodes : 允許可變長度，但需要精細的記憶體管理
 - Padding : 將 key 填滿到固定長度
-- Key Map / Indirection : 維護 key / value 的對應表
+- Key Map / Indirection : 使用一個固定長度的 key map 來指向實際的 key / value，有點類似 slotted page
+
+如果一個 key 就比 node 還大，那就需要再把它存到 overflow page 中來處理。
+在 PostgreSQL 中，這個 overflow page 被稱為 TOAST (The Oversized-Attribute Storage Technique)，當有超過 2KB 的資料時，就會切成多塊並存到獨立的 TOAST 表中。
 
 ### Intra-Node Search
 
 在節點內搜索有三種方式 :
 
-- Linear : 線性搜索，可以用 SIMD 來加速
-- Binary : 二分搜索
-- Interpolation : 用 key 的分布來估計位置
+- Linear : 遍歷整個節點。線性掃描對 CPU cache 友善，並且能搭配 SIMD 指令來進行加速，因此即使 B+Tree 的節點內是排序過的，線性掃描仍然是常見的選擇。
+- Binary : 二分搜索，演算法複雜度比較低，但對 CPU cache 不友善
+- Interpolation : 用 key 的分布來估計位置，舉例來說，如果 key 是 1 到 1000 之間的數字，且我們要找 500，那就可以直接跳到中間的位置。
+
+:::note
+
+SIMD (Single Instruction, Multiple Data) 是一種平行運算的技術，可以讓 CPU 在同一個指令週期內對多個資料進行相同的操作，與之相對的是 SISD (Single Instruction, Single Data)，也就是傳統的單一資料流處理方式。
+
+在現代的 CPU 中，除了有 eax 這種通用的暫存器外，還有一種叫做向量暫存器 (vector register) 的東西，常見的有 XMM (128-bit)、YMM (256-bit)、ZMM (512-bit) 等等，這些向量暫存器可以一次儲存多個資料。
+而 SIMD 指令集就是用來操作這些向量暫存器的，它可以讓我們在一個指令週期內對多個資料進行相同的運算，如 `_mm_add_epi32` 可以同時對向量暫存器中的四個 32-bit 整數進行加法運算，`_mm_cmpgt_epi32` 可以同時比較向量暫存器中的四個 32-bit 整數。
+
+:::
 
 ## B+ Tree Optimizations
 
-### Prefix
+### Prefix Compression
 
 同一個 node 常常有相同的 key，我們可以透過 prefix 來減少儲存空間。
 
-<ImageModal src="/img/cmu15-445/c08/image-5.webp" caption="B+ Tree" />
+<ImageModal src="/img/cmu15-445/c08/image-5.webp" caption="B+ Tree Prefix" />
 
 ### Deduplication
 
 可以將重複的 key 合併。
 
-<ImageModal src="/img/cmu15-445/c08/image-6.webp" caption="B+ Tree" />
+<ImageModal src="/img/cmu15-445/c08/image-6.webp" caption="B+ Tree Deduplication" />
 
-### Suffix
+### Suffix Truncation
 
 在 inner node 中， key 只是用來決定要往左還是往右走，因此只需要儲存可供辨識的部分。
 例如 key 是 abcdefgh，我們可以只儲存 abc。
 
-### Pointer Swizzing
+### Pointer Swizzling
 
-我們需要透過 page id 來找到其他的 page，這樣就必須先訪問 page table，但如果這個 page 已經固定在 buffer pool 中，我們就使用原始指標而不需要再訪問 page table。
+在 DBMS 中，如果我們要查詢一個 page 的位置，通常要帶著 page_id 來查詢 page table，但如果這個 page 已經固定在 buffer pool 中，我們就可以使用原始指標而不需要再訪問 page table。
 
 ### Bulk Insert
 
-最快建立 B+Tree 的方法是將 key 先排好序，再從下往上建立 B+Tree，在有大量的插入操作時可以這麼做。
+最快建立 B+Tree 的方法是將 key 先排好序，再從下往上建立 B+Tree，適合在大量資料匯入時使用。
 
 ### Write-Optimized B+ Tree
 
@@ -187,31 +209,34 @@ Bloom Filter 是一種機率型的資料結構，提供了 insert 跟 lookup 的
 1. 初始化一個位元陣列 (bitmap)，大小為 m 位元。
 2. 選擇 k 個 hash function，這些 hash function 可以將資料映射到 0 到 m-1 的範圍內。
 3. 當插入一個資料時，使用 k 個 hash function 計算出 k 個位置，將這些位置的位元設為 1。
-4. 當查找一個資料時，使用 k 個 hash function，檢查 k 個位置是否都是 1，如果是，則可能存在；如果有任何一個位置是 0，則一定不存在。
+4. 當查找一個資料時，使用 k 個 hash function，檢查 k 個位置是否都是 1，如果是，則可能存在，如果有任何一個位置是 0，則一定不存在。
 
-除了比較正統的 Bloom Filter 之外，還有一些變體：
+<ImageModal src="/img/cmu15-445/c08/image-17.webp" caption="Bloom Filter" />
 
-- Counting Bloom Filter：使用計數器來代替位元陣列，這樣可以支援刪除操作。
-- Cuckoo Filter：使用 cuckoo hashing 跟 fringerprint 技術來減少 false positive 的機率，並且支援刪除操作。
+除了比較正統的 Bloom Filter 之外，還有一些變體 :
+
+- Counting Bloom Filter : 使用計數器來代替位元陣列，這樣可以支援刪除操作。
+- Cuckoo Filter : 使用 cuckoo hashing 跟 fingerprint 技術來減少 false positive 的機率，並且支援刪除操作。
 - Succinct Range Filter : 一種不可修改的 Bloom Filter，使用位元陣列來表示一個範圍內的值是否存在。
 
 ## Skip List
 
-Skip list 是一種基於 linked list 的資料結構，提供了類似於平衡樹的查找效率 (logN)，但實現起來更簡單。它使用多層 linked list 來跳過一些節點，從而加快查找速度。
+Skip list 是一種基於 linked list 的資料結構，提供了類似於平衡樹的查找效率 $O(\log n)$，但實現起來更簡單。
+它使用多層 linked list 來跳過一些節點，從而加快查找速度。
 
 與 B+Tree 一樣，Skip list 以有序的方式儲存資料，不同的是在插入跟刪除的時候，Skip list 不需要進行分裂或合併節點，而是透過隨機選擇 (丟硬幣) 的方式來維持平衡。
 
-<ImageModal src="/img/cmu15-445/c08/image-9.webp" caption="Skip List" />
-
 Skip list 提供了三種操作，分別是插入、刪除和查找。
 
-- 查找：從最高層開始，找到大於等於目標節點的第一個節點，然後向下移動到下一層，直到找到目標節點或到達最低層。
+- 查找：從最高層開始，只要下一個節點小於目標值就繼續往右走，不然的話就往下一層走，直到到達最底層為止。
 - 插入：
   - 首先需要隨機選擇一個層級，從最低即開始丟硬幣決定是否要在這一層插入，如果不是的話就向上移動一層直到最高層為止，確保每層的分布是對數級別的。
   - 然後跟查找一樣，從最高層開始，找到每一層中正確的插入位置。
-  - 最後從最底層開始插入節點，直到目標層級。從下到上插入的原因是為了併發性，且如果是單向鏈結的話，可以透過 swapping pointers 來實現，避免使用 latch。
+  - 最後從最底層開始插入節點，直到目標層級。從下到上插入的原因是為了併發性，因為只有最底層的被連接好之後，這個節點才算是對外可見的，搭配 CAS 甚至可以做到無鎖的插入。
 - 刪除：
   - 先找出所有要刪除的節點，接著做軟刪除，最後 GC 會定期清理這些軟刪除的節點。
+
+<ImageModal src="/img/cmu15-445/c08/image-9.webp" caption="Skip List" />
 
 Skip list 的主要優點在於不需要做 rebalancing，這也就代表了鎖的開銷會相對較低，且如果不使用 reverse pointer 的話記憶體的用量也會相對較少。
 缺點在於不利於硬碟快取，因為有不同層級的節點會分布在不同的記憶體位置，這樣會導致 cache miss 的機率增加，且如果沒有 reverse pointer 的話反向搜索會相對困難。
@@ -224,7 +249,8 @@ Skip list 的主要優點在於不需要做 rebalancing，這也就代表了鎖�
 這些數字可以是 ASCII 字元、Unicode 字元或其他類型的數字。
 字典樹的每個節點都包含一個指向下一層節點的指針，這些指針可以用來快速地查找鍵是否存在，且複雜度與鍵的長度成正比。
 
-跨度 (span) 是指一個數字所佔用的位元數。如果這個數字及其前綴存在於資料集合中，那麼在該數字處會儲存一個指向下一層節點的指針，否則就儲存 null。
+跨度 (span) 是指一個數字所佔用的位元數，如果是二進位的話，則跨度為 2。
+如果這個數字及其前綴存在於資料集合中，那麼在該數字處會儲存一個指向下一層節點的指針，否則就儲存 null。
 
 <ImageModal src="/img/cmu15-445/c08/image-10.webp" caption="Trie" />
 
@@ -233,9 +259,7 @@ Skip list 的主要優點在於不需要做 rebalancing，這也就代表了鎖�
 - 水平壓縮 (Horizontal Compression) : 如果同一層級的 span 很大且很空，可以考慮改成使用 array 來儲存
 - 垂直壓縮 (Vertical Compression) / 基數樹 (Radix Tree) : 如果只有一個單一的分支，可以考慮將這個分支直接合併到父節點中，這樣可以減少節點的數量，但這樣有可能造成錯誤，因此最後還是需要跟原本的 tuple 做比對。
 
-<ImageModal src="/img/cmu15-445/c08/image-16.webp" caption="Radix Tree" />
-
-從左到右是正常的 Trie，水平壓縮後的 Trie，垂直壓縮後的 Radix Tree。
+<ImageModal src="/img/cmu15-445/c08/image-16.webp" caption="Normal -> Horizontal Compression -> Radix Tree" />
 
 ## Inverted Index
 
@@ -306,8 +330,4 @@ Navigable Small Worlds 是一種基於圖的近似最近鄰搜尋方法。
 當進行最近鄰搜尋時，Navigable Small Worlds 利用這個圖，從一個定義好的入口點開始，透過 greedy algorithm 選擇那些能讓它更接近查詢向量的邊，來逐步導航。
 兩個知名的實現例子是 FAISS 和 HNSWlib (Hierarchical Navigable Small Worlds)。
 
-<ImageModal src="/img/cmu15-445/c08/image-15.webp" caption="NSW" />
-
-## References
-
-- [B-tree 跟 B+tree 的優缺點](https://blog.csdn.net/sxcsch/article/details/131434222)
+<ImageModal src="/img/cmu15-445/c08/image-15.webp" caption="Navigable Small Worlds" />
