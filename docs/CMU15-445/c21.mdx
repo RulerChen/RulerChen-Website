@@ -30,7 +30,7 @@ ARIES 有三個關鍵的概念 :
 
 WAL 中的每條紀錄都需要包含一個唯一的序列號，稱為 LSN (Log Sequence Number)，各個元件都需要紀錄屬於他們的 LSN。
 
-![Log Sequence Numbers](/img/cmu15-445/c20/image.png)
+<ImageModal src="/img/cmu15-445/c21/image.webp" caption="Log Sequence Numbers" />
 
 1. LSN : 全局唯一的序列號，用來標識每個日誌記錄，每次日誌寫入時，LSN 會遞增
 2. flushedLSN : 表示已經寫入到磁盤的最後一條日誌的 LSN
@@ -41,7 +41,7 @@ WAL 中的每條紀錄都需要包含一個唯一的序列號，稱為 LSN (Log 
 
 在頁面寫入硬碟前，DBMS 會確保相應的 pageLSN 小於等於 flushedLSN，這樣可以保證日誌記錄已經安全地記錄在硬碟上。
 
-![Log Sequence Numbers](/img/cmu15-445/c20/image-1.png)
+<ImageModal src="/img/cmu15-445/c21/image-1.webp" caption="Log Sequence Numbers" />
 
 ## Normal Execution
 
@@ -63,7 +63,7 @@ WAL 中的每條紀錄都需要包含一個唯一的序列號，稱為 LSN (Log 
 3. 修改 flushedLSN 為 COMMIT 的 LSN
 4. 將 WAL buffer 的內容清除，並寫入一個 TXN-END 紀錄
 
-![Transaction Commit](/img/cmu15-445/c20/image-2.png)
+<ImageModal src="/img/cmu15-445/c21/image-2.webp" caption="Transaction Commit" />
 
 ### Transaction Abort
 
@@ -74,7 +74,7 @@ WAL 中的每條紀錄都需要包含一個唯一的序列號，稱為 LSN (Log 
 3. 為了防止回滾再次故障，需要將回滾的 log 寫入 WAL
 4. 回滾完之後，寫入 TXN-END 紀錄
 
-![Transaction Abort](/img/cmu15-445/c20/image-3.png)
+<ImageModal src="/img/cmu15-445/c21/image-3.webp" caption="Transaction Abort" />
 
 ### Compensation Log Record
 
@@ -83,7 +83,7 @@ CLR 是一種描述撤銷前一次更新操作的日誌記錄。
 
 需要注意的是，CLR 不會被撤銷，因為它們是用來撤銷其他日誌記錄的。
 
-![Compensation Log Record](/img/cmu15-445/c20/image-4.png)
+<ImageModal src="/img/cmu15-445/c21/image-4.webp" caption="Compensation Log Record" />
 
 ## Checkpoint
 
@@ -103,12 +103,12 @@ CLR 是一種描述撤銷前一次更新操作的日誌記錄。
 
 non-fuzzy checkpoint 的問題在於暫停所有交易並且等待所有活躍交易執行完畢，而在 slightly better checkpoint 中，我們只暫停需要 write latch 的交易，並且不需要等待所有活躍交易執行完畢。
 
-![Slightly Better Checkpoints](/img/cmu15-445/c20/image-5.png)
+<ImageModal src="/img/cmu15-445/c21/image-5.webp" caption="Slightly Better Checkpoints" />
 
 在 checkpoint 開始的時候，txn 已經獲取了 page3 的 write latch，因此它可以繼續執行，但是不能再獲取新的 write latch。
 此時 DBMS 會掃描一遍 buffer pool，將所有 dirty page 寫入硬碟，這時有可能 page3 的資料也被寫入硬碟，造成硬碟中的 snapshot 處於不一致的狀態。
 
-![Slightly Better Checkpoints](/img/cmu15-445/c20/image-5.png)
+<ImageModal src="/img/cmu15-445/c21/image-5.webp" caption="Slightly Better Checkpoints" />
 
 我們可以記錄在 checkpoint 時那些交易是活躍的，那些資料是 dirty 的，並透過 WAL 來回復這些資料。
 
@@ -123,7 +123,7 @@ non-fuzzy checkpoint 的問題在於暫停所有交易並且等待所有活躍�
 
 fuzzy checkpoint 允許在檢查期間繼續執行其他交易，不會中斷系統運行。
 
-![Fuzzy Checkpoint](/img/cmu15-445/c20/image-6.png)
+<ImageModal src="/img/cmu15-445/c21/image-6.webp" caption="Fuzzy Checkpoint" />
 
 在這個模式下，我們需要兩種紀錄來標記區間 :
 
@@ -142,7 +142,7 @@ ARIES 恢復協議 是一種 DBMS 在崩潰後恢復數據的一個廣泛使用�
 
 從 WAL 中找到 MasterRecord，並且找到最後一個 BEGIN-CHECKPOINT 紀錄。
 
-![ARIES Recovery Phase](/img/cmu15-445/c20/image-7.png)
+<ImageModal src="/img/cmu15-445/c21/image-7.webp" caption="ARIES Recovery Phase" />
 
 ### Analysis Phase
 

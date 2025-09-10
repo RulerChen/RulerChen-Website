@@ -21,7 +21,7 @@ DSS 通過分析存儲在資料庫中的歷史數據，幫助人們針對未來�
 
 OLTP 負責與正在運行中的應用程序交互，再透過異步的方式將數據同步到 OLAP 系統中作分析。
 
-![OLTP vs OLAP](/img/cmu15-445/c23/image.png)
+<ImageModal src="/img/cmu15-445/c24/image.webp" caption="OLTP vs OLAP" />
 
 OLTP 資料庫中的資料會通過一些流程將資料轉移到 OLAP 資料庫中，主要有兩種方式 :
 
@@ -41,13 +41,13 @@ star schema 主要分成兩種表，fact table 和 dimension table。
 
 fact table 通常儲存應用程式的核心事件以及指標，而 dimension table 則是對 fact table 的描述，兩者會通過 foreign key 進行關聯，且只能允許一層關聯。
 
-![Star Schema](/img/cmu15-445/c23/image-1.png)
+<ImageModal src="/img/cmu15-445/c24/image-1.webp" caption="Star Schema" />
 
 ### Snowflake Schema
 
 snowflake schema 與 star schema 類似，但 dimension table 可以進一步分解成多個表，這樣可以減少重複的資料。
 
-![Snowflake Schema](/img/cmu15-445/c23/image-2.png)
+<ImageModal src="/img/cmu15-445/c24/image-2.webp" caption="Snowflake Schema" />
 
 ### Star vs Snowflake
 
@@ -64,13 +64,13 @@ snowflake schema 與 star schema 類似，但 dimension table 可以進一步分
 
 在這種方法中，DBMS 將查詢 (或部分查詢) 推送到包含所需資料的節點，並在當地執行過濾和處理，最大限度地減少網路上的數據傳輸。
 
-![Pushing a Query to Data](/img/cmu15-445/c23/image-4.png)
+<ImageModal src="/img/cmu15-445/c24/image-4.webp" caption="Pushing a Query to Data" />
 
 ### Pull Data to Query
 
 在這種方法中，DBMS 將需要處理的資料拉取到執行查詢的節點。
 
-![Pull Data to Query](/img/cmu15-445/c23/image-3.png)
+<ImageModal src="/img/cmu15-445/c24/image-3.webp" caption="Pull Data to Query" />
 
 ### Query Fault Tolerance
 
@@ -116,7 +116,7 @@ JOIN S ON R.id = S.id
 
 每個節點在本地執行聯接操作，然後將結果發送到 coordinating node 進行聚合。
 
-![Scenario 1](/img/cmu15-445/c23/image-5.png)
+<ImageModal src="/img/cmu15-445/c24/image-5.webp" caption="Scenario 1" />
 
 ### Scenario 2
 
@@ -124,7 +124,7 @@ JOIN S ON R.id = S.id
 
 每個節點執行本地聯接操作，然後將結果發送到 coordinating node 進行聚合。
 
-![Scenario 2](/img/cmu15-445/c23/image-6.png)
+<ImageModal src="/img/cmu15-445/c24/image-6.webp" caption="Scenario 2" />
 
 ### Scenario 3
 
@@ -132,7 +132,7 @@ JOIN S ON R.id = S.id
 
 如果其中一個表較小，DBMS 可以將該表廣播到所有節點，並在本地進行 join，最終將結果發送到 coordinating node，這種情況被稱為 Broadcast Join。
 
-![Scenario 3](/img/cmu15-445/c23/image-7.png)
+<ImageModal src="/img/cmu15-445/c24/image-7.webp" caption="Scenario 3" />
 
 ### Scenario 4
 
@@ -140,7 +140,7 @@ JOIN S ON R.id = S.id
 
 DBMS 需要重新分配這些表，將它們根據 join key 進行 shuffle，然後在本地執行聯接，最終將結果發送到 coordinating node。
 
-![Scenario 4](/img/cmu15-445/c23/image-8.png)
+<ImageModal src="/img/cmu15-445/c24/image-8.webp" caption="Scenario 4" />
 
 ### Semi-Join
 

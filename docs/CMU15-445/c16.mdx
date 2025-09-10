@@ -69,7 +69,7 @@ DBMS 需要保證 transaction 的原子性，即所有操作只有全部完成�
 - t1 : A 轉給 B 100 元
 - t2 : A 和 B 獲得 6% 利息
 
-![Isolation](/img/cmu15-445/c15/image.png)
+<ImageModal src="/img/cmu15-445/c16/image.webp" caption="Isolation" />
 
 當這兩個 transaction 發生之後，不管順序如何，DBMS 需要確保最後兩者加起來的結果是 $2000 \times 1.06 = 2120$ 元。
 
@@ -84,8 +84,8 @@ concurrency control 指的是 DBMS 如何決定多個交易操作的正確順序
 
 DBMS 的執行順序被稱為 execution schedule，我們希望可以盡量交錯 transaction 來最大程度的提高倂發性，這樣當某個 transaction 在等待資源 (disk IO、page fault) 或 CPU 有空閒時，就可以繼續執行其他交易。
 
-![Schedule](/img/cmu15-445/c15/image-1.png)
-![Schedule](/img/cmu15-445/c15/image-2.png)
+<ImageModal src="/img/cmu15-445/c16/image-1.webp" caption="Schedule" />
+<ImageModal src="/img/cmu15-445/c16/image-2.webp" caption="Schedule" />
 
 我們需要保證 schedule 是 serial schedule 或是等價於 serial schedule (serializable schedule)，也就是說，這些交易的結果應該與某個 serial schedule 的結果相同，這樣才能保證 transaction 的正確性。
 
@@ -101,19 +101,19 @@ DBMS 的執行順序被稱為 execution schedule，我們希望可以盡量交�
 
 會導致 unrepeatable read，也就是當一個 transaction 多次讀取同一個資源時，資源的值不同。
 
-![Conflict](/img/cmu15-445/c15/image-3.png)
+<ImageModal src="/img/cmu15-445/c16/image-3.webp" caption="Conflict" />
 
 #### Write-Read Conflict
 
 會導致 dirty read，也就是當一個 transaction 讀取到另一個 transaction 還未 commit 的資源。
 
-![Conflict](/img/cmu15-445/c15/image-4.png)
+<ImageModal src="/img/cmu15-445/c16/image-4.webp" caption="Conflict" />
 
 #### Write-Write Conflict
 
 會導致 lost update，也就是當兩個 transaction 同時寫入同一個資源時，後者會覆蓋前者的值。
 
-![Conflict](/img/cmu15-445/c15/image-5.png)
+<ImageModal src="/img/cmu15-445/c16/image-5.webp" caption="Conflict" />
 
 ### Serializability
 
@@ -122,7 +122,7 @@ DBMS 的執行順序被稱為 execution schedule，我們希望可以盡量交�
 - Conflict Serializability : 大多數 DBMS 支持
 - View Serializability : 沒有 DBMS 支持，因為很難判斷是否是 view serializable
 
-![Serializability](/img/cmu15-445/c15/image-7.png)
+<ImageModal src="/img/cmu15-445/c16/image-7.webp" caption="Serializability" />
 
 #### Conflict Serializability
 
@@ -133,7 +133,7 @@ DBMS 的執行順序被稱為 execution schedule，我們希望可以盡量交�
 
 我們可以構建 dependency graph 來判斷是否是 conflict serializable。在這個圖中，每個事務都是一個節點，如果事務 $T_i$ 中的操作 $O_i$ 與事務 $T_j$ 中的操作 $O_j$ 衝突且 $O_i$ 在排程中先於 $O_j$，則從節點 $T_i$ 到 $T_j$ 有一條有向邊，只有當這個圖是無環時，這個 scheduler 才是 conflict serializable。
 
-![Dependency Graph](/img/cmu15-445/c15/image-6.png)
+<ImageModal src="/img/cmu15-445/c16/image-6.webp" caption="Dependency Graph" />
 
 #### View Serializability
 
@@ -145,8 +145,8 @@ DBMS 的執行順序被稱為 execution schedule，我們希望可以盡量交�
 - Final Write Equivalence : 每個資料項的最終寫入操作（即最終結果）與串行排程中的相同
 - Read-Write Equivalence : 對於每個讀操作，其讀取的值必須來自與在串行排程中相同的最後一次寫操作
 
-![View Serializability](/img/cmu15-445/c15/image-8.png)
-![View Serializability](/img/cmu15-445/c15/image-9.png)
+<ImageModal src="/img/cmu15-445/c16/image-8.webp" caption="View Serializability" />
+<ImageModal src="/img/cmu15-445/c16/image-9.webp" caption="View Serializability" />
 
 ## ACID - Durability
 

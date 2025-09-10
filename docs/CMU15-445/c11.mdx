@@ -19,7 +19,7 @@ tags: [CMU15-445]
 對於 disk-oriented 的 DBMS 來說，查詢執行時勢必要將部分資料從磁碟載入到記憶體中處理，並可能需要將中間結果回寫至磁碟。
 因此，查詢演算法設計的一個重要原則，盡量減少 I/O 的次數，特別是避免隨機存取。
 
-![Query Plan](/img/cmu15-445/c10/image.png)
+<ImageModal src="/img/cmu15-445/c11/image.webp" caption="Query Plan" />
 
 ## Sorting
 
@@ -46,7 +46,7 @@ tags: [CMU15-445]
 - sorting : 將資料分割成小塊，並且在 memory 中進行排序
 - merging : 將排序好的資料合併
 
-![External Merge Sort](/img/cmu15-445/c10/image-1.png)
+<ImageModal src="/img/cmu15-445/c11/image-1.webp" caption="External Merge Sort" />
 
 頁面的排序可以使用 early materialization 或 late materialization 來實現
 
@@ -58,7 +58,7 @@ tags: [CMU15-445]
 我們假設 file 被分成 N 個 page，且 DBMS 有 B 個 fixed-size buffers。
 需要把每個 page 讀入 buffer，並且進行排序，最後再將排序好的 page 寫回 disk，並透過不斷的合併來完成排序。
 
-![General Merge Sort](/img/cmu15-445/c10/image-2.png)
+<ImageModal src="/img/cmu15-445/c11/image-2.webp" caption="General Merge Sort" />
 
 其複雜度如下 :
 
@@ -71,7 +71,7 @@ tags: [CMU15-445]
 
 預處理接下來要使用的 page，將其讀入另一個 buffer 中來減少 IO 停頓。
 
-![Double Buffering](/img/cmu15-445/c10/image-3.png)
+<ImageModal src="/img/cmu15-445/c11/image-3.webp" caption="Double Buffering" />
 
 #### Comparison Optimizations
 
@@ -85,13 +85,13 @@ tags: [CMU15-445]
 - clustered B+tree
   I/O 是順序的，比外部排序效率更高
 
-![Clustered B+tree](/img/cmu15-445/c10/image-4.png)
+<ImageModal src="/img/cmu15-445/c11/image-4.webp" caption="Clustered B+tree" />
 
 - unclustered B+tree
 
 I/O 是隨機的，效率極低
 
-![Unclustered B+tree](/img/cmu15-445/c10/image-5.png)
+<ImageModal src="/img/cmu15-445/c11/image-5.webp" caption="Unclustered B+tree" />
 
 ## Aggregations
 
@@ -101,7 +101,7 @@ I/O 是隨機的，效率極低
 
 將資料依照 grouping key 排序，然後進行聚合，這種方法的好處是可以利用排序的結果來加速聚合運算，但缺點是排序的成本較高，特別是當資料量大於記憶體時。
 
-![Sorting](/img/cmu15-445/c10/image-6.png)
+<ImageModal src="/img/cmu15-445/c11/image-6.webp" caption="Sorting" />
 
 ### Hashing
 
@@ -115,7 +115,7 @@ I/O 是隨機的，效率極低
 
 使用 hash function h1 來將 tuple 分配到 B - 1 個 partition 中，剩下的一個 partition 用來存放輸入的資料。
 
-![Partition](/img/cmu15-445/c10/image-7.png)
+<ImageModal src="/img/cmu15-445/c11/image-7.webp" caption="Partition" />
 
 - Phase 2 : ReHash
 
@@ -123,5 +123,5 @@ I/O 是隨機的，效率極低
 
 在 rehash 的過程中，存在一組 grouping key -> return value 的 hash table，我們只需要更新這個 key-value pair 即可。
 
-![ReHash](/img/cmu15-445/c10/image-8.png)
-![ReHash](/img/cmu15-445/c10/image-9.png)
+<ImageModal src="/img/cmu15-445/c11/image-8.webp" caption="ReHash" />
+<ImageModal src="/img/cmu15-445/c11/image-9.webp" caption="ReHash" />

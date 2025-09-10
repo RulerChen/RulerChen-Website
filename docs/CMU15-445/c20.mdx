@@ -10,7 +10,7 @@ tags: [CMU15-445]
   <title>CMU 15-445 Database Logging</title>
 </head>
 
-![Database Logging](/img/cmu15-445/c19/image.png)
+<ImageModal src="/img/cmu15-445/c20/image.webp" caption="Database Logging" />
 
 資料庫在運行時可能會發生各種故障，如果中斷了事務的運作，就可能產生資料不一致的問題，這時候就需要故障恢復機制來保證資料的完整，主要會分成兩個部分來討論 :
 
@@ -58,7 +58,7 @@ DBMS 如何處理 undo / redo 主要取決於 Buffer Pool Management Policies，
 
 以下圖為例，T1 要修改 A 而 T2 要修改 B，且 A 和 B 都位在同一個 page 中，當 T2 提交時，T1 尚未提交但已經修改了 A，這時候就需要根據 Steal Policy 和 Force Policy 來決定如何處理。
 
-![Buffer Pool Management Policies](/img/cmu15-445/c19/image-1.png)
+<ImageModal src="/img/cmu15-445/c20/image-1.webp" caption="Buffer Pool Management Policies" />
 
 ### Steal Policy
 
@@ -85,17 +85,17 @@ DBMS 如何處理 undo / redo 主要取決於 Buffer Pool Management Policies，
 
 左邊是記憶體中的位置，右邊是硬碟中的位置
 
-![Shadow Paging](/img/cmu15-445/c19/image-2.png)
+<ImageModal src="/img/cmu15-445/c20/image-2.webp" caption="Shadow Paging" />
 
 當寫入的交易發生時，DBMS 會生成一份 shadow page，並在 shadow page 上進行修改，並將 DB root 的指針指向 shadow page，同時將資料都存在硬碟上。
 
-![Shadow Paging](/img/cmu15-445/c19/image-3.png)
-![Shadow Paging](/img/cmu15-445/c19/image-4.png)
+<ImageModal src="/img/cmu15-445/c20/image-3.webp" caption="Shadow Paging" />
+<ImageModal src="/img/cmu15-445/c20/image-4.webp" caption="Shadow Paging" />
 
 在 commit 之後，DBMS 會刪除舊的 master page。
 
-![Shadow Paging](/img/cmu15-445/c19/image-5.png)
-![Shadow Paging](/img/cmu15-445/c19/image-6.png)
+<ImageModal src="/img/cmu15-445/c20/image-5.webp" caption="Shadow Paging" />
+<ImageModal src="/img/cmu15-445/c20/image-6.webp" caption="Shadow Paging" />
 
 在 shadow page 的實現中，不管是 undo 還是 redo 都非常簡單，undo 只需要刪除 shadow page，而因為每次都會將資料寫入硬碟， redo 也不需要進行任何操作。
 
@@ -119,10 +119,10 @@ WAL 的核心概念是在資料庫進行變更之前，先將變更寫入一個 
 
 如下面的範例所示，我們會先寫入 WAL buffer 中，再修改值，coomit 之後再清空。
 
-![Write-Ahead Logging](/img/cmu15-445/c19/image-7.png)
-![Write-Ahead Logging](/img/cmu15-445/c19/image-8.png)
-![Write-Ahead Logging](/img/cmu15-445/c19/image-9.png)
-![Write-Ahead Logging](/img/cmu15-445/c19/image-10.png)
+<ImageModal src="/img/cmu15-445/c20/image-7.webp" caption="Write-Ahead Logging" />
+<ImageModal src="/img/cmu15-445/c20/image-8.webp" caption="Write-Ahead Logging" />
+<ImageModal src="/img/cmu15-445/c20/image-9.webp" caption="Write-Ahead Logging" />
+<ImageModal src="/img/cmu15-445/c20/image-10.webp" caption="Write-Ahead Logging" />
 
 ### WAL Group Commit
 
@@ -141,7 +141,7 @@ log 紀錄的內容可能依據不同的策略而有所不同，主要有以下�
 - Logical Logging
 - Physiological Logging
 
-![Logging Schemes](/img/cmu15-445/c19/image-11.png)
+<ImageModal src="/img/cmu15-445/c20/image-11.webp" caption="Logging Schemes" />
 
 ### Physical Logging
 
@@ -164,7 +164,7 @@ log 紀錄的內容可能依據不同的策略而有所不同，主要有以下�
 
 在使用 WAL 時，log 會隨著時間不段增長，這樣會導致 log file 過大，並且在恢復時需要不斷地回放 log，為了避免這種情況，DBMS 會定時將所有 buffer 中的資料寫到硬碟上，縮短故障恢復的時間。
 
-![Checkpoints](/img/cmu15-445/c19/image-12.png)
+<ImageModal src="/img/cmu15-445/c20/image-12.webp" caption="Checkpoints" />
 
 當資料庫故障時，DBMS 可以根據 checkpoint 來進行恢復，所有在 checkpoint 之前 commit 的交易都可以被視為已經持久化，如 T1。
 而在 checkpoint 之後 commit 的交易，則需要根據 log file 來進行 redo，如 T2、T3。

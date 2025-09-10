@@ -28,7 +28,7 @@ DBMS 的 system architecture 定義了 CPU 可以直接訪問那些共享資源�
 - Shared Disk
 - Shared Nothing
 
-![System Architecture](/img/cmu15-445/c21/image.png)
+<ImageModal src="/img/cmu15-445/c22/image.webp" caption="System Architecture" />
 
 ### Shared Memory
 
@@ -45,7 +45,7 @@ DBMS 的 system architecture 定義了 CPU 可以直接訪問那些共享資源�
 
 使用這種架構的系統如下圖所示 :
 
-![Shared Disk](/img/cmu15-445/c21/image-3.png)
+<ImageModal src="/img/cmu15-445/c22/image-3.webp" caption="Shared Disk" />
 
 ### Shared Nothing
 
@@ -59,7 +59,7 @@ DBMS 的 system architecture 定義了 CPU 可以直接訪問那些共享資源�
 
 使用這種架構的系統如下圖所示 :
 
-![Shared Nothing](/img/cmu15-445/c21/image-1.png)
+<ImageModal src="/img/cmu15-445/c22/image-1.webp" caption="Shared Nothing" />
 
 ## Design Issues
 
@@ -78,7 +78,7 @@ DBMS 的 system architecture 定義了 CPU 可以直接訪問那些共享資源�
 - Homogeneous (同質節點) : 每個節點在叢集中能夠執行相同的任務，在擴容以及故障恢復比較簡單
 - Heterogeneous (異質節點): 節點被分配特定的任務，因此不同節點之間需要進行通信才能完成任務，可以在一個物理節點上執行多個虛擬節點
 
-![Homogeneous VS Heterogeneous](/img/cmu15-445/c21/image-5.png)
+<ImageModal src="/img/cmu15-445/c22/image-5.webp" caption="Homogeneous VS Heterogeneous" />
 
 以 MongoDB 為例，它的集群有三種節點，分別是 Router、Config Server、Shard。
 使用者會發送請求給 Router，Router 會根據 Config Server 的設定來將請求轉發給 Shard。
@@ -95,7 +95,7 @@ Partitioning Schemes 是一種把資料庫分散到多個節點上的方法，�
 
 將表格的屬性拆分成不同的分區。每個分區還必須存儲元組信息，以便能夠重建原始記錄。
 
-![Vertical Partitioning](/img/cmu15-445/c21/image-7.png)
+<ImageModal src="/img/cmu15-445/c22/image-7.webp" caption="Vertical Partitioning" />
 
 ### Horizontal Partitioning
 
@@ -105,11 +105,11 @@ Partitioning Schemes 是一種把資料庫分散到多個節點上的方法，�
 - Hash Partitioning
 - Predicate Partitioning
 
-![Horizontal Partitioning](/img/cmu15-445/c21/image-8.png)
+<ImageModal src="/img/cmu15-445/c22/image-8.webp" caption="Horizontal Partitioning" />
 
 通常會使用 partitionKey 來查詢資料，並使用 consistent Hashing 來決定資料應該存儲在哪個節點上。
 
-![Consistent Hashing](/img/cmu15-445/c21/image-11.png)
+<ImageModal src="/img/cmu15-445/c22/image-11.webp" caption="Consistent Hashing" />
 
 將每個 hash 值到邏輯環上的一個位置，然後由最接近該位置的節點 (順時針方向) 負責該鍵。
 當一個節點被添加或移除時，只有相鄰的節點之間的鍵會被移動，並且只有 1/n 的鍵會被重新分配。
@@ -117,11 +117,11 @@ Partitioning Schemes 是一種把資料庫分散到多個節點上的方法，�
 
 在 shared nothing 的架構下，通常使用物理分片
 
-![Physical Sharding](/img/cmu15-445/c21/image-9.png)
+<ImageModal src="/img/cmu15-445/c22/image-9.webp" caption="Physical Sharding" />
 
 在 shared disk 的架構下，通常使用邏輯分片
 
-![Logical Sharding](/img/cmu15-445/c21/image-10.png)
+<ImageModal src="/img/cmu15-445/c22/image-10.webp" caption="Logical Sharding" />
 
 ## Distributed Concurrency Control
 
@@ -138,23 +138,23 @@ Partitioning Schemes 是一種把資料庫分散到多個節點上的方法，�
 假設一個 DBMS 有四個 partitions，分別是 P1、P2、P3、P4，並且有一個 TP Monitor 來管理所有的交易。
 這時有一個交易需要修改 P1、P3、P4 上的資料，那麼它首先要向 TP Monitor 請求 P1、P3、P4 上的鎖
 
-![Centralized Coordinator](/img/cmu15-445/c21/image-12.png)
+<ImageModal src="/img/cmu15-445/c22/image-12.webp" caption="Centralized Coordinator" />
 
 拿到鎖之後才能修改資料，修改完畢後再向 coordinator 發送 commit 請求，coordinator 會向所有的分區詢問這個交易是否可以 commit，最後返還 ACK 給使用者。
 
-![Centralized Coordinator](/img/cmu15-445/c21/image-13.png)
+<ImageModal src="/img/cmu15-445/c22/image-13.webp" caption="Centralized Coordinator" />
 
 #### Middleware
 
 Middleware 是一個位於應用程式和資料庫之間的軟體，負責跟資料庫進行通信，對於應用程式來說，它就是資料庫本身。
 
-![Middleware](/img/cmu15-445/c21/image-14.png)
+<ImageModal src="/img/cmu15-445/c22/image-14.webp" caption="Middleware" />
 
 ### Decentralized Coordinator
 
 再去中心化的架構中，執行某個交易時會選擇一個節點作為 master，負責協調所有的交易。
 
-![Decentralized Coordinator](/img/cmu15-445/c21/image-15.png)
+<ImageModal src="/img/cmu15-445/c22/image-15.webp" caption="Decentralized Coordinator" />
 
 ### Federated Database
 
@@ -162,7 +162,7 @@ Middleware 是一個位於應用程式和資料庫之間的軟體，負責跟資
 
 這種技術有很多的挑戰，像是 query optimization、data migration、data consistency，目前仍然沒有一個很好的解決方法。
 
-![Federated Database](/img/cmu15-445/c21/image-16.png)
+<ImageModal src="/img/cmu15-445/c22/image-16.webp" caption="Federated Database" />
 
 ### Distributed Concurrency Control
 
@@ -175,4 +175,4 @@ Middleware 是一個位於應用程式和資料庫之間的軟體，負責跟資
 
 在下圖的例子中，我們可以看到由於沒有中心化的協調器，一旦發現如圖中的死鎖情況，就很難進行協調。
 
-![Distributed Concurrency Control](/img/cmu15-445/c21/image-17.png)
+<ImageModal src="/img/cmu15-445/c22/image-17.webp" caption="Distributed Concurrency Control" />

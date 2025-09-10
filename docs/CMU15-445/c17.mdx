@@ -21,7 +21,7 @@ tags: [CMU15-445]
 
 DBMS 會有專門的 lock manager 來負責管理整個系統的 locks，只要有 transaction 需要加鎖或是升級鎖時都會向它發出請求，lock manager 會維護一個 lock table，這個 table 上面會記錄所有鎖的資料，lock manager 會依據這些資料來決定是否可以加鎖。
 
-![Lock](/img/cmu15-445/c16/image-1.png)
+<ImageModal src="/img/cmu15-445/c17/image-1.webp" caption="Lock" />
 
 ## Two-Phase Locking
 
@@ -31,21 +31,21 @@ DBMS 會有專門的 lock manager 來負責管理整個系統的 locks，只要�
 
 - Growing Phase: transaction 會在這一個階段請求需要的鎖，且不會釋放已有的鎖
 
-![Growing Phase](/img/cmu15-445/c16/image-2.png)
+<ImageModal src="/img/cmu15-445/c17/image-2.webp" caption="Growing Phase" />
 
 - Shrinking Phase: transaction 只能釋放鎖，不能再請求新的鎖
 
-![Shrinking Phase](/img/cmu15-445/c16/image-3.png)
+<ImageModal src="/img/cmu15-445/c17/image-3.webp" caption="Shrinking Phase" />
 
 2PL 本身可以保證 schedule 是 conflict serializability，因為它可以構成無環的 precedence graph，但是卻有可能發生 cascading aborts，範例如下 :
 
-![Cascading Aborts](/img/cmu15-445/c16/image-4.png)
+<ImageModal src="/img/cmu15-445/c17/image-4.webp" caption="Cascading Aborts" />
 
 由於 t1 被 abort 了，所以 t2 讀到的東西就變成了 dirty read，因此如果 t1 中止了，我們就需要將其他所有有讀過相同資料的 transaction 都中止，這就是 cascading aborts。
 
 ### Strong Strict Two-Phase Locking (Rigorous 2PL)
 
-![Strong Strict Two-Phase Locking](/img/cmu15-445/c16/image-5.png)
+<ImageModal src="/img/cmu15-445/c17/image-5.webp" caption="Strong Strict Two-Phase Locking" />
 
 為了解決這個問題，我們可以使用 2PL 的變體 Strong Strict Two-Phase Locking，在每個 transaction commit 之前，不允許釋放任何鎖。
 
@@ -57,15 +57,15 @@ DBMS 會有專門的 lock manager 來負責管理整個系統的 locks，只要�
 
 假設是 t1 是 A 轉帳給 B 100，t2 是印出 A+B 的餘額
 
-![Non-2PL](/img/cmu15-445/c16/image-6.png)
-![2PL](/img/cmu15-445/c16/image-7.png)
-![Rigorous 2PL](/img/cmu15-445/c16/image-8.png)
+<ImageModal src="/img/cmu15-445/c17/image-6.webp" caption="Non-2PL" />
+<ImageModal src="/img/cmu15-445/c17/image-7.webp" caption="2PL" />
+<ImageModal src="/img/cmu15-445/c17/image-8.webp" caption="Rigorous 2PL" />
 
 ## Deadlock
 
 在 DBMS 中，當多個交易互相等待對方釋放鎖時，會發生 deadlock，而解決 deadlock 主要可以分為預防跟偵測兩種方式。
 
-![Deadlock](/img/cmu15-445/c16/image-9.png)
+<ImageModal src="/img/cmu15-445/c17/image-9.webp" caption="Deadlock" />
 
 ### Deadlock Detection
 
@@ -73,13 +73,13 @@ DBMS 會動態維護一個 wait-for graph，當發現有 cycle 時就會想辦�
 
 在檢測到 deadlock 時，DBMS 會選擇一個 transaction 當作 victim，然後將它中止或重新啟動，可以依據很多條件來決定要中止哪一個 transaction，例如 transaction 的時間，鎖定了多少資料等等，也可以選擇 rollback 所有或部分的 transaction。
 
-![Deadlock Detection](/img/cmu15-445/c16/image-10.png)
+<ImageModal src="/img/cmu15-445/c17/image-10.webp" caption="Deadlock Detection" />
 
 ### Deadlock Prevention
 
 這種方式會在每次 transaction 嘗試拿到鎖時就進行檢查，並決定中止其中一個 transaction，同時系統會為每個 transaction 設定一個 priority 來幫助決定要中止哪一個 transaction。
 
-![Deadlock Prevention](/img/cmu15-445/c16/image-11.png)
+<ImageModal src="/img/cmu15-445/c17/image-11.webp" caption="Deadlock Prevention" />
 
 主要有兩種方式 :
 
@@ -92,7 +92,7 @@ DBMS 會動態維護一個 wait-for graph，當發現有 cycle 時就會想辦�
 
 前面我們所討論的大部分都是針對一條資料的鎖，但是當我們需要一次性的更新數億條資料時，就需要其他方法來避免紀錄過多的鎖。
 
-![Lock Granularities](/img/cmu15-445/c16/image-12.png)
+<ImageModal src="/img/cmu15-445/c17/image-12.webp" caption="Lock Granularities" />
 
 在 DBMS 中，鎖的粒度 (Lock Granularity) 是指鎖定資料庫中的對象 (如資料庫、表格、頁面、元組或屬性) 的層次和範圍。不同粒度的鎖對並行性和系統性能有不同的影響，因此選擇適當的粒度是設計高效並發控制機制的關鍵。
 
@@ -105,7 +105,7 @@ DBMS 會動態維護一個 wait-for graph，當發現有 cycle 時就會想辦�
 - Intention-Exclusive (IX) : 表示在更低層級上存在獨佔鎖或共享鎖
 - Shared + Intention-Exclusive (SIX) : 表示在當前層級以共享模式鎖定該節點，並且在更低層級存在獨佔鎖
 
-![Intention Lock](/img/cmu15-445/c16/image-13.png)
+<ImageModal src="/img/cmu15-445/c17/image-13.webp" caption="Intention Lock" />
 
 需要特別注意的是，IS 跟 IX 是可以同時存在的，且 SIX 跟 IS 也是可以同時存在的。
 
@@ -115,8 +115,8 @@ DBMS 會動態維護一個 wait-for graph，當發現有 cycle 時就會想辦�
 - T2 : 讀取一個元組
 - T3 : 掃描所有元組
 
-![Intention Lock Example](/img/cmu15-445/c16/image-14.png)
-![Intention Lock Example](/img/cmu15-445/c16/image-15.png)
+<ImageModal src="/img/cmu15-445/c17/image-14.webp" caption="Intention Lock Example" />
+<ImageModal src="/img/cmu15-445/c17/image-15.webp" caption="Intention Lock Example" />
 
 - T1 首先會在表中請求 SIX 鎖，並在需要更新的元組上請求 X 鎖
 - T2 會在表中請求 IS 鎖，並在讀取的元組上請求 S 鎖

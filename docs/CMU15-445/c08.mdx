@@ -32,7 +32,7 @@ B-Tree 中的 B 通常代表 Balanced，而 B-Tree 的變種有很多，例如 :
 
 B+Tree 是一種 self-balancing tree，在 search、insert、delete 跟 sequential access 時的時間複雜度都是 $O(\log n)$，是一種 BST 的變種。
 
-![B+ Tree](/img/cmu15-445/c08/image.png)
+<ImageModal src="/img/cmu15-445/c08/image.webp" caption="B+ Tree" />
 
 M-way B+Tree 的特點有 :
 
@@ -41,7 +41,7 @@ M-way B+Tree 的特點有 :
 - 除了 root node 以外，每個節點都至少要有 $M / 2 - 1 \leq keys \leq M - 1$ 個 key (半滿)
 - leaf node 會透過 doubly linked list 連接，提高 sequential access 的效率
 
-![B+ Tree](/img/cmu15-445/c08/image-1.png)
+<ImageModal src="/img/cmu15-445/c08/image-1.webp" caption="B+ Tree" />
 
 在每個 node 中都包含了一個經過排序的 key / value 陣列，其中 key 就是 index 的值，而 value 則會根據是 inner node 或 leaf node 而有所不同。
 
@@ -92,14 +92,14 @@ SELECT * FROM table_name WHERE key2 = 2 AND key3 = 3;
 - Append Record ID : 把唯一的 Record ID 附加在 key 後面，這樣可以保證每個 key 都是唯一的，但會增加 index 的大小。
 - Overflow Leaf Nodes : 允許節點溢出來儲存 duplicate keys。
 
-![B+ Tree](/img/cmu15-445/c08/image-2.png)
-![B+ Tree](/img/cmu15-445/c08/image-3.png)
+<ImageModal src="/img/cmu15-445/c08/image-2.webp" caption="B+ Tree" />
+<ImageModal src="/img/cmu15-445/c08/image-3.webp" caption="B+ Tree" />
 
 ### Clustered Indexes
 
 Clustered Index 是一種資料實體的排序方式，會讓 資料表的資料 (tuple) 實體上依照某個欄位排序儲存，而不是隨機或插入順序，這對於範圍查詢非常有用，因為可以直接從硬碟上讀取連續的資料頁面，且只會讀取一個 page 一次。
 
-![B+ Tree](/img/cmu15-445/c08/image-8.png)
+<ImageModal src="/img/cmu15-445/c08/image-8.webp" caption="B+ Tree" />
 
 在 PostgreSQL 中，我們可以使用以下的 SQL 指令來做一次 one-time 的 clustering :
 
@@ -111,7 +111,7 @@ CLUSTER table_name USING index_name;
 
 由於直接從 unclustered index 中取得資料非常沒效率，因此 DBMS 會把需要的 page id 全部取出來做排序。
 
-![B+ Tree](/img/cmu15-445/c08/image-4.png)
+<ImageModal src="/img/cmu15-445/c08/image-4.webp" caption="B+ Tree" />
 
 ## B+Tree Design Choices
 
@@ -150,13 +150,13 @@ CLUSTER table_name USING index_name;
 
 同一個 node 常常有相同的 key，我們可以透過 prefix 來減少儲存空間。
 
-![B+ Tree](/img/cmu15-445/c08/image-5.png)
+<ImageModal src="/img/cmu15-445/c08/image-5.webp" caption="B+ Tree" />
 
 ### Deduplication
 
 可以將重複的 key 合併。
 
-![B+ Tree](/img/cmu15-445/c08/image-6.png)
+<ImageModal src="/img/cmu15-445/c08/image-6.webp" caption="B+ Tree" />
 
 ### Suffix
 
@@ -175,7 +175,7 @@ CLUSTER table_name USING index_name;
 
 因為分裂和合併節點在 B+Tree 中非常耗時，因此有些 B-Tree 的變體會延遲這些行為，如 $B\epsilon$-Tree，這種樹會將變動儲存在 log 檔並慢慢往下傳遞。
 
-![B-epsilon tree](/img/cmu15-445/c08/image-7.png)
+<ImageModal src="/img/cmu15-445/c08/image-7.webp" caption="B-epsilon tree" />
 
 ## Bloom Filter
 
@@ -201,7 +201,7 @@ Skip list 是一種基於 linked list 的資料結構，提供了類似於平衡
 
 與 B+Tree 一樣，Skip list 以有序的方式儲存資料，不同的是在插入跟刪除的時候，Skip list 不需要進行分裂或合併節點，而是透過隨機選擇 (丟硬幣) 的方式來維持平衡。
 
-![Skip List](/img/cmu15-445/c08/image-9.png)
+<ImageModal src="/img/cmu15-445/c08/image-9.webp" caption="Skip List" />
 
 Skip list 提供了三種操作，分別是插入、刪除和查找。
 
@@ -226,14 +226,14 @@ Skip list 的主要優點在於不需要做 rebalancing，這也就代表了鎖�
 
 跨度 (span) 是指一個數字所佔用的位元數。如果這個數字及其前綴存在於資料集合中，那麼在該數字處會儲存一個指向下一層節點的指針，否則就儲存 null。
 
-![Trie](/img/cmu15-445/c08/image-10.png)
+<ImageModal src="/img/cmu15-445/c08/image-10.webp" caption="Trie" />
 
 在實際應用中，Trie 的節點可能會非常稀疏，或是單一的分支過於冗長，因此我們可以採用壓縮的方式來儲存 :
 
 - 水平壓縮 (Horizontal Compression) : 如果同一層級的 span 很大且很空，可以考慮改成使用 array 來儲存
 - 垂直壓縮 (Vertical Compression) / 基數樹 (Radix Tree) : 如果只有一個單一的分支，可以考慮將這個分支直接合併到父節點中，這樣可以減少節點的數量，但這樣有可能造成錯誤，因此最後還是需要跟原本的 tuple 做比對。
 
-![Radix Tree](/img/cmu15-445/c08/image-16.png)
+<ImageModal src="/img/cmu15-445/c08/image-16.webp" caption="Radix Tree" />
 
 從左到右是正常的 Trie，水平壓縮後的 Trie，垂直壓縮後的 Radix Tree。
 
@@ -245,7 +245,7 @@ Skip list 的主要優點在於不需要做 rebalancing，這也就代表了鎖�
 倒排索引儲存的是詞 (terms) 到包含這些詞項的記錄 (records) 之間的映射。
 這些包含詞的記錄列表被稱為 posting list，簡單來說，它就像一本書的索引，但不是按照頁碼順序排列詞語，而是按照關鍵字來查找包含該詞語的所有文檔或記錄。
 
-![Inverted Index](/img/cmu15-445/c08/image-11.png)
+<ImageModal src="/img/cmu15-445/c08/image-11.webp" caption="Inverted Index" />
 
 ### Lucene
 
@@ -260,7 +260,7 @@ Lucene 是一個專門的倒排索引引擎，它儲存倒排索引的方式是�
 
 此外，Lucene 還支援預聚合 (pre-aggregation)，這可以加速基於詞項分組的聚合查詢。
 
-![Lucene Inverted Index](/img/cmu15-445/c08/image-12.png)
+<ImageModal src="/img/cmu15-445/c08/image-12.webp" caption="Lucene Inverted Index" />
 
 ### PostgreSQL
 
@@ -272,7 +272,7 @@ PostgreSQL 的通用倒排索引 (Generalized Inverted Index, GIN) 使用 B+Tree
 PostgreSQL 還使用一個單獨的 pending list 來避免頻繁的小規模增量更新。
 當有新的更新時，它們會先被記錄在這個待處理列表中，然後累積起來，最終以批次插入的方式一次性應用到主字典中。
 
-![PostgreSQL GIN Inverted Index](/img/cmu15-445/c08/image-13.png)
+<ImageModal src="/img/cmu15-445/c08/image-13.webp" caption="PostgreSQL GIN Inverted Index" />
 
 ## Vector Index
 
@@ -296,7 +296,7 @@ LLM 以其能夠為文本生成 embedding 而聞名，這些嵌入本質上是�
 
 為了進一步提升查找速度，可以對索引執行預處理 (preprocessing) 和量化 (quantization)。這些技術可以降維或降低其精度，從而加快查找時間。
 
-![Inverted File](/img/cmu15-445/c08/image-14.png)
+<ImageModal src="/img/cmu15-445/c08/image-14.webp" caption="Inverted File" />
 
 ### Navigable Small Worlds
 
@@ -306,7 +306,7 @@ Navigable Small Worlds 是一種基於圖的近似最近鄰搜尋方法。
 當進行最近鄰搜尋時，Navigable Small Worlds 利用這個圖，從一個定義好的入口點開始，透過 greedy algorithm 選擇那些能讓它更接近查詢向量的邊，來逐步導航。
 兩個知名的實現例子是 FAISS 和 HNSWlib (Hierarchical Navigable Small Worlds)。
 
-![NSW](/img/cmu15-445/c08/image-15.png)
+<ImageModal src="/img/cmu15-445/c08/image-15.webp" caption="NSW" />
 
 ## References
 

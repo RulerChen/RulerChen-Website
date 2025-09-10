@@ -40,8 +40,8 @@ Basic Timestamp Ordering (BASIC T/O) 是一種最基本的 T/O 協議。
 詳細的例子可以參考投影片的第 10 頁 [CMU 15-445/645: Timestamp Ordering Concurrency Control](https://15445.courses.cs.cmu.edu/fall2023/slides/17-timestampordering.pdf)。
 這邊我們只解釋第二個例子。
 
-![Example](/img/cmu15-445/c17/image.png)
-![Example](/img/cmu15-445/c17/image-1.png)
+<ImageModal src="/img/cmu15-445/c18/image.webp" caption="Example" />
+<ImageModal src="/img/cmu15-445/c18/image-1.webp" caption="Example" />
 
 我們可以看到 T1 在 T2 修改了 A 之後又修改了 A，因此 T1 會被中止並重新啟動。
 
@@ -81,20 +81,20 @@ OCC 適合在衝突較少的情況下使用，比如當所有交易都是唯讀�
 
 與 Basic T/O 相比，OCC 只需要儲存 $W-TS(X)$
 
-![Example](/img/cmu15-445/c17/image-2.png)
+<ImageModal src="/img/cmu15-445/c18/image-2.webp" caption="Example" />
 
 接著 T1 跟 T2 會將資料放到私有空間中
 
-![Example](/img/cmu15-445/c17/image-3.png)
+<ImageModal src="/img/cmu15-445/c18/image-3.webp" caption="Example" />
 
 T2 完成整個交易，由於沒有資料要寫入，因此跳過 write phase，並獲得 timestamp 1
 
-![Example](/img/cmu15-445/c17/image-4.png)
+<ImageModal src="/img/cmu15-445/c18/image-4.webp" caption="Example" />
 
 T1 將值修改為 456，由於還不知道 timestamp，因此暫時為無限大。
 接著進行 validation phase，由於 $W-TS(A) = 1$，因此 T1 可以提交，並將 $W-TS(A)$ 更新為 2。
 
-![Example](/img/cmu15-445/c17/image-5.png)
+<ImageModal src="/img/cmu15-445/c18/image-5.webp" caption="Example" />
 
 ### Validation Phase
 
@@ -110,11 +110,11 @@ DBMS 檢查提交中的交易與所有其他正在運行的交易的順序。尚
 
 - $T_i$ 在 $T_j$ 開始執行之前完成了所有三個階段
 
-![Example](/img/cmu15-445/c17/image-6.png)
+<ImageModal src="/img/cmu15-445/c18/image-6.webp" caption="Example" />
 
 - $T_i$ 在 $T_j$ 開始寫入階段之前完成，且 $T_i$ 沒有寫入 $T_j$ 讀取過的任何物件
 
-![Example](/img/cmu15-445/c17/image-7.png)
+<ImageModal src="/img/cmu15-445/c18/image-7.webp" caption="Example" />
 
 - $T_i$ 在 $T_j$ 完成讀取階段之前完成了其讀取階段，且 $T_i$ 沒有寫入 $T_j$ 讀取或寫入過的任何物件
 
@@ -131,7 +131,7 @@ OCC 會有以下的問題 :
 
 到目前為止，我們只討論了資料庫的讀取以及更新，而沒有考慮到插入和刪除等等的操作，這些操作可能會帶來新的問題，其中一個問題就是 Phantom Problem。
 
-![Example](/img/cmu15-445/c17/image-8.png)
+<ImageModal src="/img/cmu15-445/c18/image-8.webp" caption="Example" />
 
 幻影問題是指在交易執行期間，其他交易插入了新的資料，導致同樣的查詢產生了不同的結果，解決方式大致有以下三種 :
 
@@ -162,7 +162,7 @@ OCC 會有以下的問題 :
 - Key-Range Locks：鎖定從一個現有鍵到下一個鍵的範圍。
 - Hierarchical Locking：允許交易持有更廣泛的鍵範圍鎖，並使用不同的鎖定模式來減少鎖管理器的負擔。
 
-![Hierarchical Locking](/img/cmu15-445/c17/image-9.png)
+<ImageModal src="/img/cmu15-445/c18/image-9.webp" caption="Hierarchical Locking" />
 
 ### Locking Without An Index
 
@@ -179,7 +179,7 @@ serializability 是一種很實用的特性，它可以讓寫程式的人不用�
 更弱的 isolation level 會導致更高的性能，但也會帶來更多的問題，
 如 dirty read、non-repeatable read、phantom read 等等。
 
-![Isolation Levels](/img/cmu15-445/c17/image-10.png)
+<ImageModal src="/img/cmu15-445/c18/image-10.webp" caption="Isolation Levels" />
 
 如果要更詳細的了解，可以參考 [這篇筆記](https://zhenghe.gitbook.io/open-courses/ddia-bi-ji/transactions)
 
@@ -190,11 +190,11 @@ SET TRANSACTION ISOLATION LEVEL <isolation-level>;
 BEGIN TRANSACTION ISOLATION LEVEL <isolation-level>;
 ```
 
-![Isolation Levels](/img/cmu15-445/c17/image-11.png)
+<ImageModal src="/img/cmu15-445/c18/image-11.webp" caption="Isolation Levels" />
 
 但並非所有的資料庫都支持所有的 isolation level，因此需要查看相應的文件。
 
-![Isolation Levels](/img/cmu15-445/c17/image-12.png)
+<ImageModal src="/img/cmu15-445/c18/image-12.webp" caption="Isolation Levels" />
 
 除了 SQL-92 定義的四種 isolation level 外，還有其他的 isolation level，如 :
 

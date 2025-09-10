@@ -22,11 +22,11 @@ tags: [CMU15-445]
 - Output : 連接運算子向查詢計劃樹中的父運算子發出的資料
 - Cost Analysis Criteria : 評估不同的 join algorithms 的成本
 
-{/* ![Join](/img/cmu15-445/c11/image.png) */}
+{/* <ImageModal src="/img/cmu15-445/c12/image.webp" caption="Join" /> */}
 
 ### Output
 
-![Join Output](/img/cmu15-445/c11/image-1.png)
+<ImageModal src="/img/cmu15-445/c12/image-1.webp" caption="Join Output" />
 
 主要有兩種連結方式 :
 
@@ -37,13 +37,13 @@ tags: [CMU15-445]
 
 將所有的資料都放到新的 tuple 中，這樣之後就不需要在回去表中讀取資料，較適合 row store。
 
-![Early Materialization](/img/cmu15-445/c11/image-2.png)
+<ImageModal src="/img/cmu15-445/c12/image-2.webp" caption="Early Materialization" />
 
 #### Late Materialization
 
 也可以只複製 join key 跟 record id，之後再去表中讀取資料，較適合 column store。
 
-![Late Materialization](/img/cmu15-445/c11/image-3.png)
+<ImageModal src="/img/cmu15-445/c12/image-3.webp" caption="Late Materialization" />
 
 ### Cost Analysis Criteria
 
@@ -63,13 +63,13 @@ tags: [CMU15-445]
 
 cost 是 $M + (m \times N)$
 
-![Naive Nested Loop Join](/img/cmu15-445/c11/image-4.png)
+<ImageModal src="/img/cmu15-445/c12/image-4.webp" caption="Naive Nested Loop Join" />
 
 ### Block Nested Loop Join
 
 每次取 R 中的所有 tuple 出來，並與 S 的所有 tuple 比對一次。
 
-![Block Nested Loop Join](/img/cmu15-445/c11/image-5.png)
+<ImageModal src="/img/cmu15-445/c12/image-5.webp" caption="Block Nested Loop Join" />
 
 cost 是 $M + (M \times N)$
 
@@ -81,7 +81,7 @@ cost 則變為 $M + \lceil \frac{M}{B-2} \rceil \times N$
 
 前面幾種較慢的原因在於我們需要多次對全表掃描，但若 inner table 在 join attribute 上有 index，我們就可以透過 index 來加速，只需掃描一次即可。
 
-![Index Nested Loop Join](/img/cmu15-445/c11/image-6.png)
+<ImageModal src="/img/cmu15-445/c12/image-6.webp" caption="Index Nested Loop Join" />
 
 cost 是 $M + m \times C$，其中 C 是掃描一次 index 的 cost。
 
@@ -95,7 +95,7 @@ cost 是 $M + m \times C$，其中 C 是掃描一次 index 的 cost。
   - 從兩個 table 的端點開始進行掃描，並進行比對
   - 如果遇到重複則需要 backtracking
 
-![Sort-Merge Join](/img/cmu15-445/c11/image-7.png)
+<ImageModal src="/img/cmu15-445/c12/image-7.webp" caption="Sort-Merge Join" />
 
 sort cost (R) : $2M \times (1 + \lceil \log_{B-1} \lceil\frac{M}{B} \rceil \rceil)$  
 sort cost (S) : $2N \times (1 + \lceil \log_{B-1} \lceil\frac{N}{B} \rceil \rceil)$  
@@ -126,12 +126,12 @@ sort meger 主要適用的情境是 :
 
 也可以使用 bloom filter 來幫助我們快速找到不在 T 中的 tuple。
 
-![Simple Hash Join](/img/cmu15-445/c11/image-8.png)
+<ImageModal src="/img/cmu15-445/c12/image-8.webp" caption="Simple Hash Join" />
 
 ### Grace Hash Join / Partitioned Hash Join
 
-![Grace Hash Join](/img/cmu15-445/c11/image-10.png)
-![Grace Hash Join](/img/cmu15-445/c11/image-9.png)
+<ImageModal src="/img/cmu15-445/c12/image-10.webp" caption="Grace Hash Join" />
+<ImageModal src="/img/cmu15-445/c12/image-9.webp" caption="Grace Hash Join" />
 
 主要分為兩個階段
 
@@ -146,7 +146,7 @@ partition cost : $2(M + N)$ read + write both tables
 probe cost : $M + N$ read both tables  
 total : $3(M + N)$
 
-![Grace Hash Join](/img/cmu15-445/c11/image-11.png)
+<ImageModal src="/img/cmu15-445/c12/image-11.webp" caption="Grace Hash Join" />
 
 如果有些 key 非常常使用，我們可以將他們放入 memory 中並立即比較，而非溢出到硬碟中。
 
@@ -154,4 +154,4 @@ total : $3(M + N)$
 
 對於大部分的 join 來說，hash join 都是比較好的選擇，除非你的 SQL 需要排序才會考慮 sort-merge join。
 
-![Join Algorithms](/img/cmu15-445/c11/image-12.png)
+<ImageModal src="/img/cmu15-445/c12/image-12.webp" caption="Join Algorithms" />

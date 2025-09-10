@@ -32,7 +32,7 @@ Iterator 模型，也被稱為 Volcano model 或 Pipeline model，是最常見�
 
 Iterator 模型支持 pipelining，這代表 DBMS 會盡量對 tuple 進行處理，然後在處理下一個 tuple。有些 operator (如 join、subquery 和 ORDER BY 等) 在處理時會阻塞直到它們的所有子節點都發出資料為止，這類操作符被稱為 Pipeline Breakers。
 
-![Iterator Model](/img/cmu15-445/c12/image.png)
+<ImageModal src="/img/cmu15-445/c13/image.webp" caption="Iterator Model" />
 
 ### Materialization Model
 
@@ -40,7 +40,7 @@ Iterator 模型支持 pipelining，這代表 DBMS 會盡量對 tuple 進行處�
 
 這種方法更適合 OLTP 系統，因為 OLTP 通常只須回傳少量資料，可以減少調用 `Next` 函數的次數。
 
-![Materialization Model](/img/cmu15-445/c12/image-1.png)
+<ImageModal src="/img/cmu15-445/c13/image-1.webp" caption="Materialization Model" />
 
 ### Vectorized / Batch Model
 
@@ -48,7 +48,7 @@ Vectorized / Batch Model 是一種 iterator 和 materialization 的混合模型�
 
 這種方式適合於 OLAP 系統，可以減少調用 Next 函數的次數，並且可以使用 SIMD 指令集來批量處理 tuple。
 
-![Vectorized / Batch Model](/img/cmu15-445/c12/image-2.png)
+<ImageModal src="/img/cmu15-445/c13/image-2.webp" caption="Vectorized / Batch Model" />
 
 ## Access Methods
 
@@ -100,7 +100,7 @@ DBMS 中的 modification 主要包含 `INSERT`、`UPDATE` 和 `DELETE` 三種操
 
 在 `UPDATE` 跟 `DELETE` 操作中，child operator 會跟蹤已經處理過的 tuple 並返回 record id，而在 `INSERT` 中有兩種實現方式，一種是自己 materialize tuple，另一種是接收 child operator 的輸出。
 
-![Modification Queries](/img/cmu15-445/c12/image-3.png)
+<ImageModal src="/img/cmu15-445/c13/image-3.webp" caption="Modification Queries" />
 
 如上面的圖，我們有可能會遇到 Halloween Problem，這個問題是指在更新過程中，由於更新後的 tuple 位置可能會改變，所以可能會更新到已經更新過的 tuple。
 
@@ -108,7 +108,7 @@ DBMS 中的 modification 主要包含 `INSERT`、`UPDATE` 和 `DELETE` 三種操
 
 DBMS 會將 `WHERE` 條件中的表達式轉換成一個 expression tree，遍歷之後產生結果，可以使用 JIT 編譯技術來加速表達式的計算。
 
-![Expression Evaluation](/img/cmu15-445/c12/image-4.png)
+<ImageModal src="/img/cmu15-445/c13/image-4.webp" caption="Expression Evaluation" />
 
 ## Scheduler
 
@@ -116,7 +116,7 @@ scheduler 的功用是將 data flow 跟 control flow 進行清晰的分離，適
 
 scheduler 會生成 work order，並將其放入 scheduling queue 中，然後 worker 會從 work queue 中取出 work order 並執行。
 
-![Scheduler](/img/cmu15-445/c12/image-5.png)
+<ImageModal src="/img/cmu15-445/c13/image-5.webp" caption="Scheduler" />
 
 ## Parallel vs Distributed Databases
 
@@ -145,7 +145,7 @@ client 端的請求經過 dispatcher 後會由 dispatcher 分配一個 worker �
 
 這種 process model 主要出現在 pthread 還沒有穩定的時候，主要是為了解決移植性問題，如舊版的 Oracle 和 DB2 以及現在的 PostgreSQL。
 
-![Process per Worker](/img/cmu15-445/c12/image-6.png)
+<ImageModal src="/img/cmu15-445/c13/image-6.webp" caption="Process per Worker" />
 
 ### Thread per Worker
 
@@ -165,7 +165,7 @@ DBMS 由一個 process 和多個 worker thread 組成。
 - 將 tasks 分配給哪些 core
 - 輸出要被放在哪裡
 
-![Thread per Worker](/img/cmu15-445/c12/image-7.png)
+<ImageModal src="/img/cmu15-445/c13/image-7.webp" caption="Thread per Worker" />
 
 ### Embedded DBMS
 
@@ -187,7 +187,7 @@ Intra-Query Parallelism 是指通過平行化來將單個 query 分解成多個 
 
 將資料拆解成多個子集，並透過 exchange operator 來合併子集處理的結果。
 
-![Intra-Operator Parallelism](/img/cmu15-445/c12/image-8.png)
+<ImageModal src="/img/cmu15-445/c13/image-8.webp" caption="Intra-Operator Parallelism" />
 
 ### Inter-Operator Parallelism (Vertical)
 
@@ -195,13 +195,13 @@ Intra-Query Parallelism 是指通過平行化來將單個 query 分解成多個 
 
 通常會在一些 streaming 的系統中使用，如 Spark、Flink 等。
 
-![Inter-Operator Parallelism](/img/cmu15-445/c12/image-9.png)
+<ImageModal src="/img/cmu15-445/c13/image-9.webp" caption="Inter-Operator Parallelism" />
 
 ### Bushy Parallelism
 
 Bushy Parallelism 是 Intra-Operator 和 Inter-Operator Parallelism 的混合形式。
 
-![Bushy Parallelism](/img/cmu15-445/c12/image-10.png)
+<ImageModal src="/img/cmu15-445/c13/image-10.webp" caption="Bushy Parallelism" />
 
 ### Observation
 
@@ -215,7 +215,7 @@ I/O Parallelism 是指在 DBMS 中使用額外的進程或執行緒來平行執�
 
 在 multi-disk I/O parallelism 中，DBMS 會將資料庫檔案分散在多個硬碟上，這可以使用 RAID 來實現，
 
-![Multi-Disk I/O Parallelism](/img/cmu15-445/c12/image-11.png)
+<ImageModal src="/img/cmu15-445/c13/image-11.webp" caption="Multi-Disk I/O Parallelism" />
 
 ### Database Partitioning
 

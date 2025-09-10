@@ -32,25 +32,25 @@ MVCC 涉及多個設計決策，這些決策影響資料庫的性能、存儲需
 - Write Conflicts : 如果兩個交易更新同一個對象，會以先提出的交易為主
 - Write Skew Anomaly : 兩個交易分別修改不同的對象，最終可能導致非可序列化的調度，如下方的圖片範例。
 
-![Write Skew Anomaly](/img/cmu15-445/c18/image-4.png)
+<ImageModal src="/img/cmu15-445/c19/image-4.webp" caption="Write Skew Anomaly" />
 
 ### Example
 
 $T_1$ 先修改 $A$，創造一個新的版本 $A_1$，並將 $A_0$ 的結束時間改成 1
 
-![MVCC Example](/img/cmu15-445/c18/image.png)
+<ImageModal src="/img/cmu15-445/c19/image.webp" caption="MVCC Example" />
 
 此時 $T_2$ 想讀取 $A$，因為 $T_1$ 還沒提交，所以 $T_2$ 只能讀取 $A_0$
 
-![MVCC Example](/img/cmu15-445/c18/image-1.png)
+<ImageModal src="/img/cmu15-445/c19/image-1.webp" caption="MVCC Example" />
 
 接著 $T_2$ 想要修改 $A$，但是有另一個 active 的事務正在修改 $A$，所以 $T_2$ 會被 block
 
-![MVCC Example](/img/cmu15-445/c18/image-2.png)
+<ImageModal src="/img/cmu15-445/c19/image-2.webp" caption="MVCC Example" />
 
 直到 $T_1$ commit 之後，$T_2$ 才能創建新的版本 $A_2$，並將 $A_1$ 的結束時間改成 2
 
-![MVCC Example](/img/cmu15-445/c18/image-3.png)
+<ImageModal src="/img/cmu15-445/c19/image-3.webp" caption="MVCC Example" />
 
 ## Concurrency Control Protocol
 
@@ -82,21 +82,21 @@ $T_1$ 先修改 $A$，創造一個新的版本 $A_1$，並將 $A_0$ 的結束時
 - Oldest-to-Newest (O2N) : 最舊的版本在前面，最新的版本在後面，查詢時需要遍歷整個鏈條
 - Newest-to-Oldest (N2O) : 最新的版本在前面，最舊的版本在後面，每次插入新版本時，需要更新索引指針
 
-![Append-Only Storage](/img/cmu15-445/c18/image-5.png)
+<ImageModal src="/img/cmu15-445/c19/image-5.webp" caption="Append-Only Storage" />
 
 ### Time-Travel Storage
 
 DBMS 維護一個獨立的 time travel table，用來存儲元組的舊版本。
 每次更新時，DBMS 會將舊版本複製到 time travel table 中，並在主表中覆蓋元組為新版本，主表中的元組指向時間旅行表中的舊版本。
 
-![Time-Travel Storage](/img/cmu15-445/c18/image-6.png)
+<ImageModal src="/img/cmu15-445/c19/image-6.webp" caption="Time-Travel Storage" />
 
 ### Delta Storage
 
 類似於時間旅行存儲，但僅存儲元組之間的 Delta，而不是完整的舊版本，DBMS 可以通過逆向應用增量數據來重建舊版本。
 這種方式通常比時間旅行存儲寫入更快，但查詢舊版本時會更慢。
 
-![Delta Storage](/img/cmu15-445/c18/image-7.png)
+<ImageModal src="/img/cmu15-445/c19/image-7.webp" caption="Delta Storage" />
 
 ## Garbage Collection
 
@@ -117,24 +117,24 @@ Tuple-level GC 通過直接檢查元組來檢查舊版本的資料，有兩種�
 
 會有一個在背景執行的 vacuum thread，這個 process 會定期檢查所有的 tuple，並將那些沒有 active 事務可以看到的版本刪除
 
-![Background Vacuuming](/img/cmu15-445/c18/image-9.png)
+<ImageModal src="/img/cmu15-445/c19/image-9.webp" caption="Background Vacuuming" />
 
 系統會維護一個 dirty page bitmap 追蹤上次 vacuum 之後有哪些頁面被修改過，這樣就可以只檢查這些頁面，用空間換取時間
 
-![Background Vacuuming](/img/cmu15-445/c18/image-10.png)
+<ImageModal src="/img/cmu15-445/c19/image-10.webp" caption="Background Vacuuming" />
 
 #### Cooperative Cleaning
 
 worker thread 在遍歷 version chain 時順便回收。這種方法僅適用於 O2N chains。
 
-![Cooperative Cleaning](/img/cmu15-445/c18/image-11.png)
+<ImageModal src="/img/cmu15-445/c19/image-11.webp" caption="Cooperative Cleaning" />
 
 ### Transaction-level GC
 
 在 Transaction-level GC 中，每個交易都會維護其自己的 read / write set。
 當交易完成時，GC 可以根據這些集合來識別哪些元組版本可以被回收。
 
-![Transaction-level GC](/img/cmu15-445/c18/image-12.png)
+<ImageModal src="/img/cmu15-445/c19/image-12.webp" caption="Transaction-level GC" />
 
 ## Index Management
 
@@ -152,20 +152,20 @@ MVCC 中，Primary Key Indexes 通常指向 version chain 的頭部，需要更�
 
 所有的 secondary index 都指向 version chain 的頭部，這樣在更新時會出現效能問題。
 
-![Physical Pointers](/img/cmu15-445/c18/image-13.png)
+<ImageModal src="/img/cmu15-445/c19/image-13.webp" caption="Physical Pointers" />
 
 #### Logical Pointers
 
 可以改為指向一個 indirection layer (如 primary key)，這樣就可以避免更新 secondary index 的問題。
 
-![Logical Pointers](/img/cmu15-445/c18/image-14.png)
-![Logical Pointers](/img/cmu15-445/c18/image-15.png)
+<ImageModal src="/img/cmu15-445/c19/image-14.webp" caption="Logical Pointers" />
+<ImageModal src="/img/cmu15-445/c19/image-15.webp" caption="Logical Pointers" />
 
 ### MVCC Duplicate Key Problem
 
 在 MVCC 索引中，通常部會儲存 tuple 和 key 的版本資訊 (MySQL 除外)，因此 MVCC 系統需要支持多個版本的相同邏輯元組。
 
-![MVCC Duplicate Key Problem](/img/cmu15-445/c18/image-16.png)
+<ImageModal src="/img/cmu15-445/c19/image-16.webp" caption="MVCC Duplicate Key Problem" />
 
 為了解決這個問題，索引的資料結構需要能支持 non-unique key，並且能夠存儲多個版本的 tuple，
 worker 有可能會得到不只一個 tuple，需要選擇適當的 tuple 返回。
@@ -185,7 +185,7 @@ worker 有可能會得到不只一個 tuple，需要選擇適當的 tuple 返回
 
 ## Summary
 
-![Summary](/img/cmu15-445/c18/image-17.png)
+<ImageModal src="/img/cmu15-445/c19/image-17.webp" caption="Summary" />
 
 ## References
 

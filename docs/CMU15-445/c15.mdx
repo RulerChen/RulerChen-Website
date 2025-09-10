@@ -24,9 +24,7 @@ tags: [CMU15-445]
 - Logical Plan: 查詢中的關係代數表達式
 - Physical Plan: 具體的執行策略，如排序的方法、join 的方式等
 
-import p1 from '@site/static/img/cmu15-445/c14/image.png';
-
-<img src={p1} alt="test" style={{ width: '100%', height: 'auto' }} />
+<ImageModal src="/img/cmu15-445/c15/image.webp" caption="Query Optimization Process" />
 
 在這個 SQL 語句執行的流程圖中 tree rewriter 會負責將 SQL 語句轉換成 logical plan，而 optimizer 則會透過 system catalog 所提供的資訊來將 logical plan 轉換成 physical plan。
 
@@ -78,9 +76,9 @@ import p1 from '@site/static/img/cmu15-445/c14/image.png';
 
 真實的資料中幾乎不可能是 uniform 的，因此我們可以使用 histogram 來更好的估算成本，儲存方式通常有以下幾種可能 :
 
-![Histograms](/img/cmu15-445/c14/image-1.png)
-![Histograms](/img/cmu15-445/c14/image-2.png)
-![Histograms](/img/cmu15-445/c14/image-3.png)
+<ImageModal src="/img/cmu15-445/c15/image-1.webp" caption="Histograms" />
+<ImageModal src="/img/cmu15-445/c15/image-2.webp" caption="Histograms" />
+<ImageModal src="/img/cmu15-445/c15/image-3.webp" caption="Histograms" />
 
 ### Sketches
 
@@ -114,10 +112,10 @@ DBMS 可以針對 table 的部分資料進行 sampling 來估算成本，並在 
 - 對每個 logical operator 找到最佳的 physical operator (hash join、sort merge join ...)
 - 使用 left-deep tree 並透過動態規劃找到最佳的 join order
 
-![Buttom-Up](/img/cmu15-445/c14/image-4.png)
+<ImageModal src="/img/cmu15-445/c15/image-4.webp" caption="Buttom-Up" />
 
 #### Top-Down
 
 optimizer 會從 logical plan 開始，使用 branch and bound 的方法來遍歷樹狀結構，並將 logical operator 轉換成 physical operator。
 
-![Top-Down](/img/cmu15-445/c14/image-5.png)
+<ImageModal src="/img/cmu15-445/c15/image-5.webp" caption="Top-Down" />

@@ -31,7 +31,7 @@ DBMS 可以將資料複製到多個節點上以及高可用性，在實現上，
 
 主要可以分為兩種方式，Primary-Replica 和 Multi-Master。
 
-![Replication](/img/cmu15-445/c22/image.png)
+<ImageModal src="/img/cmu15-445/c23/image.webp" caption="Replication" />
 
 #### Primary-Replica
 
@@ -53,7 +53,7 @@ K-safety 是用來衡量資料庫的容錯能力的閾值，K 值表示每個物
 - Synchronous Propagation : Strong Consistency
 - Asynchronous Propagation : Eventual Consistency
 
-![Propagation Scheme](/img/cmu15-445/c22/image-2.png)
+<ImageModal src="/img/cmu15-445/c23/image-2.webp" caption="Propagation Scheme" />
 
 #### Synchronous Propagation
 
@@ -124,27 +124,27 @@ DBMS 只有在交易提交後才將該交易的 log 發送到從節點，避免�
 
 協調者向參與節點發送 prepare 請求，詢問它們是否可以提交當前交易
 
-![2PC](/img/cmu15-445/c22/image-3.png)
+<ImageModal src="/img/cmu15-445/c23/image-3.webp" caption="2PC" />
 
 等待所有節點回覆 OK 後，則進入提交階段 (Commit Phase)。
 
 協調者會向所有參與者發送提交消息，通知它們提交交易。
 
-![2PC](/img/cmu15-445/c22/image-4.png)
+<ImageModal src="/img/cmu15-445/c23/image-4.webp" caption="2PC" />
 
 等待所有交易提交後，協調者向應用程式回覆提交成功。
 
-![2PC](/img/cmu15-445/c22/image-5.png)
+<ImageModal src="/img/cmu15-445/c23/image-5.webp" caption="2PC" />
 
 #### 2PC Abort
 
 在準備階段時，如果有任何一個節點無法執行，則應該回覆 ABORT 給協調者。
 
-![2PC](/img/cmu15-445/c22/image-6.png)
+<ImageModal src="/img/cmu15-445/c23/image-6.webp" caption="2PC" />
 
 而此時協調者應該向應用程式回覆提交失敗，同時向所有參與者發送中止消息，並且確保所有交易都有回滾。
 
-![2PC](/img/cmu15-445/c22/image-7.png)
+<ImageModal src="/img/cmu15-445/c23/image-7.webp" caption="2PC" />
 
 #### 2PC Optimization
 
@@ -175,21 +175,21 @@ Paxos 的協調者被稱為提議者 (Proposer)，參與者被稱為接受者 (A
 
 首先，應用程式會向 proposer 發送提交請求，然後 proposer 會向 acceptor 發送提議
 
-![Paxos](/img/cmu15-445/c22/image-8.png)
+<ImageModal src="/img/cmu15-445/c23/image-8.webp" caption="Paxos" />
 
 與 2PC 不同的是，Paxos 不需要等待所有節點的回覆，只需要等待過半數的節點同意即可，因此會繼續向 acceptor 發送 commit 請求。
 
-![Paxos](/img/cmu15-445/c22/image-9.png)
+<ImageModal src="/img/cmu15-445/c23/image-9.webp" caption="Paxos" />
 
 但不同的是，即使在 commit 階段，acceptor 也可以拒絕提議，舉例如下 :
 
 假設有兩個 proposer，proposer 1 在 n 的時間提出協議並被所有人 agree
 
-![Paxos](/img/cmu15-445/c22/image-10.png)
+<ImageModal src="/img/cmu15-445/c23/image-10.webp" caption="Paxos" />
 
 這時候 proposer 2 在 n+1 的時間提出協議，接著 proposer 1 發出 commit 請求，由於時間先後順序，acceptor 會拒絕 proposer 1 的提議，之後 proposer 2 會繼續直到提交完成。
 
-![Paxos](/img/cmu15-445/c22/image-11.png)
+<ImageModal src="/img/cmu15-445/c23/image-11.webp" caption="Paxos" />
 
 這樣會導致的問題是有可能同時兩個 proposer 互相組塞，因此我們可以透過 Multi-Paxos 來解決這個問題。
 
@@ -227,7 +227,7 @@ Google Spanner 是一個由 google 發明的資料庫系統，具有以下特點
 - Strict 2PL + MVCC + Multi-Paxos + 2PC
 - Externally consistent : Spanner 保證事務具有外部一致性，這意味著如果事務 T1 完成後事務 T2 開始，則 T2 必須看到 T1 的結果。為了實現這一點，Spanner 使用原子鐘和 GPS 產生的全球唯一時間戳來確保事務順序。
 
-![Google Spanner](/img/cmu15-445/c22/image-1.png)
+<ImageModal src="/img/cmu15-445/c23/image-1.webp" caption="Google Spanner" />
 
 ## References
 
