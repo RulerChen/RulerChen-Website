@@ -10,16 +10,9 @@ tags: [CMU15-445]
   <title>CMU 15-445 Hash Tables</title>
 </head>
 
-為了能讓 DBMS 快速查找資料，我們需要使用一些資料結構，其中最常見的是 Hash Table 跟 Tree。
+為了能讓 DBMS 快速查找資料，我們需要使用一些資料結構來幫助查詢，其中最常見的是 Hash Table 跟 Tree。
 
-這些資料結構會被用在不同的地方，例如 :
-
-- Internal Metadata
-- Core Data Storage
-- Temporary Data Structures
-- Table Indexes
-
-在使用這些資料結構時，我們需要考慮以下幾點 :
+在使用這些資料結構時，我們需要考慮以下兩點 :
 
 - Data Organization : 要如何把資料放到 page / memory 中，以及需要哪些資訊來支持更高效的查詢
 - Concurrency : 如何讓多個 worker 同時存取資料而不會出現問題
@@ -28,7 +21,7 @@ tags: [CMU15-445]
 
 ## Hash Tables
 
-hash table 是一個無序的資料結構，可以用來儲存 key-value pair，並且可以快速查找資料。
+Hash table 是一個無序的資料結構，可以用來儲存 key-value pair，並且可以快速查找資料。
 
 在實作細節上，主要可以分為兩個部分來討論 :
 
@@ -57,20 +50,20 @@ hash table 是一個無序的資料結構，可以用來儲存 key-value pair，
 - Hopscotch Hashing
 - Swiss Tables
 
-這裡我們只會介紹前兩個 Linear Probe Hashing 跟 Cuckoo Hashing。
+這裡我們會介紹 Linear Probe Hashing 跟 Cuckoo Hashing。
 
 ### Linear Probe Hashing
 
 插入時，我們會在 slot 中儲存 key-value pair，發生 collision 時，我們會往下一個 slot 移動，直到找到空的 slot 為止。
 
-![Linear Probe Hashing](/img/cmu15-445/c07/image.png)
+<ImageModal src="/img/cmu15-445/c07/image.webp" caption="Linear Probe Hashing Insert" />
 
 如果 key 不是 unique 的話，我們有兩種方式可以解決 :
 
-- Separate Linked List : 將相同 key 的 value 串在一起
+- Separate Linked List : 將相同 key 的 value 串在一起，但這樣會導致每個節點都需要 new，不利於快取
 - Redundant Keys : 在 slot 中儲存所有相同 key 的 value (大部分 DBMS 採用)
 
-![Linear Probe Hashing Insert](/img/cmu15-445/c07/image-1.png)
+<ImageModal src="/img/cmu15-445/c07/image-1.webp" caption="Linear Probe Hashing Non-Unique Keys" />
 
 刪除有兩種方法 :
 
@@ -79,21 +72,21 @@ hash table 是一個無序的資料結構，可以用來儲存 key-value pair，
 
 以及一些常見的 optimization :
 
-- 根據類型或鍵的大小來產生哈希表，例如，如果 key 是 string，可以依據 string 的長度來產生多個 hash table
+- 根據類型或鍵的大小來產生哈希表，例如，如果 key 是 string，可以依據 string 的長度選擇儲存 pointer 還是直接儲存 string
 - 將 metadata 獨立儲存，例如將 empty slot 和 tombstone 的位置儲存在 bitmap 中
-- 維護 hash table 和 slot 的版本，因為為 hash table 重新分配記憶體的開銷很大，因此可以使用版本來避免重新分配記憶體，如果 slot 跟 table 的版本不一樣，就表示 slot 為空。
+- 維護 hash table 和 slot 的版本，因為為 hash table 重新分配記憶體的開銷很大，因此可以使用版本來避免重新分配記憶體。如果 slot 跟 table 的版本不一樣，就表示 slot 為空。
 
 Google 的 `absl::flat_hash_map` 是目前最先進的 Linear Probe Hashing。
 
 ### Cuckoo Hashing
 
-Cuckoo Hashing 使用多個 hash function 的 seed 來尋找空的 slot，這樣就能在 O(1) 的時間進行插入和刪除。
+Cuckoo Hashing 可以在 O(1) 的時間進行查找和刪除。
 
-![Cuckoo Hashing](/img/cmu15-445/c07/image-2.png)
-
-以圖片為例，我們會使用兩個不同的 hash function 的 seed 來找空的 slot ，如果兩個都空的話就隨機選擇一個 slot 來放入 key-value pair，如果兩個都滿的話就隨機覆蓋一個，並將被覆蓋掉的重新執行一次 hash function 直到找到空的 slot。
+以圖片為例，我們會選擇一個 hash function 並使用不同的 seed 來找空的 slot，如果兩個都空的話就隨機選擇一個 slot 來放入 key-value pair，如果兩個都滿的話就隨機覆蓋一個，並將被覆蓋掉的遞迴執行一次 hash function 直到有一個 key 找到空的 slot。
 
 在極少數的情況下，可能會出現 cycle，這時候我們可以重新使用新的 seed 全部 rehash (少見)，或者直接搬到更大的 table 中 (常見)。
+
+<ImageModal src="/img/cmu15-445/c07/image-2.webp" caption="Cuckoo Hashing" />
 
 ## Dynamic Hashing Schemes
 
@@ -101,36 +94,46 @@ Cuckoo Hashing 使用多個 hash function 的 seed 來尋找空的 slot，這樣
 
 ### Chained Hashing
 
-chained hashing 的每個 key 會對應一個 linked list，而 linked list 的每個 node 都是一個 bucket，如果這個 bucket 滿了就會再往後面加一個 bucket。
+Chained hashing 會將每個可能的 hash value 對應一個 linked list，而 linked list 的每個 node 都是一個 bucket，如果這個 bucket 滿了就會再往後面加一個 bucket。
 
-![Chained Hashing](/img/cmu15-445/c07/image-3.png)
+<ImageModal src="/img/cmu15-445/c07/image-3.webp" caption="Chained Hashing" />
 
-在 bucket pointer 中，我們可以使用 bloom filter 來加速查找，在這個資料結構中只有兩個接口，一個是 insert，一個是 lookup，都是 O(1) 的時間複雜度，且沒有刪除的功能。
-但是要注意的是，使用 bloom filter 有可能產生 false positive，也就是說，如果 bloom filter 回傳 false，表示這個 key 一定不存在，但如果 bloom filter 回傳 true，表示這個 key 可能存在。
-
-![Chained Hashing](/img/cmu15-445/c07/image-4.png)
+在 bucket pointer 中，我們可以使用 bloom filter 來加速查找，後面會再介紹 bloom filter。
 
 ### Extendible Hashing
 
-extendible hashing 與 chained hashing 有點類似，但是在 extendible hashing 中，我們不會把 bucket 串在一起，而是進行分裂。
-當 bucket 滿了時，我們會將 bucket 分裂成兩個 bucket，並且使用 prefix 來決定要放在哪個 bucket 中。
+Extendible hashing 與 chained hashing 有點類似，但是在 extendible hashing 中，我們不會把 bucket 串在一起，而是進行分裂。
 
-![Extendible Hashing](/img/cmu15-445/c07/image-5.png)
-![Extendible Hashing](/img/cmu15-445/c07/image-6.png)
-![Extendible Hashing](/img/cmu15-445/c07/image-7.png)
-![Extendible Hashing](/img/cmu15-445/c07/image-8.png)
+在 Extendible hashing 中，我們會維護兩個 depth，一個是 global depth，另一個是 local depth。
+除此之外，我們還需要維護一個 directory，它的大小為 $$2^{global\_depth}$$，裡面存放著每個 bucket 的 pointer。
+
+當我們要查詢一個 key-value pair 時，我們會先使用 hash function 來計算 hash value 並得到一組位元 (0101010...)。
+然後根據 global depth 來決定要使用多少 bits 來找 bucket，如果是 global depth 為 3 的話，我們就會使用前三個 bits (010) 來找 bucket。
+找到之後線性掃描 bucket 中的 key-value pair，如果有空的 slot 就直接插入，如果沒有空的 slot 就需要分裂這個 bucket。
+
+<ImageModal src="/img/cmu15-445/c07/image-5.webp" caption="Extendible Hashing - Get" />
+
+當要插入時，如果 bucket 已經滿了，我們需要先檢查這個 bucket 的 local depth 是否等於 global depth。
+如果相等的話，我們需要將 global depth 加一，並且將 directory 的大小翻倍 (將原本的 pointer 複製一份) 並重新指向 bucket。
+最後將這個 bucket 分裂成兩個 bucket，並且把原本 bucket 中的值重新 hash 到新的 bucket 中。
+
+<ImageModal src="/img/cmu15-445/c07/image-6.webp" caption="Extendible Hashing - Put" />
+<ImageModal src="/img/cmu15-445/c07/image-7.webp" caption="Extendible Hashing - Put" />
+<ImageModal src="/img/cmu15-445/c07/image-8.webp" caption="Extendible Hashing - Put" />
 
 ### Linear Hashing
 
-維護一個 pointer 指向下一個要被分裂的 bucket，當任意一個 bucket 滿了時，就將指針指向的 bucket 分裂。
+Linear hashing 中放棄了哪裡滿了就分裂哪裡的概念，而是採用預先規劃好的分裂順序。
 
-![Linear Hashing](/img/cmu15-445/c07/image-9.png)
-![Linear Hashing](/img/cmu15-445/c07/image-10.png)
-![Linear Hashing](/img/cmu15-445/c07/image-11.png)
-![Linear Hashing](/img/cmu15-445/c07/image-12.png)
+維護一個 split pointer 指向下一個要被分裂的 bucket，當任意一個 bucket 滿了時，就新增一個 bucket 並將指針指向的 bucket 分裂，最後把這個分裂的 bucket 中的值重新 hash 到新的 bucket 中。
 
-隨著分裂指針的移動，最終所有溢出的桶都會被處理到，當分裂指針到達最後一個 bucket 時，我們可以將第一個 hash 移除只使用第二個 hash ，並且將分裂指針歸零。
-如果在指針下面的第一個 bucket 是空的，我們可以移除這個 bucket 並反向移動指針。
+<ImageModal src="/img/cmu15-445/c07/image-9.webp" caption="Linear Hashing - Get" />
+<ImageModal src="/img/cmu15-445/c07/image-10.webp" caption="Linear Hashing - Put" />
+<ImageModal src="/img/cmu15-445/c07/image-11.webp" caption="Linear Hashing - Put" />
+<ImageModal src="/img/cmu15-445/c07/image-12.webp" caption="Linear Hashing - Get" />
 
-![Linear Hashing](/img/cmu15-445/c07/image-13.png)
-![Linear Hashing](/img/cmu15-445/c07/image-14.png)
+隨著分裂指針的移動，最終所有溢出的桶都會被處理到，當分裂指針到達最後一個 bucket 時，我們可以將第一個 hash 移除只使用第二個 hash，並且將分裂指針歸零。
+如果在最下面一個 bucket 是空的，我們可以移除這個 bucket 並反向移動指針。
+
+<ImageModal src="/img/cmu15-445/c07/image-13.webp" caption="Linear Hashing - Delete" />
+<ImageModal src="/img/cmu15-445/c07/image-14.webp" caption="Linear Hashing - Delete" />
