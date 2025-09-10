@@ -19,7 +19,7 @@ tags: [CMU15-445]
 - Physical Correctness : 內部的資料是否正確 (本篇重點)
 - Logical Correctness : 我們是否能看到應該看到的資料 (後面會討論)
 
-## Locks and Latches
+## Locks & Latches
 
 這裡我們會重點討論 latch，在 latch 中有兩種 mode :
 
@@ -42,16 +42,22 @@ tags: [CMU15-445]
 - Blocking OS Mutex
 - Reader-Writer Latches
 
+除此之外，還有一些更為複雜的實現方式，但在這裡不做討論。
+
+- Adaptive Spinlock (Apple ParkingLot) : 當有競爭的時候，先進行 spin 一段時間，如果還是無法獲取就放棄並且進入睡眠
+- Queue-based Spinlock (MCS Locks) : 創建一個 queue 來管理等待的 thread，當有 thread 釋放鎖的時候，通知下一個 thread 獲取鎖
+- Optimistic Lock Coupling (The Germans) : 專門用在樹狀結構上，樂觀的方式來獲取子節點的鎖
+
 ### Test-and-Set Spin Latch (TAS)
 
-這種方式的原理是 thread 不斷的執行 CAS (Compare-And-Swap) 來更新一個記憶體中的位置，並由 DBMS 來控制成功或失敗後的行為，可以給予比 mutex 更多的彈性及效能。
+這種方式的原理是 thread 不斷的執行 CAS (Compare-And-Swap) 來更新一個記憶體中的位置，並由 DBMS 來控制成功或失敗後的行為。
 
 <ImageModal src="/img/cmu15-445/c09/image-11.webp" caption="Test-and-Set Spin Latch" />
 
 - 優點
   - 效能佳
 - 缺點
-  - 無法擴展以及 cache coherence (快取一致性) 的問題，且 CAS 指令會在多個不同的執行緒上執行，浪費 CPU 資源
+  - 無法擴展以及 cache coherence (快取一致性) 的問題，且 CAS 指令會在多個不同的執行緒上執行，浪費 CPU bus 的資源
 - 範例
   - `std::atomic<T>`
 
@@ -61,7 +67,9 @@ CAS 是一種原子操作，它比較一個內存位置的值與給定的預期�
 
 ### Blocking OS Mutex
 
-這種方式是直接使用由 OS 所提供的互斥鎖，在 Linux 的 futex 中 DBMS 會先嘗試獲得 user-space mutex，如果獲取成功則代表 latch 被成功設定，如果失敗的話就會去嘗試獲取 kernel-space mutex，如果依然無法獲得就會被放進 block scheduler，而 block scheduler 會決定下一個要被執行的 thread。
+這種方式是直接使用由 OS 所提供的互斥鎖，與 spinlock 不同的是，當 thread 無法獲取鎖的時候，會進入睡眠狀態並且交出 CPU 的控制權，等到鎖被釋放的時候再被喚醒。
+
+在 Linux 的 futex 中，DBMS 會先嘗試獲得 user-space mutex，如果獲取成功則代表 latch 被成功設定，如果失敗的話就會去嘗試獲取 kernel-space mutex，如果依然無法獲得就會被放進 block scheduler，而 block scheduler 會決定下一個要被執行的 thread。
 
 <ImageModal src="/img/cmu15-445/c09/image-12.webp" caption="Blocking OS Mutex" />
 
@@ -69,12 +77,14 @@ CAS 是一種原子操作，它比較一個內存位置的值與給定的預期�
   - 使用簡單
 - 缺點
   - 效能較差 (每次鎖定和解鎖需要 25ns)
+  - 與 spinlock 相比，context switch 的開銷較大 (因為要進入睡眠狀態)
 - 範例
   - `std::mutex`
 
 ### Reader-Writer Latches
 
-這種方式是建立在 spinlock 之上，但與前面兩種方式不同，這種方式可以允許 latch 以 read mode 或 write mode 來被取得。我們會追蹤有多少 thread 取得了 latch 以及有多少 thread 在等待 latch，並依據不同的 policy (如 reader-preferred、writer-preferred、fair reader-writer locks) 來維護 priority queue 來決定下一個要被執行的 thread。
+這種方式是建立在 spinlock 之上，但與前面兩種方式不同，這種方式可以允許 latch 以 read mode 或 write mode 來被取得。
+我們會追蹤有多少 thread 取得了 latch 以及有多少 thread 在等待 latch，並依據不同的 policy (如 reader-preferred、writer-preferred、fair reader-writer locks) 來維護 priority queue 來決定下一個要被執行的 thread。
 
 <ImageModal src="/img/cmu15-445/c09/image-13.webp" caption="Reader-Writer Latches" />
 
@@ -89,7 +99,7 @@ CAS 是一種原子操作，它比較一個內存位置的值與給定的預期�
 
 ## Hash Table Latching
 
-對於 hash table 來說併發控制是相對簡單的，這是因為在 hash table 中所有的 thread 的訪問方向都相同，且一次只會訪問一個 page / slot，因此不會有 deadlocks 的問題。
+對於 hash table 來說併發控制是相對簡單的，這是因為 hash table 一次只會訪問一個 page 或 slot，因此不會有 deadlocks 的問題。
 
 如果 hash table 需要 resize 的時候，我們只需要對整個 hash table 加鎖即可，動態的 hash table 也是透過類似的方式實現。
 
@@ -142,23 +152,20 @@ Latch Crabbing 是一種可以允許多個 thread 同時訪問 (修改) 一個 n
 
 從 root 開始往下遍歷，不斷的獲取 child 的 read latch 並釋放 parent 的 latch 直到 leaf node。
 
-<ImageModal src="/img/cmu15-445/c09/image.webp" caption="Search Latch Crabbing" />
-<ImageModal src="/img/cmu15-445/c09/image-1.webp" caption="Search Latch Crabbing" />
-<ImageModal src="/img/cmu15-445/c09/image-2.webp" caption="Search Latch Crabbing" />
-<ImageModal src="/img/cmu15-445/c09/image-3.webp" caption="Search Latch Crabbing" />
+<ImageModal src="/img/cmu15-445/c09/image.webp" caption="Search Latch Crabbing - 1" />
+<ImageModal src="/img/cmu15-445/c09/image-1.webp" caption="Search Latch Crabbing - 2" />
+<ImageModal src="/img/cmu15-445/c09/image-2.webp" caption="Search Latch Crabbing - 3" />
+<ImageModal src="/img/cmu15-445/c09/image-3.webp" caption="Search Latch Crabbing - 4" />
 
 #### Insert / Delete
 
-從 root 開始往下遍歷，
-並獲取 child 的 write latch，
-如果獲取就檢查 child 是否 `safe`，
-如果是的話就釋放之前獲取的所有 latch。
+從 root 開始往下遍歷，並獲取 child 的 write latch，如果獲取就檢查 child 是否 `safe`，如果是的話就釋放之前獲取的所有 latch。
 
-<ImageModal src="/img/cmu15-445/c09/image-4.webp" caption="Insert Latch Crabbing" />
-<ImageModal src="/img/cmu15-445/c09/image-5.webp" caption="Insert Latch Crabbing" />
-<ImageModal src="/img/cmu15-445/c09/image-6.webp" caption="Insert Latch Crabbing" />
-<ImageModal src="/img/cmu15-445/c09/image-7.webp" caption="Insert Latch Crabbing" />
-<ImageModal src="/img/cmu15-445/c09/image-8.webp" caption="Insert Latch Crabbing" />
+<ImageModal src="/img/cmu15-445/c09/image-4.webp" caption="Insert Latch Crabbing - 1" />
+<ImageModal src="/img/cmu15-445/c09/image-5.webp" caption="Insert Latch Crabbing - 2" />
+<ImageModal src="/img/cmu15-445/c09/image-6.webp" caption="Insert Latch Crabbing - 3" />
+<ImageModal src="/img/cmu15-445/c09/image-7.webp" caption="Insert Latch Crabbing - 4" />
+<ImageModal src="/img/cmu15-445/c09/image-8.webp" caption="Insert Latch Crabbing - 5" />
 
 ### Better Latching Algorithm
 
@@ -169,11 +176,12 @@ Latch Crabbing 是一種可以允許多個 thread 同時訪問 (修改) 一個 n
 
 前面只有討論 top-down 的 latch crabbing，但在 range query 中，我們會需要進行橫向的訪問。
 
-<ImageModal src="/img/cmu15-445/c09/image-9.webp" caption="Leaf Node Scans" />
-
-在 top-down 的訪問中， thread 只能從下層節點來獲取 latch，如果 latch 無法被獲取， thread 就需要等待，因此避免了 deadlock 的問題。但在 leaf node scans 中，如果 thread 1 嘗試進行 scan，而 thread 2 則在刪除節點，就會導致 deadlock 的問題。
+在 top-down 的訪問中， thread 只能從下層節點來獲取 latch，如果 latch 無法被獲取，thread 就需要等待，因此避免了 deadlock 的問題。
+但在 leaf node scans 中，如果 thread 1 嘗試進行 scan，而 thread 2 則在刪除節點，就會導致 deadlock 的問題。
 
 當獲取 latch 失敗時，thread 應該快速停止所有動作並且釋放所有 latch，最後再重新開始，這是因為我們需要盡量避免長時間的等待以及不需要的計算。
+
+<ImageModal src="/img/cmu15-445/c09/image-9.webp" caption="Leaf Node Scans" />
 
 ## References
 
