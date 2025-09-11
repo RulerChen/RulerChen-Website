@@ -21,14 +21,16 @@ tags: [CMU15-445]
 
 而 query plan 主要也有兩種類型 :
 
-- Logical Plan: 查詢中的關係代數表達式
-- Physical Plan: 具體的執行策略，如排序的方法、join 的方式等
+- Logical Plan : 查詢中的關係代數表達式
+- Physical Plan : 具體的執行策略，如排序的方法、join 的方式等
 
-<ImageModal src="/img/cmu15-445/c15/image.webp" caption="Query Optimization Process" />
+<ImageModal src="/img/cmu15-445/c15/image.webp" caption="Query Process" />
 
-在這個 SQL 語句執行的流程圖中 tree rewriter 會負責將 SQL 語句轉換成 logical plan，而 optimizer 則會透過 system catalog 所提供的資訊來將 logical plan 轉換成 physical plan。
+在這個 SQL 語句執行的流程圖中，binder 跟 tree rewriter 會負責將 SQL 語句轉換成 logical plan，而 optimizer 則會透過 system catalog 所提供的資訊來將 logical plan 轉換成 physical plan。
 
 ## Logical Query Optimization
+
+我們可以先透過一些簡單的規則將 logical plan 進行優化，這些規則通常是基於關係代數的等價轉換。
 
 ### Selection Optimization
 
@@ -40,7 +42,7 @@ tags: [CMU15-445]
 
 - 刪除不必要的 column : 減少 I/O，舉例來說，如果 SQL 中只有 `SELECT name FROM table`，那麼我們就應該在一開始只留 name 欄位再做後續操作
 
-### Query Rewrite Optimizations
+### Query Rewrite Optimization
 
 - 移除不可能或不必要的篩選條件 : 如 `WHERE 1 = 0`
 - 合併篩選條件 : 如 `VAL BETWEEN 1 AND 10 OR VAL BETWEEN 5 AND 15` 可以合併成 `VAL BETWEEN 1 AND 15`
@@ -49,15 +51,16 @@ tags: [CMU15-445]
 
 ### Join Optimization
 
-- Join Reordering : 重新排序 join 的順序
+- Join Reordering : 重新排序 join 的順序，如將資料量較少的 table 當成 outer table
 
 ## Cost Estimation
 
 除了一些基本的 heuristic 外，有許多操作在 DBMS 中沒有一定的優劣，所以我們需要透過 cost estimation 來估算成本。
 
 查詢成本通常取決於很多因素，如 CPU、硬碟 I/O、記憶體、網絡等。
+以 PostgreSQL 來說，他會為每個操作指定一個固定的 CPU 成本 (如 seq_page_cost = 1.0, random_page_cost = 4.0)，或是一個固定的 I/O 成本 (如 cpu_tuple_cost = 0.01, cpu_index_tuple_cost = 0.005)。
 
-但大部分的成本依舊取決於在整個 query plan 中我們要讀寫多少 tuple，因此 DBMS 需要維護一些統計資料，如 tuple 數量、篩選條件的選擇性等等來幫助估算成本。
+但大部分的成本依舊取決於在整個 query plan 中我們要讀寫多少 tuple，因此 DBMS 需要維護一些統計資料，如 tuple 數量或最大最小值來幫助估算成本。
 
 ### Statistics
 
@@ -66,23 +69,22 @@ tags: [CMU15-445]
 - $N_R$ : R 中的 tuple 數量
 - $V(A,R)$ : R 中屬性 A 的不同值數量
 
-透過這兩個資訊，我們可以得到 selection cardinality $SC(A,R) = N_R / V(A,R)$，這種方式通常會有三個假設 :
+透過這兩個資訊，我們可以得到 selection cardinality $SC(A,R) = N_R / V(A,R)$。
 
-- Uniform Data : 值的分布是一致的
-- Independent Predicates : 屬性之間是獨立的
-- Inclusion Principle : join 使用的 key 在 outer table 必定存在
+除此之外，以 PostgreSQL 為例，它還會維護以下統計資料 :
+
+- n_distinct : 每個欄位的唯一值數量
+- most_common_vals : 每個欄位中最常出現的值
+- histogram_bounds : 每個欄位的 histogram 範圍
+- correlation : 每個欄位的值與物理儲存順序的相關性
 
 ### Histograms
 
-真實的資料中幾乎不可能是 uniform 的，因此我們可以使用 histogram 來更好的估算成本，儲存方式通常有以下幾種可能 :
-
-<ImageModal src="/img/cmu15-445/c15/image-1.webp" caption="Histograms" />
-<ImageModal src="/img/cmu15-445/c15/image-2.webp" caption="Histograms" />
-<ImageModal src="/img/cmu15-445/c15/image-3.webp" caption="Histograms" />
+真實的資料中幾乎不可能是 uniform 的，因此我們可以使用 histogram 來更好的估算成本，histogram 會將屬性的值域 (range) 分成多個區間 (bucket)，並記錄每個區間的 tuple 數量。
 
 ### Sketches
 
-我們可以使用 Probabilistic data structures 來產生近似於 dataset 的資料，如 HyperLogLog、Count-Min Sketch 等等。
+我們可以使用 probabilistic data structures 來產生近似於 dataset 的資料，如 HyperLogLog、Count-Min Sketch 等等。
 
 ### Sampling
 
@@ -90,32 +92,34 @@ DBMS 可以針對 table 的部分資料進行 sampling 來估算成本，並在 
 
 ## Query Plan
 
-在執行完 rule-based 的 rewrite 之後，DBMS 會枚舉不同的查詢計畫並估計成本，直到嘗試完所有可能或超時為止。
+在有了 cost estimation 後，optimizer 就可以開始在巨大的 search space 中尋找最佳的 query plan。
 
 ### Single-Relation Query Plans
 
-只需要使用簡單的啟發式規則即可，目標是找到最佳的 access method。
+對於單表查詢來說，只需要使用簡單的啟發式規則即可，目標是找到最佳的 access method。
 
 - sequential scan
+- binary search (with clustered indexes)
 - index scan
-- binary search (clustered indexes)
 
 ### Multi-Relation Query Plans
 
 隨著連結數量的增加，可以選擇的計劃數量會急劇增加，因此我們需要限制搜索空間以便在有限時間內找到最佳計劃，通常有 bottom-up 和 top-down 兩種方法。
 
-#### Buttom-Up
+#### Generative / Bottom-up
 
-使用動態規劃 (Dynamic Programming) 來找到最佳的 join order，步驟如下
+從單表開始逐步建立更大的計畫，就像是動態規劃 (Dynamic Programming) 一樣。
 
-- 將查詢分成多個邏輯區塊
-- 對每個 logical operator 找到最佳的 physical operator (hash join、sort merge join ...)
-- 使用 left-deep tree 並透過動態規劃找到最佳的 join order
+舉例來說，假設我們要找到三個 table A、B、C 的最佳 join order，步驟會大致如下 :
 
-<ImageModal src="/img/cmu15-445/c15/image-4.webp" caption="Buttom-Up" />
+- 先針對單表找到最佳的 access method，如 sequential scan、index scan
+- 兩兩一組，找出最佳的 join order，如 (A hash join B)、(B merge sort join C)、(A hash join C)
+- 接著在從上一輪的結果中找出最佳的 join order，如 ((A hash join B) merge sort join C)、((B merge sort join C) hash join A)
 
-#### Top-Down
+<ImageModal src="/img/cmu15-445/c15/image-6.webp" caption="Bottom-Up" />
 
-optimizer 會從 logical plan 開始，使用 branch and bound 的方法來遍歷樹狀結構，並將 logical operator 轉換成 physical operator。
+#### Transformation / Top-down
+
+Optimizer 會從 logical plan 開始，使用 branch and bound 的方法來遍歷樹狀結構，並將 logical operator 轉換成 physical operator。
 
 <ImageModal src="/img/cmu15-445/c15/image-5.webp" caption="Top-Down" />
