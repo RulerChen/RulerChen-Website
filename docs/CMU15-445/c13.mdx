@@ -197,7 +197,7 @@ Client 端的請求經過 dispatcher 後會由 dispatcher 分配一個 worker �
 
 OS scheduler 會負責分解跟分派任務給 CPU core 並執行。
 
-OS dispatcher 會負責接收 client 的請求並將請求分配給 worker，譬如說 PostgreSQL 就有一個 dispatcher 叫做 postmaster，負責 `fork` 新的 process。
+OS dispatcher 會負責接收 client 的請求並將請求分配給 worker。
 
 :::
 
