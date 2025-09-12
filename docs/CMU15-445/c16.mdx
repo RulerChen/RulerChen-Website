@@ -76,10 +76,12 @@ Consistency 表示在資料庫中的邏輯是正確的，主要分為兩種 :
 
 ### Concurrency Control
 
-Concurrency control 指的是 DBMS 如何決定多個交易操作的正確順序，大致有兩種策略 :
+Concurrency control 指的是 DBMS 如何決定多個交易操作的正確順序，大致有兩種不同類型的策略 :
 
 - Pessimistic (悲觀) : DBMS 假設會發生衝突，可以透過鎖定資源來實現
 - Optimistic (樂觀) : DBMS 假設不會發生衝突，直到 commit 時才會檢查衝突並回滾
+
+我們會在接下來的幾節裡面詳細討論不同的 concurrency control 策略，如 Two-Phase Locking (2PL) 跟 Optimistic Concurrency Control (OCC)。
 
 ### Schedule
 
