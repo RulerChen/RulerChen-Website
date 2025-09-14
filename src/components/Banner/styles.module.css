@@ -5,16 +5,44 @@
   src: url('../../../static/font/RobotoMono-Bold.ttf') format('truetype');
 }
 
+:root {
+  --navbar-height: 70px;
+  --primary-color: #60a5fa;
+  --secondary-color: #34d399;
+  --accent-color: #fbbf24;
+  --text-primary: #e5e7eb;
+  --text-secondary: #9ca3af;
+  --bg-dark: #0f172a;
+  --bg-medium: #1e293b;
+  --bg-light: #334155;
+  --terminal-bg: rgba(17, 24, 39, 0.95);
+  --border-color: rgba(75, 85, 99, 0.3);
+}
+
 /* Hero Section */
 .heroContainer {
-  height: 100vh;
   background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
-  padding-top: 70px; /* Account for fixed navbar */
+  overflow-x: hidden;
+}
+
+@media (min-width: 769px) {
+  .heroContainer {
+    height: 100vh;
+    overflow: hidden;
+    padding-top: 70px; /* Account for fixed navbar */
+  }
+}
+
+@media (max-width: 768px) {
+  .heroContainer {
+    min-height: 100vh;
+    padding: 70px 1rem 2rem;
+    overflow: visible;
+  }
 }
 
 .particlesBackground {
@@ -69,14 +97,16 @@
 
 .heroContent {
   max-width: 1400px;
+  width: 100%;
   margin: 0 auto;
   padding: 0 2rem;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 4rem;
   align-items: center;
-  z-index: 2;
+  z-index: 10;
   position: relative;
+  box-sizing: border-box;
 }
 
 /* Terminal Section */
@@ -92,9 +122,9 @@
   overflow: hidden;
   backdrop-filter: blur(10px);
   transition: all 0.3s ease;
-  width: 600px;
-  min-width: 600px;
+  width: 100%;
   max-width: 600px;
+  min-width: 300px;
 }
 
 .terminalWindow:hover {
@@ -236,20 +266,35 @@
 /* Profile Section */
 .heroRight {
   animation: slideInRight 1s ease-out;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .profileSection {
   text-align: center;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  position: relative;
+  z-index: 10;
 }
 
 .profileImageContainer {
   position: relative;
-  margin-bottom: 2rem;
+  margin: 0 auto 2rem auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  max-width: 100%;
 }
 
 .profileImage {
-  width: 300px;
-  height: 300px;
+  width: 200px;
+  height: 200px;
   border-radius: 50%;
   object-fit: cover;
   border: 4px solid rgba(96, 165, 250, 0.3);
@@ -263,19 +308,23 @@
 
 .statusIndicator {
   position: absolute;
-  bottom: 20px;
-  right: 20px;
+  bottom: 10px;
+  right: 10px;
   background: rgba(17, 24, 39, 0.9);
-  padding: 0.5rem 1rem;
+  padding: 0.4rem 0.8rem;
   border-radius: 20px;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.8rem;
+  gap: 0.4rem;
+  font-size: 0.75rem;
   color: #34d399;
   font-family: 'JetBrains Mono', monospace;
   backdrop-filter: blur(10px);
   border: 1px solid rgba(52, 211, 153, 0.3);
+  white-space: nowrap;
+  max-width: calc(100% - 20px);
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .statusDot {
@@ -300,6 +349,9 @@
 
 .introText {
   text-align: left;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .greeting {
@@ -364,6 +416,8 @@
   display: flex;
   gap: 1rem;
   margin-bottom: 2rem;
+  flex-wrap: wrap;
+  justify-content: flex-start;
 }
 
 .primaryBtn,
@@ -454,104 +508,213 @@
   }
 }
 
-/* Responsive Design */
-@media (max-width: 1024px) {
+/* =================
+   RESPONSIVE DESIGN
+   Three Breakpoints Only:
+   1. Desktop (>1024px): Two-column with terminal
+   2. Tablet (769px-1024px): Single column, no terminal
+   3. Mobile (≤768px): Mobile-optimized, no terminal
+   ================= */
+
+/* TABLET: 769px to 1024px */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .heroContainer {
+    padding: 90px 1.5rem 2rem;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
   .heroContent {
     grid-template-columns: 1fr;
-    gap: 3rem;
+    gap: 2.5rem;
     text-align: center;
+    padding: 0 1.5rem;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 10;
   }
 
   .heroLeft {
-    order: 2;
+    display: none; /* Hide terminal on tablet */
   }
 
   .heroRight {
     order: 1;
+    width: 100%;
   }
 
   .introText {
     text-align: center;
   }
 
-  .name {
-    font-size: 3rem;
-  }
-
   .profileImage {
-    width: 250px;
-    height: 250px;
+    width: 200px;
+    height: 200px;
   }
 
-  .terminalWindow {
-    max-width: 100%;
-    min-width: 400px;
-    margin: 0 auto;
+  .profileImageContainer {
+    margin: 0 auto 1.5rem auto;
+  }
+
+  .name {
+    font-size: 2.8rem;
+  }
+
+  .roleContainer {
+    font-size: 1.3rem;
+  }
+
+  .description {
+    font-size: 1.1rem;
+    max-width: 500px;
+    margin: 0 auto 2rem auto;
+  }
+
+  .ctaButtons {
+    justify-content: center;
   }
 }
 
+/* MOBILE: ≤768px */
 @media (max-width: 768px) {
   .heroContainer {
-    padding: 70px 1rem 2rem;
+    padding: 80px 1rem 2rem;
+    min-height: 100vh;
+    overflow: visible;
   }
 
   .heroContent {
-    padding: 0 1rem;
-    gap: 2rem;
     grid-template-columns: 1fr;
+    gap: 2rem;
+    text-align: center;
+    padding: 0 1rem;
+    align-items: center;
+    justify-content: center;
   }
 
   .heroLeft {
-    display: none; /* Hide the terminal/codeblock on mobile */
+    display: none; /* Hide terminal on mobile */
   }
 
   .heroRight {
     order: 1;
-  }
-
-  .name {
-    font-size: 2.5rem;
-  }
-
-  .roleContainer {
-    font-size: 1.2rem;
-  }
-
-  .ctaButtons {
+    width: 100%;
+    display: flex;
     flex-direction: column;
     align-items: center;
   }
 
-  .primaryBtn,
-  .secondaryBtn {
+  .introText {
+    text-align: center;
     width: 100%;
-    max-width: 250px;
-    justify-content: center;
+    max-width: 100%;
   }
 
   .profileImage {
     width: 200px;
     height: 200px;
   }
-}
 
-@media (max-width: 480px) {
+  .profileImageContainer {
+    margin: 0 auto 1.5rem auto;
+  }
+
+  .greeting {
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+    display: block;
+    text-align: center;
+  }
+
   .name {
-    font-size: 2rem;
+    font-size: 2.2rem;
+    line-height: 1.1;
+    margin-bottom: 1rem;
+    text-align: center;
+  }
+
+  .nameHighlight {
+    display: block;
+    text-align: center;
   }
 
   .roleContainer {
-    font-size: 1rem;
+    font-size: 1.1rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    min-height: 1.5rem;
   }
 
   .description {
     font-size: 1rem;
+    margin: 0 auto 1.5rem auto;
+    text-align: center;
+    line-height: 1.6;
+    max-width: 90%;
   }
 
-  .profileImage {
-    width: 180px;
-    height: 180px;
+  .ctaButtons {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  .primaryBtn,
+  .secondaryBtn {
+    width: 100%;
+    max-width: 280px;
+    justify-content: center;
   }
 }
 
-/* Legacy styles removed - all replaced with new modern design */
+/* SMALL MOBILE: ≤480px */
+@media (max-width: 480px) {
+  .heroContainer {
+    padding: 70px 0.75rem 1.5rem;
+  }
+
+  .heroContent {
+    padding: 0 0.75rem;
+    gap: 1.5rem;
+  }
+
+  .profileImage {
+    width: 200px;
+    height: 200px;
+  }
+
+  .profileImageContainer {
+    margin: 0 auto 1rem auto;
+  }
+
+  .greeting {
+    font-size: 0.9rem;
+  }
+
+  .name {
+    font-size: 1.8rem;
+    line-height: 1.1;
+    margin-bottom: 0.8rem;
+  }
+
+  .roleContainer {
+    font-size: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .description {
+    font-size: 0.9rem;
+    line-height: 1.5;
+    max-width: 95%;
+    margin: 0 auto 1.2rem auto;
+  }
+
+  .primaryBtn,
+  .secondaryBtn {
+    max-width: 250px;
+    padding: 0.8rem 1.2rem;
+    font-size: 0.9rem;
+  }
+}

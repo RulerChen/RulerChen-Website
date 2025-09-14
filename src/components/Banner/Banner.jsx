@@ -125,10 +125,6 @@ const Home = () => {
             <div className={styles.profileSection}>
               <div className={styles.profileImageContainer}>
                 <img className={styles.profileImage} src={Profile} alt="RulerChen" />
-                <div className={styles.statusIndicator}>
-                  <span className={styles.statusDot}></span>
-                  <span>Available for work</span>
-                </div>
               </div>
 
               <div className={styles.introText}>
