@@ -719,7 +719,7 @@
 }
 
 /* Height-based responsive design - Hide image when viewport height is small */
-@media (max-height: 660px) {
+@media (max-height: 660px) and (min-width: 769px) {
   .profileImageContainer {
     display: none;
   }
