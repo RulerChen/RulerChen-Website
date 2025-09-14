@@ -1,3 +1,7 @@
+/* =============================================================================
+   1. IMPORTS & VARIABLES
+============================================================================= */
+
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 @font-face {
@@ -6,43 +10,50 @@
 }
 
 :root {
-  --navbar-height: 70px;
+  /* Layout */
+  --navbar-height: 80px;
+
+  /* Colors */
   --primary-color: #60a5fa;
   --secondary-color: #34d399;
   --accent-color: #fbbf24;
   --text-primary: #e5e7eb;
   --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
+
+  /* Backgrounds */
   --bg-dark: #0f172a;
   --bg-medium: #1e293b;
   --bg-light: #334155;
   --terminal-bg: rgba(17, 24, 39, 0.95);
+  --terminal-header-bg: rgba(31, 41, 55, 0.8);
+
+  /* Borders & Effects */
   --border-color: rgba(75, 85, 99, 0.3);
+  --border-color-hover: rgba(96, 165, 250, 0.5);
+  --glass-backdrop: blur(10px);
+
+  /* Shadows */
+  --shadow-medium: 0 25px 50px rgba(0, 0, 0, 0.25);
+  --shadow-large: 0 35px 60px rgba(0, 0, 0, 0.35);
+
+  /* Typography */
+  --font-mono: 'JetBrains Mono', monospace;
 }
 
-/* Hero Section */
+/* =============================================================================
+   2. LAYOUT & STRUCTURE
+============================================================================= */
+
 .heroContainer {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+  background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-medium) 50%, var(--bg-light) 100%);
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow-x: hidden;
-}
-
-@media (min-width: 769px) {
-  .heroContainer {
-    height: 100vh;
-    overflow: hidden;
-    padding-top: 70px; /* Account for fixed navbar */
-  }
-}
-
-@media (max-width: 768px) {
-  .heroContainer {
-    min-height: 100vh;
-    padding: 70px 1rem 2rem;
-    overflow: visible;
-  }
+  min-height: 100vh;
+  padding: calc(var(--navbar-height) + 1rem) 1rem 2rem;
 }
 
 .particlesBackground {
@@ -59,40 +70,20 @@
   position: absolute;
   width: 2px;
   height: 2px;
-  background: #60a5fa;
   border-radius: 50%;
   animation: float 6s ease-in-out infinite;
   opacity: 0.7;
+  background: var(--primary-color);
 }
 
 .particle:nth-child(even) {
-  background: #34d399;
+  background: var(--secondary-color);
   animation-duration: 8s;
 }
 
 .particle:nth-child(3n) {
-  background: #fbbf24;
+  background: var(--accent-color);
   animation-duration: 10s;
-}
-
-@keyframes float {
-  0%,
-  100% {
-    transform: translateY(0px) rotate(0deg);
-    opacity: 0.3;
-  }
-  25% {
-    transform: translateY(-30px) rotate(90deg);
-    opacity: 0.7;
-  }
-  50% {
-    transform: translateY(-20px) rotate(180deg);
-    opacity: 1;
-  }
-  75% {
-    transform: translateY(-40px) rotate(270deg);
-    opacity: 0.5;
-  }
 }
 
 .heroContent {
@@ -109,18 +100,21 @@
   box-sizing: border-box;
 }
 
-/* Terminal Section */
+/* =============================================================================
+   3. TERMINAL COMPONENT
+============================================================================= */
+
 .heroLeft {
   animation: slideInLeft 1s ease-out;
 }
 
 .terminalWindow {
-  background: rgba(17, 24, 39, 0.95);
+  background: var(--terminal-bg);
   border-radius: 12px;
-  border: 1px solid rgba(75, 85, 99, 0.3);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-medium);
   overflow: hidden;
-  backdrop-filter: blur(10px);
+  backdrop-filter: var(--glass-backdrop);
   transition: all 0.3s ease;
   width: 100%;
   max-width: 600px;
@@ -129,17 +123,17 @@
 
 .terminalWindow:hover {
   transform: translateY(-5px);
-  box-shadow: 0 35px 60px -12px rgba(0, 0, 0, 0.35);
-  border-color: rgba(96, 165, 250, 0.5);
+  box-shadow: var(--shadow-large);
+  border-color: var(--border-color-hover);
 }
 
 .terminalHeader {
-  background: rgba(31, 41, 55, 0.8);
+  background: var(--terminal-header-bg);
   padding: 1rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid rgba(75, 85, 99, 0.2);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .terminalButtons {
@@ -158,14 +152,14 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #9ca3af;
-  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
   font-size: 0.9rem;
 }
 
 .terminalBody {
   padding: 1.5rem;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 0.9rem;
   line-height: 1.6;
   overflow-x: auto;
@@ -175,20 +169,20 @@
 }
 
 .terminalPrompt {
-  color: #9ca3af;
+  color: var(--text-secondary);
   margin-bottom: 1rem;
 }
 
 .promptUser {
-  color: #34d399;
+  color: var(--secondary-color);
 }
 
 .promptSeparator {
-  color: #9ca3af;
+  color: var(--text-secondary);
 }
 
 .promptPath {
-  color: #60a5fa;
+  color: var(--primary-color);
 }
 
 .promptSymbol {
@@ -197,18 +191,18 @@
 }
 
 .promptCommand {
-  color: #fbbf24;
+  color: var(--accent-color);
 }
 
 .codeLine {
   display: flex;
   margin-bottom: 0.5rem;
   animation: typeIn 0.5s ease-out;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
 }
 
 .lineNumber {
-  color: #6b7280;
+  color: var(--text-muted);
   margin-right: 1rem;
   user-select: none;
   min-width: 2rem;
@@ -216,54 +210,32 @@
 }
 
 .codeContent {
-  color: #e5e7eb;
+  color: var(--text-primary);
   white-space: pre;
 }
 
 .keywordLine {
   color: #c792ea;
   white-space: pre;
+  font-weight: 500;
 }
 
 .propertyLine {
   color: #82aaff;
   white-space: pre;
-}
-
-.keywordLine,
-.propertyLine {
   font-weight: 500;
 }
 
 .cursor {
-  color: #60a5fa;
+  color: var(--primary-color);
   animation: blink 1s infinite;
   font-weight: bold;
 }
 
-@keyframes blink {
-  0%,
-  50% {
-    opacity: 1;
-  }
-  51%,
-  100% {
-    opacity: 0;
-  }
-}
+/* =============================================================================
+   4. PROFILE COMPONENT
+============================================================================= */
 
-@keyframes typeIn {
-  from {
-    opacity: 0;
-    transform: translateX(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-/* Profile Section */
 .heroRight {
   animation: slideInRight 1s ease-out;
   width: 100%;
@@ -317,9 +289,9 @@
   align-items: center;
   gap: 0.4rem;
   font-size: 0.75rem;
-  color: #34d399;
-  font-family: 'JetBrains Mono', monospace;
-  backdrop-filter: blur(10px);
+  color: var(--secondary-color);
+  font-family: var(--font-mono);
+  backdrop-filter: var(--glass-backdrop);
   border: 1px solid rgba(52, 211, 153, 0.3);
   white-space: nowrap;
   max-width: calc(100% - 20px);
@@ -330,21 +302,9 @@
 .statusDot {
   width: 8px;
   height: 8px;
-  background: #34d399;
+  background: var(--secondary-color);
   border-radius: 50%;
   animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.7);
-  }
-  70% {
-    box-shadow: 0 0 0 10px rgba(52, 211, 153, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0);
-  }
 }
 
 .introText {
@@ -356,10 +316,10 @@
 
 .greeting {
   display: block;
-  color: #9ca3af;
+  color: var(--text-secondary);
   font-size: 1.2rem;
   margin-bottom: 0.5rem;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
 }
 
 .name {
@@ -370,7 +330,7 @@
 }
 
 .nameHighlight {
-  background: linear-gradient(135deg, #60a5fa 0%, #34d399 50%, #fbbf24 100%);
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 50%, var(--accent-color) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -378,29 +338,20 @@
   animation: glow 3s ease-in-out infinite alternate;
 }
 
-@keyframes glow {
-  from {
-    filter: brightness(1);
-  }
-  to {
-    filter: brightness(1.2);
-  }
-}
-
 .roleContainer {
   font-size: 1.5rem;
   margin-bottom: 1.5rem;
-  color: #e5e7eb;
-  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
   min-height: 2rem;
 }
 
 .rolePrefix {
-  color: #9ca3af;
+  color: var(--text-secondary);
 }
 
 .typewriter {
-  color: #60a5fa;
+  color: var(--primary-color);
   font-weight: 600;
 }
 
@@ -411,6 +362,10 @@
   margin-bottom: 2.5rem;
   max-width: 500px;
 }
+
+/* =============================================================================
+   5. INTERACTIVE ELEMENTS
+============================================================================= */
 
 .ctaButtons {
   display: flex;
@@ -429,13 +384,13 @@
   border-radius: 12px;
   text-decoration: none;
   font-weight: 600;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   transition: all 0.3s ease;
   border: 2px solid transparent;
 }
 
 .primaryBtn {
-  background: linear-gradient(135deg, #60a5fa, #34d399);
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
   color: #ffffff;
 }
 
@@ -448,13 +403,13 @@
 
 .secondaryBtn {
   background: transparent;
-  color: #60a5fa;
-  border-color: #60a5fa;
+  color: var(--primary-color);
+  border-color: var(--primary-color);
   font-size: 16px;
 }
 
 .secondaryBtn:hover {
-  background: #60a5fa;
+  background: var(--primary-color);
   color: #ffffff;
   transform: translateY(-2px);
   text-decoration: none;
@@ -472,20 +427,65 @@
   width: 50px;
   height: 50px;
   background: rgba(96, 165, 250, 0.1);
-  color: #60a5fa;
+  color: var(--primary-color);
   border-radius: 12px;
   transition: all 0.3s ease;
   border: 1px solid rgba(96, 165, 250, 0.2);
 }
 
 .socialLink:hover {
-  background: #60a5fa;
+  background: var(--primary-color);
   color: #ffffff;
   transform: translateY(-3px);
   box-shadow: 0 10px 20px rgba(96, 165, 250, 0.3);
 }
 
-/* Animations */
+/* =============================================================================
+   6. ANIMATIONS
+============================================================================= */
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px) rotate(0deg);
+    opacity: 0.3;
+  }
+  25% {
+    transform: translateY(-30px) rotate(90deg);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translateY(-20px) rotate(180deg);
+    opacity: 1;
+  }
+  75% {
+    transform: translateY(-40px) rotate(270deg);
+    opacity: 0.5;
+  }
+}
+
+@keyframes blink {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  51%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes typeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 @keyframes slideInLeft {
   from {
     opacity: 0;
@@ -508,79 +508,36 @@
   }
 }
 
-/* =================
-   RESPONSIVE DESIGN
-   Three Breakpoints Only:
-   1. Desktop (>1024px): Two-column with terminal
-   2. Tablet (769px-1024px): Single column, no terminal
-   3. Mobile (≤768px): Mobile-optimized, no terminal
-   ================= */
-
-/* TABLET: 769px to 1024px */
-@media (max-width: 1024px) and (min-width: 769px) {
-  .heroContainer {
-    padding: 90px 1.5rem 2rem;
-    min-height: 100vh;
-    overflow: visible;
+@keyframes glow {
+  from {
+    filter: brightness(1);
   }
-
-  .heroContent {
-    grid-template-columns: 1fr;
-    gap: 2.5rem;
-    text-align: center;
-    padding: 0 1.5rem;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    z-index: 10;
-  }
-
-  .heroLeft {
-    display: none; /* Hide terminal on tablet */
-  }
-
-  .heroRight {
-    order: 1;
-    width: 100%;
-  }
-
-  .introText {
-    text-align: center;
-  }
-
-  .profileImage {
-    width: 200px;
-    height: 200px;
-  }
-
-  .profileImageContainer {
-    margin: 0 auto 1.5rem auto;
-  }
-
-  .name {
-    font-size: 2.8rem;
-  }
-
-  .roleContainer {
-    font-size: 1.3rem;
-  }
-
-  .description {
-    font-size: 1.1rem;
-    max-width: 500px;
-    margin: 0 auto 2rem auto;
-  }
-
-  .ctaButtons {
-    justify-content: center;
+  to {
+    filter: brightness(1.2);
   }
 }
 
-/* MOBILE: ≤768px */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(52, 211, 153, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0);
+  }
+}
+
+/* =============================================================================
+   7. RESPONSIVE DESIGN
+   Mobile-first approach with consolidated breakpoints
+============================================================================= */
+
+/* Base styles (mobile-first) */
 @media (max-width: 768px) {
   .heroContainer {
-    padding: 80px 1rem 2rem;
-    min-height: 100vh;
+    padding: calc(var(--navbar-height) + 1rem) 1rem 2rem;
     overflow: visible;
   }
 
@@ -589,8 +546,6 @@
     gap: 2rem;
     text-align: center;
     padding: 0 1rem;
-    align-items: center;
-    justify-content: center;
   }
 
   .heroLeft {
@@ -611,19 +566,9 @@
     max-width: 100%;
   }
 
-  .profileImage {
-    width: 200px;
-    height: 200px;
-  }
-
-  .profileImageContainer {
-    margin: 0 auto 1.5rem auto;
-  }
-
   .greeting {
     font-size: 1rem;
     margin-bottom: 0.5rem;
-    display: block;
     text-align: center;
   }
 
@@ -635,7 +580,6 @@
   }
 
   .nameHighlight {
-    display: block;
     text-align: center;
   }
 
@@ -669,10 +613,10 @@
   }
 }
 
-/* SMALL MOBILE: ≤480px */
+/* Small mobile adjustments */
 @media (max-width: 480px) {
   .heroContainer {
-    padding: 70px 0.75rem 1.5rem;
+    padding: var(--navbar-height) 0.75rem 1.5rem;
   }
 
   .heroContent {
@@ -681,8 +625,8 @@
   }
 
   .profileImage {
-    width: 200px;
-    height: 200px;
+    width: 150px;
+    height: 150px;
   }
 
   .profileImageContainer {
@@ -716,5 +660,67 @@
     max-width: 250px;
     padding: 0.8rem 1.2rem;
     font-size: 0.9rem;
+  }
+}
+
+/* Tablet styles */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .heroContainer {
+    padding: calc(var(--navbar-height) + 2rem) 1.5rem 2rem;
+    overflow: visible;
+  }
+
+  .heroContent {
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+    text-align: center;
+    padding: 0 1.5rem;
+  }
+
+  .heroLeft {
+    display: none; /* Hide terminal on tablet */
+  }
+
+  .heroRight {
+    order: 1;
+    width: 100%;
+  }
+
+  .introText {
+    text-align: center;
+  }
+
+  .name {
+    font-size: 2.8rem;
+  }
+
+  .roleContainer {
+    font-size: 1.3rem;
+  }
+
+  .description {
+    font-size: 1.1rem;
+    max-width: 500px;
+    margin: 0 auto 2rem auto;
+  }
+
+  .ctaButtons {
+    justify-content: center;
+  }
+}
+
+/* Desktop styles */
+@media (min-width: 1025px) {
+  .heroContainer {
+    height: 100vh;
+    overflow: hidden;
+    padding: var(--navbar-height) 2rem 0;
+  }
+}
+
+/* Height-based responsive design - Hide image when viewport height is small */
+@media (max-height: 660px) {
+  .profileImageContainer {
+    display: none;
   }
 }
