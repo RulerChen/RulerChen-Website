@@ -160,17 +160,15 @@ Log 紀錄的內容可能依據不同的策略而有所不同，主要有以下�
 
 ## Checkpoint
 
-在使用 WAL 時，log 會隨著時間不斷增長，這會導致在故障恢復時需要回放大量的 log，從而增加恢復時間。
-為了避免這種情況，DBMS 會定期進行 checkpoint 操作，將當前的資料庫狀態寫入硬碟，並在 log file 中記錄一個 checkpoint 記錄，表示在這個點之前的 log 都已經永久的應用到資料庫中。
-
-當資料庫故障時，DBMS 可以根據 checkpoint 來進行恢復，所有在 checkpoint 之前 commit 的交易都可以被視為已經持久化。
+在使用 WAL 時，log 會隨著時間不斷增長，導致在故障恢復時需要回放大量的 log，從而增加恢復時間。
+為了避免這種情況，DBMS 會定期進行 checkpoint 操作，將當前的髒頁寫入硬碟，並在 log file 中加上一個 checkpoint 記錄，表示在這個點之前的 log 都已經永久的應用到資料庫中。
 
 以下圖為例，在 checkpoint 之前 commit 完成的交易 T1 已經經被應用到資料庫中了，因此不需要做任何操作。
 而在 checkpoint 之後 commit 的交易 T2 則需要進行 redo，未 commit 的交易 T3 則需要進行 undo。
 
 <ImageModal src="/img/cmu15-445/c20/image-12.webp" caption="Checkpoints" />
 
-Checkpoint 最主要要考慮的問題是多久執行一次 checkpoint。
+Checkpoint 最需要考慮的問題是多久執行一次。
 如果過於頻繁，會導致效能下降，但如果太久才做一次，則會導致恢復時間過長。
 
 以 PostgreSQL 為例，它會在以下情況下觸發 checkpoint :
@@ -187,4 +185,4 @@ Blocking checkpoint 是一種最簡單的 checkpoint 實作方法，步驟如下
 - 刷新緩衝區 : 將當前記憶體中的所有日誌記錄和修改過的緩衝區寫到硬碟中
 - 記錄 checkpoint : 寫入一個 `<CHECKPOINT>` 記錄到日誌檔案中，並將其寫入硬碟
 
-但一般來說，blocking checkpoint 會導致系統停頓，因此較少使用。
+但一般來說，blocking checkpoint 會導致系統停頓，因此較少使用，我們會在下一節中討論其他更好的方法。
