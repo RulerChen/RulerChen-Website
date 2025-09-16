@@ -10,24 +10,28 @@ tags: [CMU15-445, CMU15-445 Projects]
   <title>CMU 15-445 2024Fall P0 C++ Primer</title>
 </head>
 
-## Problem Description
+這個作業的目標是實現一個常見的資料結構 Hyperloglog，並熟悉 C++ 的語法。
 
-這個版本是 2024 Fall 的版本，目標是實現一個常見的資料結構 Hyperloglog，並熟悉 C++ 的語法。
-
-如果想要快速上手專案架構，可以使用 AI，譬如 [deepwiki](https://deepwiki.com/cmu-db/bustub/1-overview)。
+對於已經熟悉 C++ 的人來說，我認為可以直接跳過這個作業，因為這個作業不會影響後續的作業內容。
 
 ## Learning Resource
 
+下面列出一些我覺得不錯的資源，可以幫助更快上手 C++ 和相關工具 :
+
 - [15-445 C++ Bootcamp](https://github.com/cmu-db/15445-bootcamp)
 - [Debug a C++ project in VS Code](https://www.youtube.com/watch?v=G9gnSGKYIg4)
-- [Makefile](https://seisman.github.io/how-to-write-makefile/overview.html)
-- [CMake](https://www.bilibili.com/video/BV14h41187FZ/?vd_source=0b8d45cc2260b9a7a9d948d819ac16f3)
+- [Makefile](https://seisman.github.io/how-to-write-makefile/overview.html) (Optional)
+- [CMake](https://www.bilibili.com/video/BV14h41187FZ/?vd_source=0b8d45cc2260b9a7a9d948d819ac16f3) (Optional)
 
 ## Environment Setup
 
-1. 我使用的環境是 WSL (Ubuntu 24.04) 和 VSCode
+這個作業最重要的是要能夠順利編譯和執行 C++ 的程式碼，並且能夠使用 debugger 來除錯。
+
+我的環境設定如下 :
+
+1. 環境是 WSL2 (Ubuntu 24.04) 和 VSCode
 2. 安裝 VSCode 套件 `C/C++ Extension Pack`、`clangd`、`CMake Tools`、`Clang-Format`
-3. 將 bustub clone 下來，並且回退到 2024 Fall 的 commit，這樣可以避免一些不必要的問題
+3. 將 bustub clone 下來，並且回退到 2024 Fall 的 commit，或是直接從 [release](https://github.com/cmu-db/bustub/releases/tag/v20241207-2024fall) 下載 zip 檔解壓縮
 
 ```bash
 git clone https://github.com/cmu-db/bustub.git
@@ -35,7 +39,7 @@ cd bustub
 git checkout f97256b88b20468c01023928b63f5693d697674c
 ```
 
-接著可以把 `.git` 檔案移除並接上自己的 git repo (注意不要公開 repo 在 github 上並且把 github action 關掉)
+4. 把 `.git` 移除並接上自己的 git repo (這堂課有要求不能公開解答，不然有機會被寫在 WALL OF SHAME 裡面)
 
 ```bash
 rm -rf .git
@@ -47,7 +51,7 @@ git remote add origin <your-git-repo>
 git push -u origin main
 ```
 
-4. 由於我使用的是 24.04，所以需要修改一下 `packages.sh` 的內容，並順便安裝 `clangd` 的套件。
+5. 由於我使用的是 Ubuntu 24.04，所以需要修改一下 `packages.sh` 的內容，並順便安裝 `clangd` 的套件
 
 ```bash title="build_support/packages.sh" showLineNumbers {10,33-34}
 install_linux() {
@@ -93,27 +97,23 @@ install() {
 }
 ```
 
-5. 安裝套件
+6. 安裝套件
 
 ```bash
 sudo build_support/packages.sh
 ```
 
-6. 嘗試編譯一下，看看有沒有問題
+7. 嘗試編譯一下，看看有沒有問題
 
 ```bash
 cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=/usr/bin/clang-14 -DCMAKE_CXX_COMPILER=/usr/bin/clang++-14 -B build
 ```
 
 ```bash
-cd build
+cd build && make -j`nproc`
 ```
 
-```bash
-make -j`nproc`
-```
-
-7. 設定 formatter 以及 cmake、clangd 等等
+8. 設定 formatter 以及 cmake、clangd 等等
 
 ```json title=".vscode/settings.json"
 {
@@ -136,13 +136,13 @@ make -j`nproc`
 }
 ```
 
-8. 接著設定 debugger，我使用的 debugger 是 `GDB`
+9. 安裝 debugger，我使用的 debugger 是 `GDB`
 
 ```bash
 sudo apt install gdb
 ```
 
-以下這個設定可以幫助我們顯示 STL 容器的內容 :
+10. 這個設定可以幫助我們顯示 STL 容器的內容
 
 ```json title=".vscode/launch.json"
 {
@@ -177,42 +177,117 @@ sudo apt install gdb
 
 之後如果要執行 debug，設定好斷點對著 test file 按 `F5` 即可。
 
-## Solution
+## Background
 
-P0 主要有兩個 task，第一個是實作基本的 Hyperloglog，第二個是實作 Presto 的 Hyperloglog，`.h` 和 `.cpp` 的檔案分別在 `src/include/primer` 和 `src/primer` 裡面。
+在開始寫之前，強烈建議先讀一下作業說明中有關 Hyperloglog 的說明，接下來我也會簡單介紹一下 Hyperloglog 的原理。
 
-我認為比較需要注意的是 C++ 中 `std::bitset` 的使用，這個資料結構可以用來儲存二進位的數字，並且可以用 `<<` 和 `>>` 來做位移運算，也需要特別注意 `std::bitset` 的 `[0]` 指的是最右邊的 bit，而不是最左邊的 bit。
+HyperLogLog 是一種用來估算集合中不重複元素數量的資料結構。
+它最大的優勢是能夠在固定空間與常數時間內完成估算，非常適合用於大規模資料處理。
 
-### Task 1: Hyperloglog
+舉例來說，假設我們想要計算過去一週有多少不同使用者造訪過我們的網站。傳統作法可能是 :
 
-大致說明一下 Hyperloglog 的實作，這個資料結構主要是用來估計不重複的元素的數量，並且可以在 O(1) 的時間和固定的空間內完成。
+- 使用一個 set 儲存所有使用者 ID
+- 將所有紀錄排序，再透過類似 merge 的方法來計算不重複的 ID
 
-首先我們會將所有的元素 hash 成一個 64 bits 的整數，然後將這個整數分成兩個部分，前面的 `n_bits` 代表桶的 index (總共有 $2^{nbits}$ 個桶)，在這些數字之後，我們就要開始數 `leading zeros` 的數量直到遇到第一個 `1` 為止 (包含 `1`)，再把 `leading zeros` 取最大值之後放進桶裡面，最後再用這些桶來估計不重複的元素的數量。
+這些方法在理論上可行，但在使用者數量龐大時，會消耗大量的記憶體與 CPU，因此實務上難以應用。
 
-這個 task 有四個 function 需要實作，分別是 `HyperLogLog(inital_bits)`, `PositionOfLeftmostOne()`, `AddElem(val)`, 和 `ComputeCardinality()`，並且有兩個寫好的 function，分別是 `ComputeBinary(hash_t hash)` 和 `CalculateHash(...)`，這兩個 function 分別是用來將 hash 值轉成二進位的數字和計算 hash 值的。
+### Min Hash
 
-- `HyperLogLog(int initial_bits)` : 這個 constructor 會初始化桶的數量，並且將所有的桶的值設成 0，需要注意的是需要處理傳進來的 `n_bits` 有可能會是負數的情況
-- `PositionOfLeftmostOne()` : 這個 function 會計算二進位表示法中從 bucket_index 結束後的下一個 bit 開始到第一個 `1` 的位置，要特別注意的是 `1` 的位置也需要計算，並且如果 `n_bits` 為 0，也需要保留第一個 bit 當作 index
-- `AddElem(val)` : 這個 function 會將傳進來的 `val` 做 hash，然後將這個 hash 值轉成二進位的數字，接著計算桶的 index 和 `leading zeros` 的數量，最後取最大值放進桶裡面
-- `ComputeCardinality()` : 這個 function 會回傳計算後的 cardinality，依照公式來寫即可，最後記得用 `std::floor` 來取整數，並且要注意 `n_bits` 為 0 的情況
+估算不重覆數字的方法有很多，其中一個做法是將數字 hash 成一個 0~1 之間的浮點數，然後估計這個不重覆的數量為 $\frac{1}{min\_hash}$，其中 `min_hash` 是所有 hash 值中最小的那個。
 
-### Task 2: Presto Hyperloglog
+這個做法的問題是有可能出現極端值，導致結果誤差很大。
 
-這個 task 主要是要實作 Presto 的 Hyperloglog，是一種 Hyperloglog 的修改版。
+<ImageModal src="/img/cmu15-445/p0/image.webp" caption="Min Hash" />
 
-在這個修改版中，`leading zeros` 的儲存和計算方式都有所改變。
-儲存會分成兩個部分，分別是 4 bits 的 `dense_bucket_` 跟 3 bits 的 `overflow_bucket_`。
-計算方式是將 `leading zeros` 改成從最右邊開始取值到第一個 `1` 的位置 (不包含 `1`)，然後將這個值放進 `dense_bucket_` 裡面，如果這個值超過 4 bits，再把多餘的部分放到 `overflow_bucket_` 裡面。
+### Probabilistic Counting
 
-這個 task 主要有三個 function 需要實作，分別是 `PrestoHyperLogLog(initial_bits)`、`AddElem(val)` 和 `ComputeCardinality()`，這三個 function 的邏輯和 Hyperloglog 的差不多，只是要注意 `dense_bucket_` 和 `overflow_bucket_` 的處理。
+為了降低這個變異值，因此有了 probabilistic counting 的做法。
+這個做法是將 hash 值轉成二進位的數字，然後計算從最左邊開始數到第一個 `1` 為止的 `leading zeros` 的數量。
+假設所有集合中最大的 `leading zeros` 為 `k`，那麼我們就可以估計這個不重覆的數量為 $2^k$。
 
-- `PrestoHyperLogLog(int initial_bits)` : 與 task 1 類似，只是改成要初始化 `dense_bucket_`
-- `AddElem(val)` : 與 task 1 類似，只是要注意將 `leading zeros` 的計算方式改成從最右邊開始取值到第一個 `1` 的位置 (不包含 `1`)
-- `ComputeCardinality()` : 與 task 1 類似，只是將 `overflow_bucket_` 左移 4 bits 再相加
+這個做法在一定程度上降低了變異值，但仍然有可能出現極端值，導致結果誤差很大。
+
+<ImageModal src="/img/cmu15-445/p0/image-1.webp" caption="Probabilistic Counting" />
+
+### Multiple Hash Functions
+
+為了減輕單一資料的影響，後來有人提出了使用多個獨立的 hash function 的做法。
+通過使用多個獨立的 hash function，我們可以得到多個不同的 `leading zeros` 數量，然後取這些數量的平均值來估計不重覆的數量。
+
+缺點是計算成本較高，因為每筆資料都需要經過多次 hash。
+
+<ImageModal src="/img/cmu15-445/p0/image-2.webp" caption="Multiple Hash Functions" />
+
+### LogLog
+
+為了降低計算量，學者們提出了將 hash 值分成多個部分的做法，也就是 `LogLog`。
+
+它將 hash 值分成前 `n_bits` 個 bits 跟後面的 bits，前面的 `n_bits` 個 bits 用來決定桶的 index，後面的 bits 用來計算 `leading zeros` 的數量。
+這樣子我們就可以使用單一的 hash function 來達到類似多個獨立 hash function 的效果。
+
+如下圖所示，前面 4 個 bits (1011 -> 11) 用來決定桶的 index，後面的 bits (0111...100000) 用來計算 `leading zeros` 的數量 (5)。
+作業裡面是從前面開始算，這裡是從後面。
+
+<ImageModal src="/img/cmu15-445/p0/image-3.webp" caption="LogLog" />
+
+我們可以用以下的公式來計算基數 (cardinality) :
+
+$$
+
+Cardinality_{LogLog} = Constant * m * 2^{\frac{1}{m} \sum_{j=1}^{N} R_j}
+
+$$
+
+Constant 經過統計推導出來的值為 0.79402，m 為桶的數量，$R_j$ 為第 j 個桶中的 `leading zeros` 的數量，這樣的結果可以使誤差到達到 $ \frac{1.3}{\sqrt{m}} $。
+
+### SuperLogLog & HyperLogLog
+
+後續又有進一步改良版本，有名的有 `SuperLogLog` 和 `HyperLogLog` 兩種 :
+
+- SuperLogLog : 丟棄最大 30% 的桶值再取平均，可以使誤差到達 $ \frac{1.05}{\sqrt{m}} $
+- HyperLogLog : 使用調和平均 (harmonic mean) 來取代算術平均 (arithmetic mean)，可以使誤差到達 $ \frac{1.04}{\sqrt{m}} $
+
+而這次的作業要實作的就是 HyperLogLog。
+
+## Task 1 - Hyperloglog
+
+首先我們會將所有的元素 hash 成一個 64 bits 的整數，然後將這個整數分成兩個部分，右邊數來前面的 `n_bits` 代表桶的 index (總共有 $2^{n\_bits}$ 個桶)，在這些數字之後，我們就要開始數 `leading zeros` 的數量直到遇到第一個 `1` 為止 (包含 `1`)，再把 `leading zeros` 取最大值之後放進桶裡面，最後再用這些桶來估計不重複的元素的數量。
+
+舉例來說，如果 `n_bits` 為 4，然後 hash 出來的值為 `101101110000011111...`，那麼 bucket index 為 `1011` (11)，`leading zeros` 為 `01` (2)。
+
+這個 task 有兩個寫好的 function，分別是 :
+
+- `CalculateHash` : 將傳進來的值做 hash，並回傳 `unsigned long` (64 bits)的整數
+- `ComputeBinary` : 將 hash 值轉成二進位的數字
+
+在 `AddElem` 中，我們會呼叫這兩個 function 來取得二進位的表示法。
+
+有四個 function 需要實作，分別是 :
+
+- `HyperLogLog` : 初始化桶的數量，並且將所有的桶的值設成 0，需要注意的是需要處理傳進來的 `n_bits` 有可能會是負數的情況
+- `PositionOfLeftmostOne` : 計算二進位表示法中從 bucket_index 結束後的下一個 bit 開始到第一個 `1` 的位置，要特別注意的是 `1` 的位置也需要計算，並且如果 `n_bits` 為 0，也需要保留第一個 bit 當作 index
+- `AddElem` : 使用提供的函數將 `val` 轉成 `std::bitset`，接著計算桶的 index 和 `leading zeros` 的數量，最後取最大值放進桶裡面
+- `ComputeCardinality` : 回傳計算後的 cardinality，依照公式來寫即可，最後記得用 `std::floor` 來取整數，並且要注意 `n_bits` 為 0 的情況
+
+## Task 2 - Presto Hyperloglog
+
+Task 2 主要是要實作 Presto Hyperloglog，是一種 Hyperloglog 的修改版，可以優化空間使用率。
+
+在這個修改版中，儲存會分成兩個部分，分別是 `dense_bucket_` 跟 `overflow_bucket_`，我們會將最後 4 bits 放到 `dense_bucket_`，剩下的 bits 放到 `overflow_bucket_`。
+
+舉例來說，如果 `n_bits` 為 4，然後 hash 出來的值為 `1011...0000100001`，那麼 dense bucket 為 `0001` (1)，overflow bucket 為 `010` (2)。
+
+這個 task 主要有三個 function 需要實作，這三個的邏輯跟 task 1 的差不多，只需要注意 `dense_bucket_` 和 `overflow_bucket_` 的處理。
+
+- `PrestoHyperLogLog` : 與 task 1 類似，只是改成要初始化 `dense_bucket_`
+- `AddElem` : 與 task 1 類似，只是要注意計算方式改成從最右邊開始取值到第一個 `1` 的位置 (不包含 `1`)
+- `ComputeCardinality` : 與 task 1 類似，只是將 `overflow_bucket_` 左移 4 bits 再相加
+
+## Common Mistakes
+
+我覺得這個作業需要注意的是類別，特別是 `hash_t` 是 `unsigned long` (無正負數 64 bits)，要特別小心 overflow 的問題。
 
 ## Submit
-
-如果要註冊 GradeScope，可以參考 [這個網站](https://blog.csdn.net/qq_40878302/article/details/136005292) 跟 [官網](https://15445.courses.cs.cmu.edu/fall2024/faq.html)。
 
 1. 將 `/test/primer/hyperloglog_test.cpp` 的所有 test case 中的 `DISABLE_` 都移除，舉例來說 :
 
@@ -226,29 +301,7 @@ TEST(HyperLogLogTest, DISABLE_BasicTest1) {}
 TEST(HyperLogLogTest, BasicTest1) {}
 ```
 
-這樣就可以執行所有的 test case 了。
-
-2. 重新編譯並測試所有的 test case
-
-```bash
-cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=/usr/bin/clang-14 -DCMAKE_CXX_COMPILER=/usr/bin/clang++-14 -B build
-```
-
-```bash
-cd build
-```
-
-```bash
-make -j$(nproc) hyperloglog_test
-```
-
-```bash
-./test/hyperloglog_test
-```
-
-並確認所有的 test case 都能通過，代表成功完成了這個作業。
-
-3. 修改 `CMakeLists.txt`，將 `P0_FILES` 設定為以下 (需要重新執行 `cmake` 指令來更新 makefile) :
+2. 修改 `CMakeLists.txt`，將 `P0_FILES` 設定為以下 (也可以順便把 `P1_FILES` 也加入這個，後面會用到) :
 
 ```CMake title="CMakeLists.txt" showLineNumbers {6}
 set(P0_FILES
@@ -260,13 +313,27 @@ set(P0_FILES
 )
 ```
 
-4. 進行排版，確定消除所有 error 和 warning (特別是 check-clang-tidy-p0) :
+3. 排版，確定消除所有 error 和 warning (可以忽略 `DeprecationWarning: module 'sre_compile' is deprecated` 的 warning) :
 
 ```bash
-make format
-make check-lint
-make check-clang-tidy-p0
+make format && check-format && make check-lint && make check-clang-tidy-p0
 ```
+
+4. 編譯並測試所有的 test case
+
+```bash
+cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=/usr/bin/clang-14 -DCMAKE_CXX_COMPILER=/usr/bin/clang++-14 -B build
+```
+
+```bash
+cd build
+```
+
+```bash
+make -j$(nproc) hyperloglog_test && ./test/hyperloglog_test
+```
+
+並確認所有的 test case 都能通過。
 
 5. 簽名，會產生一個 `GRADESCOPE.md` :
 
@@ -280,4 +347,14 @@ python3 gradescope_sign.py
 make submit-p0
 ```
 
-7. 上傳 `.zip` 檔到 GradeScope
+7. 註冊 GradeScope，可以參考 [官網](https://15445.courses.cs.cmu.edu/fall2024/faq.html) 的 Q7。
+
+8. 上傳 `.zip` 檔到 GradeScope
+
+## Takeaways
+
+這是我第一次接觸 C++ 的專案，之前都只有用來寫 leetcode 題目，對於 C++ 如何建構專案花了蠻多時間在研究的，不然我覺得純寫 code 的時間應該 1-2 天可以搞定 (吧?)。
+
+## References
+
+- [HyperLogLog in Presto: A significantly faster way to handle cardinality estimation](https://engineering.fb.com/2018/12/13/data-infrastructure/hyperloglog/)
