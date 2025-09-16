@@ -10,19 +10,17 @@ tags: [CMU15-445, CMU15-445 Projects]
   <title>CMU 15-445 2024Fall P1 Buffer Pool Manager</title>
 </head>
 
-## Problem Description
+在這個 project 中，我們需要實現一個 buffer pool manager，總共有 3 個 task :
 
-在這個 project 中，我們需要實現一個 buffer pool manager，總共有 3 個 Task :
+- LRU-K Replacement Policy
+- Disk Scheduler
+- Buffer Pool Manager
 
-- LRU-K Replacement Policy : 修改 `/src/buffer/lru_k_replacer.cpp` 來實現 LRU-K replacement policy
-- Disk Scheduler : 修改 `/src/storage/disk/disk_scheduler.cpp` 來實現 disk scheduler
-- Buffer Pool Manager : 修改 `/src/buffer/buffer_pool_manager.cpp` 跟 `/src/storage/page/page_guard.cpp` 來實現 buffer pool manager
+我採取的做法都是只求通過不求效能，如果想要進行效能優化，可以參考最下方 References 中的文章。
 
-## Solution
+## Background
 
-我採取的做法都是只求通過不求效能，如果想要進行效能優化，可以參考最下方 Reference 中的文章。
-
-### Task 1: LRU-K Replacement Policy
+## Task 1 - LRU-K Replacement Policy
 
 這個 Task 主要是要實現 LRU-K replacement policy，用於判斷哪個頁面要被移出記憶體。
 
@@ -35,13 +33,10 @@ tags: [CMU15-445, CMU15-445 Projects]
 - `Size() -> size_t` : 直接回傳 `curr_size_`
 
 ```bash
-cd build
-make lru_k_replacer_test -j$(nproc)
-
-./test/lru_k_replacer_test
+make lru_k_replacer_test -j$(nproc) && ./test/lru_k_replacer_test
 ```
 
-### Task 2: Disk Scheduler
+## Task 2 - Disk Scheduler
 
 這個 Task 主要是要實現 disk scheduler，主要是用來處理 IO 的請求，將請求排到 queue 中，最後背景執行的 worker thread 會將請求處理完。
 
@@ -53,13 +48,10 @@ make lru_k_replacer_test -j$(nproc)
 以及要注意註解掉建構子中的 throw error，這樣才能正常執行 test。
 
 ```bash
-cd build
-make disk_scheduler_test -j$(nproc)
-
-./test/disk_scheduler_test
+make disk_scheduler_test -j$(nproc) && ./test/disk_scheduler_test
 ```
 
-### Task 3: Buffer Pool Manager
+## Task 3 - Buffer Pool Manager
 
 這個 Task 應該是這個 project 中最難的部分，主要是要實現 Page Guard 跟 Buffer Pool Manager 的功能。
 
@@ -194,27 +186,16 @@ void WritePageGuard::Drop() {
 ## Submit
 
 ```bash
-cd build
-
-make page_guard_test -j$(nproc)
-./test/page_guard_test
-
-make buffer_pool_manager_test -j$(nproc)
-./test/buffer_pool_manager_test
-```
-
-```bash
-make format
-make check-format
-make check-lint
-make check-clang-tidy-p1
+make format && make check-format && make check-lint &&make check-clang-tidy-p1
 ```
 
 ```bash
 make submit-p1
 ```
 
-## Reference
+## Takeaways
+
+## References
 
 - [CMU 15445 Project 1](https://4ever-xxxl.github.io/cmu-15445-project-1/)
 - [CMU 15-445 2023 P1 优化攻略](https://www.aneureka.com/posts/cmu-15445-p1-opt)

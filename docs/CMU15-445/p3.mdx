@@ -10,8 +10,6 @@ tags: [CMU15-445, CMU15-445 Projects]
   <title>CMU 15-445 2024Fall P3 Query Execution</title>
 </head>
 
-## Problem Description
-
 在這個 project 中，我們需要實現一個 query execution engine，總共有 4 個 Task :
 
 - Access Method Executors
@@ -19,7 +17,7 @@ tags: [CMU15-445, CMU15-445 Projects]
 - HashJoin Executor and Optimization
 - External Merge Sort + Limit Executors
 
-## Overview
+## Background
 
 - `src/tools/shell/shell.cpp`: 這是 shell 的入口點，負責解析 SQL 語句並調用相應的 executor
 - `src/common/bustub_instance.cpp`: 這是 Bustub 的實例，負責管理資料庫的連接和執行 SQL 語句，`ExecuteSql()` 函數是執行 SQL 的主要入口
@@ -47,24 +45,23 @@ tags: [CMU15-445, CMU15-445 Projects]
 
 而在這次作業中，我們主要就是實作各個 Executor 的 `Init()` 跟 `Next()` 函數，來完成 SQL 的執行。
 
-## Solution
+## Task 1 - Access Method Executors
 
-不要使用以下的寫法，可能會導致模板函數無法正確解析:
+## Task 2 - Aggregation & Join Executors
 
-```cpp
-auto [key, rid] = *iter_;
-```
+## Task 3 - HashJoin Executor and Optimization
+
+## Task 4 - External Merge Sort + Limit Executors
 
 ## Submit
 
-如果要執行 SQL，可以使用以下指令或是到[網站](https://15445.courses.cs.cmu.edu/fall2024/bustub/)上執行
+如果要執行 SQL，可以使用以下指令或是到[網站](https://15445.courses.cs.cmu.edu/fall2024/bustub/)上執行 :
 
 ```bash
-cd build && make -j$(nproc) shell
-./bin/bustub-shell
+make -j$(nproc) shell && ./bin/bustub-shell
 ```
 
-測試的方式有點麻煩，要自己一個一個試
+測試的方式有點麻煩，要自己一個一個試 :
 
 ```bash
 make -j$(nproc) sqllogictest
@@ -73,17 +70,16 @@ make -j$(nproc) sqllogictest
 ```
 
 ```bash
-make format
-make check-format
-make check-lint
-make check-clang-tidy-p3
+make format && make check-format && make check-lint && make check-clang-tidy-p3
 ```
 
 ```bash
 make submit-p3
 ```
 
-## Reference
+## Takeaways
+
+## References
 
 - [CMU Fall 2024 15-445 P3[待优化]&PaperNotes](https://zhuanlan.zhihu.com/p/5843407385)
 - [做个数据库：2022 CMU15-445 Project3 Query Execution](https://zhuanlan.zhihu.com/p/587566135)
