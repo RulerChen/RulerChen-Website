@@ -58,7 +58,7 @@
 <!-- -->
 <p>今天應該就是我待在 Carousell 的 last day 了吧，說起來也在這個地方待了快整整六個月，感覺也該久違的寫一下 blog 紀錄一下這段時間的實習生活。</p>
 <p>整體來說感覺這次的實習沒有甚麼很充實的被事情塞滿的感覺，但可以看到一個快要沒落的公司和一個組在經歷 reorg 和裁員之後的變化，同時也能認識到很好的同事跟了解一些公司的 domain know how，感覺也是一個蠻特別的經驗。</p>
-<figure class="image-modal-container"><img src="https://rulerchen.github.io/RulerChen-Website/img/blog/carousell-1.jpg" alt="" width="100%" class="image-modal-thumbnail" style="cursor:pointer" loading="lazy"><figcaption class="image-modal-caption">Carousell mission in the office</figcaption></figure>
+<figure class="image-modal-container"><div class="image-modal-wrapper" style="width:100%"><div class="image-modal-skeleton" style="width:100%"><div class="image-modal-skeleton-shimmer"></div></div><img src="https://rulerchen.github.io/RulerChen-Website/img/blog/carousell-1.jpg" alt="" width="100%" class="image-modal-thumbnail image-loading" style="cursor:pointer;opacity:0" loading="lazy"></div><figcaption class="image-modal-caption">Carousell mission in the office</figcaption></figure>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="前情提要">前情提要<a href="https://rulerchen.github.io/RulerChen-Website/blog/CarousellBackendIntern/#%E5%89%8D%E6%83%85%E6%8F%90%E8%A6%81" class="hash-link" aria-label="前情提要的直接連結" title="前情提要的直接連結">​</a></h2>
 <p>從大三下開始我就在找我的下一份實習，但由於之前的履歷我把入學日期寫錯了，導致幾乎都沒有收到任何回信，改了之後才成功在大四上找到這份實習。</p>
 <p>在投上一份實習的時候，我其實沒有甚麼特別的期待，就只是單純想要找一份實習來打發時間，當時的我還是個大二的菜鳥，對未來沒有想法，也不知道自己能幹麼，所以有公司讓我去我就也沒想太多就直接去了。
