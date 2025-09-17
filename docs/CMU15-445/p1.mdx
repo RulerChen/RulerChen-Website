@@ -26,11 +26,11 @@ tags: [CMU15-445, CMU15-445 Projects]
 
 不考慮效能的話只需要全部都使用 `std::scoped_lock` 即可，可以順便對 `LRUKNode` 寫一些 get function 來方便取得資料。
 
-- `Evict() -> std::optional<frame_id_t>` : 優先度是先找有 inf 的，都是 inf 就比第一次讀取的時候哪個最早，如果都沒有 inf 的話就也找第一次讀取的時候哪個最早 (`this->history_.back()`)
-- `RecordAccess(frame_id_t frame_id)` : 更新 `history_` 中的資料
-- `Remove(frame_id_t frame_id)` : 檢查是否是 `evictable` 之後就可以直接刪除
-- `SetEvictable(frame_id_t frame_id, bool set_evictable)` : 判斷 `IsEvictable` 的情況並刪除即可
-- `Size() -> size_t` : 直接回傳 `curr_size_`
+- `Evict` : 優先度是先找有 inf 的，都是 inf 就比第一次讀取的時候哪個最早，如果都沒有 inf 的話就也找第一次讀取的時候哪個最早 (`this->history_.back()`)
+- `RecordAccess` : 更新 `history_` 中的資料
+- `Remove` : 檢查是否是 `evictable` 之後就可以直接刪除
+- `SetEvictable` : 判斷 `IsEvictable` 的情況並刪除即可
+- `Size` : 直接回傳 `curr_size_`
 
 ```bash
 make lru_k_replacer_test -j$(nproc) && ./test/lru_k_replacer_test
