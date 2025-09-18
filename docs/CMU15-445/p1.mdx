@@ -20,17 +20,42 @@ tags: [CMU15-445, CMU15-445 Projects]
 
 ## Background
 
+這個 project 的背景是模擬資料庫系統中 buffer pool manager 的運作，主要是用來管理記憶體中的頁面。
+
+在開始之前，我們可以先來看一下 bustub 的 IO 架構圖 :
+
+<ImageModal src="/img/cmu15-445/p1/IO workflow.webp" caption="Bustub IO Workflow" />
+
+用文字來描述的話，大致流程如下 :
+
+1. 上層呼叫 `BufferPoolManager` 的 API 來獲得 `PageGuard`
+2. `BufferPoolManager` 會先檢查 page 是否在 buffer pool 中，並把 metadata 放在 `FrameHeader` 中 (包含 pin_count、is_dirty 等等)
+3. 如果 page 不在 buffer pool 中，`BufferPoolManager` 會先檢查 free list 是否有空間，如果沒有的話就呼叫 `LRUKReplacer` 來找一個 page 來 evict，`LRUKReplacer` 會根據 `LRUKNode` 中的歷史紀錄來決定要 evict 哪個 page
+4. 如果要 evict 的 page 是 dirty 的話 (或其他需要 flush 的情況)，就會傳送一個 `DiskRequest` 給 `DiskScheduler`，`DiskScheduler` 會把 request 放到 queue 中，並由背景的 worker thread 來處理
+5. 接著 worker thread 會呼叫 `DiskManager` 來讀取 / 寫入資料到硬碟
+
 ## Task 1 - LRU-K Replacement Policy
 
-這個 Task 主要是要實現 LRU-K replacement policy，用於判斷哪個頁面要被移出記憶體。
+Task 1 的目標是實現 LRU-K replacement policy，主要包括 `LRUKReplacer` 跟 `LRUKNode` 兩個 class。
 
-不考慮效能的話只需要全部都使用 `std::scoped_lock` 即可，可以順便對 `LRUKNode` 寫一些 get function 來方便取得資料。
+基本上就是維護 `node_store_` 跟 `LRUKNode` 中的 `history_` 就好，可以順便對 `LRUKNode` 寫一些 get function 來方便取得資料。
 
-- `Evict` : 優先度是先找有 inf 的，都是 inf 就比第一次讀取的時候哪個最早，如果都沒有 inf 的話就也找第一次讀取的時候哪個最早 (`this->history_.back()`)
+LRU-K 的邏輯如下 :
+
+1. 當一個 page 被 access 的時候，就會把當前的 timestamp 加到 `history_` 中，當 `history_` 的大小超過 K 的時候，就會把最早的 timestamp 移除
+2. 當要 evict 的時候，會先找出所有 `IsEvictable` 的 node，然後分成兩組，一組是 `history_` 中有 K 個 timestamp 的，另一組是不滿 K 個的
+3. 會優先排除不滿 K 個 timestamp 的 node，找出這組中最後一個 timestamp 最早的 node 來 evict
+4. 如果所有 node 都滿 K 個 timestamp 的話，就在這組中找出最後一個 timestamp 最早的 node 來 evict
+
+實作上大致如下，其實都非常直觀，沒有特別需要注意的地方 :
+
+- `Evict` : 主要是實作上面提到的邏輯
 - `RecordAccess` : 更新 `history_` 中的資料
-- `Remove` : 檢查是否是 `evictable` 之後就可以直接刪除
 - `SetEvictable` : 判斷 `IsEvictable` 的情況並刪除即可
+- `Remove` : 檢查 `IsEvictable` 之後就可以直接刪除
 - `Size` : 直接回傳 `curr_size_`
+
+測試這個 task 的指令如下 :
 
 ```bash
 make lru_k_replacer_test -j$(nproc) && ./test/lru_k_replacer_test
@@ -38,14 +63,14 @@ make lru_k_replacer_test -j$(nproc) && ./test/lru_k_replacer_test
 
 ## Task 2 - Disk Scheduler
 
-這個 Task 主要是要實現 disk scheduler，主要是用來處理 IO 的請求，將請求排到 queue 中，最後背景執行的 worker thread 會將請求處理完。
+Task 2 的目標是實現 disk scheduler，主要是要實作 `DiskScheduler` 中的兩個 function :
 
-需要修改兩個 function :
-
-- `Schedule(DiskRequest r)` : 只需要將 r 使用 `std::move` 丟到 `request_queue_` 中即可
-- `StartWorkerThread()` : 設計一個沒有終止的 while 迴圈，並將 request 依據 read / write 的情況來執行，最後再設定 callback 為 true 即可
+- `Schedule` : 只需要將 r 丟到 `request_queue_` 中即可
+- `StartWorkerThread` : 設計一個 while 迴圈並執行 request，最後再設定 callback 為 true 即可，拿到 `std::nullopt` 就可以跳出迴圈
 
 以及要注意註解掉建構子中的 throw error，這樣才能正常執行 test。
+
+測試這個 task 的指令如下 :
 
 ```bash
 make disk_scheduler_test -j$(nproc) && ./test/disk_scheduler_test
@@ -53,38 +78,59 @@ make disk_scheduler_test -j$(nproc) && ./test/disk_scheduler_test
 
 ## Task 3 - Buffer Pool Manager
 
-這個 Task 應該是這個 project 中最難的部分，主要是要實現 Page Guard 跟 Buffer Pool Manager 的功能。
+Task 3 的目標是實作 buffer pool manager，主要會用到的 class 有 `PageGuard`、`BufferPoolManager`、`FrameHeader`。
+這個 task 相對於前兩個要花蠻多時間思考的，我認為可以先思考在單線程下的邏輯，最後再來處理有關鎖的問題。
 
-Page Guard 應該是 2024 版本才有的新東西，它是一個可以對記憶體進行讀寫的資料結構，是 Buffer Pool Manager 中用來保證安全讀寫頁面 (follow RAII) 的工具。
+`PageGuard` 是一個可以對 frame 進行讀寫的 class，分成 `ReadPageGuard` 跟 `WritePageGuard` 兩個 class，只有拿到 `PageGuard` 才能對 frame 進行讀寫，如 `WritePageGuard::GetDataMut()` 會回傳可修改的 `char[]`。
 
-Buffer Pool Manager 則是用來管理 buffer pool 的資料結構，主要維護 page 跟 frame 的對應關係，除此之外也包含了 `replacer_` 跟 `disk_scheduler_` 來做頁面替換以及硬碟的讀寫。
+同時，這個 class 還需要搭配 `FrameHeader` 中的 `rwlatch_` 來確保多線程下的安全性，我們會在後面討論這個部分。
 
-我們先把在單線程下的功能寫好，然後再來討論鎖的問題，我們總共要處理以下幾個 function :
+兩個 class 的邏輯大致相同 (只有鎖的種類不同而已)，這裡以 `ReadPageGuard` 為例，主要包含以下幾個 function :
 
-- `ReadPageGuard::ReadPageGuard()` : 取得 frame\_->rwlatch 的共享鎖，並把 is_valid 設定為 true
-- `ReadPageGuard::ReadPageGuard(ReadPageGuard &&that)` : 先 Drop 掉原本 PageGuard 的資料，再使用移動語意來把資料移過來，特別注意需要先檢查 this 跟 that 是否相同，以及把舊的 is_valid 設定為 false
-- `ReadPageGuard::operator=(ReadPageGuard &&that) -> ReadPageGuard &` : 類似前面
-- `ReadPageGuard::Drop()` : 先檢查 is_valid 是否為 true，如果是的話處理 pin_count 跟 SetEvictable 的情況，然後再把 is_valid 設定為 false
+- `ReadPageGuard` : 取得 frame_->rwlatch 的鎖，並把 is_valid 設定為 true
+- `ReadPageGuard(ReadPageGuard &&that)` : `PageGuard` 只能被 move 不能被 copy (這是為了避免資源管理上的問題)，所以我們需要實作 move constructor，主要是把 that 的資料搬過來，然後把 that 的 is_valid 設定為 false
+- `operator=` : 類似前面
+- `Drop` : 先檢查 is_valid 是否為 true，如果是的話處理 pin_count 跟 SetEvictable 的情況，然後再把 is_valid 設定為 false
 
-WritePageGuard 的部分大部分跟 ReadPageGuard 一樣，只是要改成使用獨佔鎖。
+`BufferPoolManager` 則是用來管理 buffer pool 的 class，主要維護 page 跟 frame 的對應關係 (`page_table_`)，除此之外也包含了 `replacer_` 跟 `disk_scheduler_` 來做頁面替換以及硬碟的讀寫。
 
-- `NewPage() -> page_id_t` : 把 next*page_id +1 之後使用 disk_scheduler*->IncreaseDiskSpace() 新增空間即可
-- `DeletePage(page_id_t page_id) -> bool` : 先確定這個 page 有在 page_table 中，接著再檢查 pin_count 是否為 0，然後再檢查 is_dirty 看是否需要 FlushPage，最後再 Reset() 即可
-- `CheckedWritePage(page_id_t page_id) -> std::optional<WritePageGuard>`
-- `CheckedReadPage(page_id_t page_id) -> std::optional<ReadPageGuard>` :
+主要需要實作的 function 如下 :
 
-  這兩個函數是這個 Task 最重要的函數，都分成三種情況 :
-  - 這個 page 已經在 buffer pool 中了，那我們就要更新他的資料 (pin_count, evictable, recordaccess) 並回傳
-  - page_id 不在 buffer pool 中，但是 free_frame 中有空間，那我們就可以 pop_front 一個 frame，然後一樣更新 metadata
-  - page_id 不在 buffer pool 中，free_frame 也沒有空間，那我們就要使用 lru_k_replacer 來 evict 一個 frame，然後一樣更新 metadata
+- `NewPage` : 把 `next_page_id` +1 之後使用 `disk_scheduler_->IncreaseDiskSpace` 新增 page 即可
+- `DeletePage` : 先確定這個 page 有在 `page_table` 中，接著再檢查 pin_count 是否為 0，然後再檢查 is_dirty 看是否需要 FlushPage，最後再呼叫 `FrameHeader->Reset` 即可
+- `CheckedWritePage` & `CheckedReadPage` : 這兩個函數是這個 task 最重要的函數，實作上也非常類似，主要邏輯如下 :
+  - 如果這個 page 已經在 buffer pool 中了，那就要更新它的 metadata (pin_count, evictable, recordaccess)
+  - 如果 `page_id` 不在 buffer pool 中，但是 `free_frame` 中有空間，那就可以 pop_front 一個 frame，然後更新 metadata
+  - 如果 `page_id` 不在 buffer pool 中，且 `free_frame` 也沒有空間，那我們就要使用 `replacer_` 來 evict 一個 frame，然後一樣更新 metadata
+- `FlushPage` : 檢查 `page_id` 是否在 `page_table` 中，然後檢查 `is_dirty` ，可以使用 `disk_scheduler_` 來把資料寫回硬碟，這個函數基本可以假設呼叫它的人都有 bpm 鎖，所以不需要再獲取
+- `FlushAllPages` : 遍歷 `page_table` 中的資料，然後使用 `FlushPage` 來寫回硬碟
+- `GetPinCount` : 檢查 `page_id` 是否在 `page_table` 中，然後回傳 `pin_count`
 
-- `FlushPage(page_id_t page_id) -> bool` : 檢查 page_id 是否在 page_table 中，然後檢查 is_dirty ，可以使用 disk_scheduler 來把資料寫回 disk，不用特別使用 bpm 的大鎖
-- `FlushAllPages()` : 遍歷 page_table 中的資料，然後使用 FlushPage 來寫回 disk
-- `GetPinCount(page_id_t page_id)` : 一樣遍歷檢查即可
+討論完基本功能之後就可以開始思考 concurrency 的問題。
+這個 task 有兩個鎖，一個是 bpm 的鎖，另一個是 frame 的鎖，我們需要確保這兩個鎖在使用上不會發生 deadlock。
 
-討論完基本功能之後我認為最重要的部分就是 concurrency 的問題，需要注意到在這個 Task 中我們有兩個鎖，一個是 bpm 的大鎖，另一個是 frame 的小鎖，我們需要確保這兩個鎖在使用上不會發生 deadlock。
+這部分我覺得 [這篇文章](https://zhuanlan.zhihu.com/p/828933572) 有很詳細的說明，我也是參考這篇文章的做法來實作，這裡就簡單說明一下。
 
-我們可以從提供的 `DeadlockTest` 來尋找方向，這個測試如下 :
+這篇文章列出了三個需要注意的地方 :
+
+1. `pin_count_` 跟 `rwlatch_` 的順序要遵守 pin -> lock -> unlock -> unpin 的順序
+2. 用 `bpm_latch_` 保護 `pin_count_` 跟 `SetEvictable` 的更新
+3. 獲取 `rwlatch_` 的時候不能同時持有 `bpm_latch_`
+
+有關於第一點可以用反例來說明。
+如果順序是先 lock 在 pin 的話，代表順序如下 :
+
+1. T1 拿到 frame 0 的鎖
+2. T1 執行 `pin_count_++`
+3. T1 做了一些事情後， `pin_count--`
+4. T1 放掉 frame 0 的鎖
+5. T2 拿到 frame 0 的鎖
+
+仔細思考的話可以發現，T1 在第 3 步驟的時候，`pin_count_` 可能會變成 0，代表這段時間開始到 T2 拿到鎖之前，這個 frame 可能會被 evict 掉，導致 T2 拿到的 frame 是已經被 evict 掉的 frame。
+
+第二點理解起來比較簡單，就是因為 `pin_count_` 跟 `is_evictable_` 需要是原子操作，所以需要用 `bpm_latch_` 來保護。
+
+第三點可以用測試案例 `DeadlockTest` 來解釋，這個測試如下 :
 
 ```cpp title="test/buffer/buffer_pool_manager_test.cpp"
 TEST(BufferPoolManagerTest, DeadlockTest) {
@@ -128,60 +174,35 @@ TEST(BufferPoolManagerTest, DeadlockTest) {
 }
 ```
 
-先簡單敘述一下這個 Test 的邏輯，首先主執行緒會先取得 page 0 的獨佔鎖，接著啟動一個子執行緒也來讀取 page 0 的獨佔鎖，這時候主執行緒會先睡 1 秒鐘，然後再取得 page 1 的獨佔鎖，最後主執行緒再釋放 page 0 的獨佔鎖。
+先簡單敘述一下這個 Test 的邏輯，首先主執行緒會先取得 frame 0 的獨佔鎖，接著啟動一個子執行緒也來讀取 frame 0 的獨佔鎖，這時候主執行緒會先睡 1 秒鐘，然後再取得 frame 1 的獨佔鎖，最後主執行緒再釋放 frame 0 的獨佔鎖。
 
-如果我們直接在 `CheckedWritePage` 中使用 `std::scoped_lock` 來鎖住 bpm 的大鎖，那麼這個測試就會死鎖，主要的流程如下 :
+如果我們直接在 `CheckedWritePage` 中使用 `std::scoped_lock` 來鎖住 bpm 的鎖，那麼這個測試就會死鎖，流程如下 :
 
-1. 主執行緒取得 bpm 的大鎖
-2. 主執行緒取得 page 0 的獨佔鎖
-3. 主執行緒放棄 bpm 的大鎖
-4. 子執行緒取得 bpm 的大鎖
-5. 子執行緒等待 page 0 的獨佔鎖
-6. 主執行緒等待 bpm 的大鎖 (準備讀取 page 1)
+1. 主執行緒取得 bpm 的鎖
+2. 主執行緒取得 frame 0 的獨佔鎖
+3. 主執行緒放棄 bpm 的鎖
+4. 子執行緒取得 bpm 的鎖
+5. 子執行緒等待 frame 0 的獨佔鎖
+6. 主執行緒等待 bpm 的鎖 (準備讀取 frame 1)
 7. 由於兩邊都在等待對方的鎖，所以就會死鎖
 
-由上面的範例我們可以知道，我們必須要讓低級的鎖 (rwlatch) 取得的時候高級的鎖不會同時被鎖住，這樣才能避免死鎖的問題。
+由上面的範例我們可以知道，我們必須要在取得 frame 的鎖之前放掉 bpm 的鎖，這樣才能避免死鎖的問題。
 
-我在實作上採取的方法是在 `CheckedWritePage` 中使用 `std::unique_lock` 來取得 bpm 的大鎖，接著在創建 `WritePageGuard` 前解鎖，接著在 `WritePageGuard` 的 constructor 中取得 page 的小鎖，最後在 `Drop()` 的時候先釋放 page 的小鎖，再使用 bpm 的大鎖更新 page 的 metadata。
+但這樣還有一個疑惑是，假設我們在取得 frame 的鎖之前放掉 bpm 的鎖，那麼在這段時間內，其他的執行緒就有可能會插隊，這樣會不會導致我們取得的 frame 不是我們想要的 frame 呢?
 
-邏輯上大致如下 :
+答案是不會，因為我們會在持有 bpm 的鎖的時候就更新 `pin_count_` 跟 `is_evictable_`，所以即使其他執行緒插隊也不會導致我們要的 frame 被 evict 掉，只是會在執行順序上有些不同而已。
 
-```cpp
-auto BufferPoolManager::CheckedWritePage() -> std::optional<WritePageGuard> {
-  std::unique_lock latch(*bpm_latch_);
+綜合以上的三個限制，我在實作上採取的方法是在 `CheckedWritePage` 中使用 `std::unique_lock` 來取得 bpm 的鎖，接著在創建 `WritePageGuard` 前解鎖，然後在 `WritePageGuard` 的 constructor 取得 frame 的鎖，最後在 `Drop()` 的時候先釋放 frame 的鎖，再使用 bpm 的鎖更新 frame 的 metadata。
 
-  // case 1: bpm have this page in memory
-  if (case1) {
-    // update metadata here
-    latch.unlock();
-    return std::make_optional(WritePageGuard());
-  }
+測試這個 task 的指令如下 :
 
-  // case 2: bpm does not have this page in memory but has free frames
-  if (case2) {
-    // update metadata here
-    latch.unlock();
-    return std::make_optional(WritePageGuard());
-  }
-  // anything else
-  return std::nullopt;
-}
-
-WritePageGuard::WritePageGuard(){
-  frame_->rwlatch_.lock();
-  // update metadata here
-}
-
-void WritePageGuard::Drop() {
-  frame_->rwlatch_.unlock();
-  {
-    std::scoped_lock lock(*bpm_latch_);
-    // update metadata here
-  }
-}
+```bash
+make page_guard_test -j$(nproc) && ./test/page_guard_test
 ```
 
-其中我認為最重要的地方在於在更新如 pin_count 之類的 metadata 時，必須要在 bpm 的大鎖下進行，這樣才能確保不會有其他的執行緒同時修改這些資料。
+```bash
+make buffer_pool_manager_test -j$(nproc) && ./test/buffer_pool_manager_test
+```
 
 ## Submit
 
@@ -195,10 +216,14 @@ make submit-p1
 
 ## Takeaways
 
+第一次寫這個作業的時候還是 2023 fall 的版本，想說改成 2024 fall 的版本應該一天就可以了，結果竟然花了一個禮拜才弄完 🫠
+
+主要是因為新增的 PageGuard 導致實作上跟原本的差的有點多，但我相信這個 class 應該會讓後面的 project 實作上更簡單。
+
 ## References
 
-- [CMU 15445 Project 1](https://4ever-xxxl.github.io/cmu-15445-project-1/)
-- [CMU 15-445 2023 P1 优化攻略](https://www.aneureka.com/posts/cmu-15445-p1-opt)
 - [CMU 15445 2024 Fall Project 1 记录](https://zhuanlan.zhihu.com/p/1657237277)
 - [CMU Fall 2024 15-445 P1&P2[优化 P2]](https://zhuanlan.zhihu.com/p/828933572)
+- [CMU 15445 Project 1](https://4ever-xxxl.github.io/cmu-15445-project-1/)
+- [CMU 15-445 2023 P1 优化攻略](https://www.aneureka.com/posts/cmu-15445-p1-opt)
 - [CMU15-445 2023 Fall Project0~4 通关总结](https://zhuanlan.zhihu.com/p/679980578)
