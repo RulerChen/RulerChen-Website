@@ -20,7 +20,7 @@ tags: [CMU15-445, CMU15-445 Projects]
 
 ## Background
 
-這個 project 的背景是模擬資料庫系統中 buffer pool manager 的運作，主要是用來管理記憶體中的頁面。
+這個 project 就是要實作 buffer pool manager，主要是負責把硬碟上的 page load 到記憶體中，並且提供一個介面讓上層可以讀取 / 寫入 page。
 
 在開始之前，我們可以先來看一下 bustub 的 IO 架構圖 :
 
@@ -55,12 +55,6 @@ LRU-K 的邏輯如下 :
 - `Remove` : 檢查 `IsEvictable` 之後就可以直接刪除
 - `Size` : 直接回傳 `curr_size_`
 
-測試這個 task 的指令如下 :
-
-```bash
-make lru_k_replacer_test -j$(nproc) && ./test/lru_k_replacer_test
-```
-
 ## Task 2 - Disk Scheduler
 
 Task 2 的目標是實現 disk scheduler，主要是要實作 `DiskScheduler` 中的兩個 function :
@@ -69,12 +63,6 @@ Task 2 的目標是實現 disk scheduler，主要是要實作 `DiskScheduler` �
 - `StartWorkerThread` : 設計一個 while 迴圈並執行 request，最後再設定 callback 為 true 即可，拿到 `std::nullopt` 就可以跳出迴圈
 
 以及要注意註解掉建構子中的 throw error，這樣才能正常執行 test。
-
-測試這個 task 的指令如下 :
-
-```bash
-make disk_scheduler_test -j$(nproc) && ./test/disk_scheduler_test
-```
 
 ## Task 3 - Buffer Pool Manager
 
@@ -194,17 +182,17 @@ TEST(BufferPoolManagerTest, DeadlockTest) {
 
 綜合以上的三個限制，我在實作上採取的方法是在 `CheckedWritePage` 中使用 `std::unique_lock` 來取得 bpm 的鎖，接著在創建 `WritePageGuard` 前解鎖，然後在 `WritePageGuard` 的 constructor 取得 frame 的鎖，最後在 `Drop()` 的時候先釋放 frame 的鎖，再使用 bpm 的鎖更新 frame 的 metadata。
 
-測試這個 task 的指令如下 :
+## Submit
 
 ```bash
+make lru_k_replacer_test -j$(nproc) && ./test/lru_k_replacer_test
+
+make disk_scheduler_test -j$(nproc) && ./test/disk_scheduler_test
+
 make page_guard_test -j$(nproc) && ./test/page_guard_test
-```
 
-```bash
 make buffer_pool_manager_test -j$(nproc) && ./test/buffer_pool_manager_test
 ```
-
-## Submit
 
 ```bash
 make format && make check-format && make check-lint &&make check-clang-tidy-p1
