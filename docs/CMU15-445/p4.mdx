@@ -21,15 +21,57 @@ tags: [CMU15-445, CMU15-445 Projects]
 
 ## Background
 
+在開始實作之前，我們需要先了解一些跟 transaction 有關的 class。
+
+<ImageModal src="/img/cmu15-445/p4/transaction.webp" caption="Transaction Class" />
+
+`TransactionManager` 是全局的交易管理器，負責如開始交易、提交交易、回滾交易等功能，也負責管理 id 的分配跟回收，並且有一個 `txn_map_` 成員，用於儲存 `txn_id` 與 `Transaction` 的映射關係。
+
+`Transaction` 類別代表一個交易，包含交易的狀態 (RUNNING、TAINTED、COMMITTED、ABORTED)、隔離級別 (SI & Serializable)、開始時間戳 (read_ts)、結束時間戳 (commit_ts) 等資訊。
+每個交易在開始時會被分配一個唯一的 `txn_id`，並且會有 `write_set_` 跟 `scan_predicates_` 成員，分別用於記錄該交易所做的寫入操作以及掃描操作。
+
+除此之外，`Transaction` 還會紀錄它的每一條 `UndoLog`，這個 log 用於查看舊版本的 tuple。
+
+`UndoLog` 包含了以下的資訊 (非常重要，是整個 project 的核心) :
+
+- `is_deleted_` : `bool`，用於標記前一個版本的 tuple 是否被刪除。如果操作是 INSERT，`is_deleted_` 就會是 true，表示上一個版本不存在
+- `modified_fields_` : `vector<bool>`，用於標記哪些欄位被修改過。假如有 3 個欄位，`modified_fields_` 可能會是 `[true, false, true]`，表示第 0 跟第 2 個欄位被修改過
+- `tuple_` : `Tuple`，紀錄上一個版本的 tuple，內容會依據 `modified_fields_` 來決定有哪些欄位。假如 `modified_fields_` 是 `[true, false, true]`，那 `tuple_` 只會包含第 0 跟第 2 個欄位的值
+- `ts_` : `timestamp_t`，創建這個 log 的 transaction 的 commit timestamp
+- `prev_version_` : `UndoLink`，指向前一個版本的 `UndoLog`。`UndoLink` 包含了 `prev_txn_` (`txn_id`) 跟 `prev_log_idx_`，表示這個 log 的上一版是由那個 transaction 的第幾條 `UndoLog` 所創建的
+
+
 ## Task 1 - Timestamps
 
-## Task 2.1 - Storage Format 
+### Task 1.1 Timestamp Allocation
 
-## Task 2.2 - Sequential Scan / Tuple Retrieval
+### Task 1.2 Watermark
+
+## Task 2 - Storage Format and Sequential Scan
+
+### Task 2.1 - Tuple Reconstruction
+
+### Task 2.2 - Sequential Scan (Tuple Retrieval)
 
 ## Task 3 - MVCC Executors
 
+### Task 3.1 - Insert Executor
+
+### Task 3.2 - Commit
+
+### Task 3.3 - Generate Undo Log
+
+### Task 3.4 - Update & Delete Executor
+
+### Task 3.5 - Stop-the-world Garbage Collection
+
 ## Task 4 - Primary Key Index
+
+### Task 4.1 - Index Insert
+
+### Task 4.2 - Index Scan, Delete, & Update
+
+### Task 4.3 - Primary Key Updates
 
 ## Bonus 1 - Abort
 
