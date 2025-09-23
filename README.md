@@ -3,11 +3,11 @@
 This website includes my personal notes, and below are some useful resources I collected during my study and interview preparation.
 
 > [!NOTE]
-> 🎓 : Online Course
-> 📝 : Articles / Blog Posts
-> ⚙️ : Tools / Platforms
-> 📖 : Books
-> 🎥 : Videos
+> 🎓 : Online Course  
+> 📝 : Articles / Blog Posts  
+> ⚙️ : Tools / Platforms  
+> 📖 : Books  
+> 🎥 : Videos  
 
 ## Computer System
 
