@@ -21,18 +21,20 @@ tags: [CMU15-445, CMU15-445 Projects]
 
 ## Background
 
-在開始實作之前，我們需要先了解一些跟 transaction 有關的 class。
+在開始實作之前，我們需要先了解一些跟這個 project 有關的 class，主要是關於 transaction 跟 MVCC 的部分。
 
 <ImageModal src="/img/cmu15-445/p4/transaction.webp" caption="Transaction Class" />
 
-`TransactionManager` 是全局的交易管理器，負責如開始交易、提交交易、回滾交易等功能，也負責管理 id 的分配跟回收，並且有一個 `txn_map_` 成員，用於儲存 `txn_id` 與 `Transaction` 的映射關係。
+`TransactionManager` 是全局的交易管理器，負責如開始交易、提交交易、回滾交易等功能，也負責管理 id 的分配跟回收。
+裡面主要會用到的成員包含了 `txn_map_`、`version_info_`、`watermark_` 等等。
+`txn_map_` 用於記錄所有的交易，`version_info_` 用於記錄每個 tuple 的版本資訊，`watermark_` 用於記錄目前所有活躍交易中最小的 `read_ts`。
 
 `Transaction` 類別代表一個交易，包含交易的狀態 (RUNNING、TAINTED、COMMITTED、ABORTED)、隔離級別 (SI & Serializable)、開始時間戳 (read_ts)、結束時間戳 (commit_ts) 等資訊。
 每個交易在開始時會被分配一個唯一的 `txn_id`，並且會有 `write_set_` 跟 `scan_predicates_` 成員，分別用於記錄該交易所做的寫入操作以及掃描操作。
 
 除此之外，`Transaction` 還會紀錄它的每一條 `UndoLog`，這個 log 用於查看舊版本的 tuple。
 
-`UndoLog` 包含了以下的資訊 (非常重要，是整個 project 的核心) :
+`UndoLog` 包含了以下的資訊 (**非常重要**) :
 
 - `is_deleted_` : `bool`，用於標記前一個版本的 tuple 是否被刪除。如果操作是 INSERT，`is_deleted_` 就會是 true，表示上一個版本不存在
 - `modified_fields_` : `vector<bool>`，用於標記哪些欄位被修改過。假如有 3 個欄位，`modified_fields_` 可能會是 `[true, false, true]`，表示第 0 跟第 2 個欄位被修改過
@@ -40,42 +42,153 @@ tags: [CMU15-445, CMU15-445 Projects]
 - `ts_` : `timestamp_t`，創建這個 log 的 transaction 的 commit timestamp
 - `prev_version_` : `UndoLink`，指向前一個版本的 `UndoLog`。`UndoLink` 包含了 `prev_txn_` (`txn_id`) 跟 `prev_log_idx_`，表示這個 log 的上一版是由那個 transaction 的第幾條 `UndoLog` 所創建的
 
-
 ## Task 1 - Timestamps
 
 ### Task 1.1 Timestamp Allocation
 
+這個 task 主要是要理解 timestamp 的分配方式。
+
+每一個交易都有兩個 timestamp，`read_ts` 跟 `commit_ts`。
+在交易開始時，會分配一個 `read_ts`，這個 timestamp 是目前已提交的最大 timestamp。
+在交易提交時，會分配一個 `commit_ts`，這個 timestamp 是目前已提交的最大 timestamp 加一。
+
+也就是說，如果一個交易的 `read_ts` 是 5，那麼它只能看到 `commit_ts` 小於等於 5 的版本。
+
+我們要做的事情就是把這些邏輯加到 `TransactionManager::Begin` 跟 `TransactionManager::Commit` 裡面。
+
 ### Task 1.2 Watermark
+
+Watermark 主要是用來追蹤所有還沒 Abort 或 Commit 的交易中，最小的 `read_ts`，如果沒有任何交易在執行，watermark 就會是 `commit_ts`。
+
+這個 class 主要是設計用來幫助 task 3.5 的 garbage collection，當我們要回收舊版本時，watermark 可以告訴我們那些版本已經不會再被任何交易使用了。
+
+這裡我使用了最簡單的 $O(log(n))$ 的方法來實作，就是把儲存的方式改成 `std::map`。
 
 ## Task 2 - Storage Format and Sequential Scan
 
 ### Task 2.1 - Tuple Reconstruction
 
+這個 task 的目標是實作 `ReconstructTuple`。
+這個函數是根據 tuple 現在的情況跟 `UndoLog` 來還原出交易開始時的 tuple。
+
+我認為需要注意的是 `UndoLog` 的順序是從新到舊，以及 `is_deleted_` 代表的是上一個版本的 tuple 是否被刪除。
+
+這裡我的實作順序如下 :
+
+1. 檢查 `undo_logs` 是否為空，如果是空的且沒有被刪除，直接回傳當前的 tuple
+2. 找到最後一個 `is_deleted_` 為 true 的 log，這代表從 index 0 到這個 log 的 tuple 都沒有用，如果這是最後一個 log，代表這個 tuple 是被刪除的，直接回傳 `std::nullopt`
+3. 從下一個 log 開始，依序把 `modified_fields_` 為 true 的欄位從 `undo_logs` 複製到 `tuple` 上
+4. 如果還是這個欄位復原到最後都沒有值，直接填 `base_tuple` 上的值 (這代表中間都沒有 `is_deleted_` 為 true 也沒有被修改過)
+
 ### Task 2.2 - Sequential Scan (Tuple Retrieval)
+
+這個 task 是要搭配 `ReconstructTuple` 來實作 `CollectUndoLogs` 並且把 project 3 裡面的 `SeqScanExecutor` 改成支援 MVCC。
+
+這邊需要先理解一下 bustub 的 timestamp 分配方式。
+timestamp 分為兩種，一種是 commit 過後的 timestamp (`ts < TXN_START_ID`)，另一種是還沒 commit 的 timestamp (`ts >= TXN_START_ID`)，還沒 commit 的可以用 `GetTransactionTempTs()` 來取得。
+
+`CollectUndoLogs` 的實作邏輯很簡單，就是從最新的 `UndoLog` 開始往前找，直到蒐集好所有要回滾的 log 即可。
+可見性判斷邏輯除了要 `GetReadTs() >= ts` 之外，還要考慮到是不是自己修改過的 `GetTransactionTempTs() == ts`。
+
+接著回到 `SeqScanExecutor`，這邊的實作邏輯也比較簡單，就是把 `CollectUndoLogs` 跟 `ReconstructTuple` 串起來即可，拿 metadata 的方法可以使用 `GetTupleAndUndoLink()`。
 
 ## Task 3 - MVCC Executors
 
 ### Task 3.1 - Insert Executor
 
+一樣是修改 project 3 裡面的 `InsertExecutor`，主要修改的地方就是 timestamp 跟使用 `AppendWriteSet()` 來把有修改的 RID 加入到 `write_set_` 裡面。
+
+由於 insert 是插入到新的 RID，所以不需要生成 `UndoLog`。
+
 ### Task 3.2 - Commit
+
+跟著作業說明做就好，主要就是在 `Commit` 裡面遍歷 `write_set_`，然後更新 timestamp。
+
+除此之外說明裡面還有說可以自己實現一個 `TxnMgrDbg`，我個人覺得這個東西還蠻有用的，但寫起來也是很麻煩，所以我直接丟給 AI 了...
 
 ### Task 3.3 - Generate Undo Log
 
+實作 `GenerateNewUndoLog` 跟 `GenerateUpdatedUndoLog`，這兩個函數內容不複雜，可以分成 insert、 delete、 update 三種情況來處理。
+
+- Insert : 傳入的 `base_tuple` 是空的，回傳一個 `is_deleted_=true` 的 `UndoLog`
+- Delete : 傳入的 `target_tuple` 是空的，回傳 `is_deleted_=false` 並且需要修改 `modified_fields_` 跟 `tuple_`
+- Update : 回傳 `is_deleted_=false`，並跟據 `target_tuple` 跟 `base_tuple` 來決定 `modified_fields_` 跟 `tuple_`
+
+其他的部分就照著作業說明做就好，主要就是要把 tuple 拼起來有點麻煩。
+
 ### Task 3.4 - Update & Delete Executor
 
+這裡一樣是修改 project 3 裡面的 `UpdateExecutor` 跟 `DeleteExecutor`，主要就是使用 task 3.3 裡面的 `GenerateUpdatedUndoLog` 跟 `GenerateNewUndoLog` 來生成跟修改 `UndoLog`，並且把有修改的 RID 加入到 `write_set_` 裡面。
+
+這部分都還先不用理有關 index 的部分，但需要檢查 WW 衝突。
+有兩種情況，第一種是 `meta.ts_ > TXN_START_ID && meta.ts_ != txn->GetTransactionTempTs()`，這代表這個 tuple 已經被其他未提交的交易修改過了。
+第二種是 `meta.ts_ < TXN_START_ID && meta.ts_ > txn->GetReadTs()`，這代表這個 tuple 已經被其他已提交且更晚的交易修改過了。
+
 ### Task 3.5 - Stop-the-world Garbage Collection
+
+為了降低併發的複雜度，bustub 採用的是 stop-the-world 的垃圾回收機制，只會在所有交易都結束後才會進行垃圾回收。
+
+這個 task 會結合我們在 task 1.2 實作的 watermark，這裡我自己分成三個步驟 :
+
+- 遍歷 `txn_map_` 跟 `write_set_`，把已經 commit 或 abort 的交易中有修改過的 RID 全部蒐集起來，建立一個 `unordered_map<txn_id_t, unordered_map<table_oid_t, unordered_set<RID>>>` 的映射
+- 紀錄不能被刪除的 txn (`unordered_set`)，檢查 `watermark <= meta.ts_`，如果是的話就把這個 txn 加入到不可刪除的集合裡面，接著再遍歷這個 RID 的 `UndoLog` 找出 `watermark <= undo_log->ts_` 的也加入不可刪除的集合
+- 最後遍歷 `txn_map_`，如果是 COMMITTED 或 ABORTED 然後又不在不可刪除的 txn 裡面，就可以把這個 txn 刪掉
 
 ## Task 4 - Primary Key Index
 
 ### Task 4.1 - Index Insert
 
+這個 task 主要目標是讓 Insert 操作可以在併發環境下正確的處理主鍵的衝突。
+
+可以先透過 `index_info->index_->GetMetadata()->IsPrimaryKey()` 拿到 primary key index 的資訊，接著在讀資料的時候先檢查這個 key 是不是已經存在了，如果存在就把狀態改成 TAINTED 並拋錯即可，如果不存在，那就帶著臨時的 timestamp 直接插入，並且呼叫 `InsertEntry()` 來插入 index。
+
+也要注意處理 `InsertEntry()` 回傳 false 的情況，這代表有其他交易已經插入了相同的 key，處理方式跟前面一樣。
+
 ### Task 4.2 - Index Scan, Delete, & Update
+
+這個 task 主要是讓所有的操作都能支持 MVCC (包括 Index Scan、Delete、Update、Insert)。
+
+為了讓索引可以支援過去的資料，bustub 規定索引一旦被創建就永遠不會被物理刪除，所以這個 task 需要修改所有的 executors。
+
+首先，在 project 3 中的 `DeleteExecutor` 需要把 `TupleMeta` 的 `is_deleted_` 改成 true，並且要把索引也刪掉。
+而現在需要把刪除索引的那部分完全移除，只需要把 `TupleMeta` 的 `is_deleted_` 改成 true 即可。
+
+接著是 INSERT 的部分，在 task 4.1 中我們有提到要先檢查主鍵是否存在，如果存在就要把狀態改成 TAINTED 並拋錯。
+而現在需要改成如果這個鍵存在且沒有被刪除 (`meta.is_deleted_ == false`)，才把狀態改成 TAINTED 並拋錯，如果這個鍵存在但被刪除 (`meta.is_deleted_ == true`)，就可以直接 reuse 這個 RID。
+
+Index scan 的部分可以參考 task 2.2 的 `SeqScanExecutor` 來實作，差別在於要先從 index 裡面取得 RID，也是一樣使用 `CollectUndoLogs` 跟 `ReconstructTuple` 來還原 tuple。
+
+除了上面這幾個 executors 之外，我們還需要實作 `UpdateTupleAndUndoLink()` 裡面的 check 函數來避免 race condition 的情況。
+由於在執行 `UpdateTupleAndUndoLink()` 之前，我們應該已經檢查過 WW 衝突了 (by task 3.4)，所以這裡只要檢查 `meta.ts_ == ts` 即可。
 
 ### Task 4.3 - Primary Key Updates
 
+這個 task 主要是要處理 UPDATE 操作，針對 primary key 被修改的情況。
+
+這裡的邏輯其實蠻多的，但是總體來說可以拆成一次刪除跟一次插入來處理，具體實作跟 task 4.2 的 INSERT 跟 DELETE 差不多。
+
 ## Bonus 1 - Abort
 
+由於如果交易失敗的話，就沒有其他交易可以繼續修改這個 tuple 了，所以我們只需要關心被修改過後的 tuple 最後一次的狀態即可。
+
+這裡我選擇的是 Implementation #2 的做法，有三種情況 :
+
+- 如果沒有 `UndoLink`，代表這個 tuple 是被 insert 的，直接插入 `TupleMeta{0, true}` 即可
+- 如果有 `UndoLink`，代表這個 tuple 是被 update 或 delete 的
+  - 如果 `ReconstructTuple` 回傳空的 optional，代表這個 tuple 是被 delete 的，更新為 `TupleMeta{undo_log.ts_, true}` 即可
+  - 如果 `ReconstructTuple` 回傳有值，代表這個 tuple 是被 update 的，更新為 `TupleMeta{undo_log.ts_, false}` 即可
+
 ## Bonus 2 - Serializable Verification
+
+為了實現可序列化，我們需要在 index scan 跟 seq scan 的時候把 predicate 加入到 `scan_predicates_` 裡面。
+
+實現的邏輯如下 :
+
+1. 跳過只讀交易
+2. 收集衝突交易 (commit_ts > 本 txn 的 read_ts)
+3. 對每個衝突交易的每個 table 的寫集合做檢查，並看看它是否有跟當前交易掃描過的 predicate 有交集 (同一個 `table_oid_t`)
+4. 對衝突交易修改的每個 RID，取得到 read_ts 時的所有 `UndoLog`
+5. 接著就可以嘗試對這個 RID 不斷用 `ReconstructTuple` 來還原 tuple 並測試是否在 predicate 的範圍內
 
 ## Submit
 
@@ -102,6 +215,13 @@ make submit-p4
 ```
 
 ## Takeaways
+
+終於寫完全部的筆記啦~ 灑花 🎉
+
+這個 project 是我花最久時間的一個，我覺得主要原因是很難找到 bug 在哪，即使現在交到 gradescope 可以全過我依然覺得我的很多實現理論上應該要有問題才對，但反正測資看不到我也當看不到好了 🫣
+
+總體來說這次的 project 就是一個不斷重構的過程，除了要回憶 project #3 的內容之外，甚至在同一個 task 裡面也會不斷的重構，像是 task 4 就是不斷的重改又重改，真的是有一點煩。
+不過這次的實作依然讓我對 MVCC 的整體概念有比較好的理解，收穫還算是滿大的。
 
 ## References
 
