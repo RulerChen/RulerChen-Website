@@ -12,9 +12,9 @@ This website includes my personal notes, and below are some useful resources I c
 ## Computer System
 
 - 🎓 [CMU 15-213](https://www.cs.cmu.edu/~213/)
-  - 🎥 [B站動畫 (只到第八章)](https://www.bilibili.com/video/BV1cD4y1D7uR/?vd_source=0b8d45cc2260b9a7a9d948d819ac16f3)
-  - 📝 [GitHub Notes](https://github.com/zhuozhiyongde/Introduction-to-Computer-System-2023Fall-PKU/tree/main?tab=readme-ov-file)
-- 📖 [CSAPP3e Book](https://csapp.cs.cmu.edu/)
+  - 🎥 [B站動畫講解 (只到第八章)](https://www.bilibili.com/video/BV1cD4y1D7uR/?vd_source=0b8d45cc2260b9a7a9d948d819ac16f3)
+  - 📝 [Course Note](https://github.com/zhuozhiyongde/Introduction-to-Computer-System-2023Fall-PKU/tree/main?tab=readme-ov-file)
+- 📖 [CSAPP3e](https://csapp.cs.cmu.edu/)
 
 ## Operating System
 
@@ -23,12 +23,12 @@ This website includes my personal notes, and below are some useful resources I c
 
 ## Computer Network
 
-- 🎓 [UCB CS 168：Introduction to the Internet: Architecture and Protocols](https://su25.cs168.io/)
+- 🎓 [UCB CS168 Introduction to the Internet: Architecture and Protocols](https://su25.cs168.io/)
 
 ## Distributed System
 
 - 🎓 [MIT 6.5840 Distributed Systems](https://pdos.csail.mit.edu/6.824)
-- 🎥 [MIT 6.824 Lecture Videos (2020)](https://www.youtube.com/watch?v=cQP8WApzIQQ&list=PLrw6a1wE39_tb2fErI4-WkMbsvGQk9_UB)
+- 🎥 [MIT 6.5840 Lecture Videos (2020)](https://www.youtube.com/watch?v=cQP8WApzIQQ&list=PLrw6a1wE39_tb2fErI4-WkMbsvGQk9_UB)
 
 ## Database
 
