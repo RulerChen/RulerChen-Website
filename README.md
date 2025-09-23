@@ -1,4 +1,4 @@
-## Introduction
+# Introduction
 
 This website includes my personal notes and resources that I have gathered while preparing for technical interviews and learning new concepts in computer science.
 
