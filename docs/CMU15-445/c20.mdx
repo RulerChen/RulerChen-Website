@@ -114,10 +114,15 @@ WAL 的核心概念是在資料庫進行變更之前，先將變更寫入一個 
 
 如下面的範例所示，我們會先寫入 WAL buffer 中，接著修改 buffer pool 中的資料，再將 WAL buffer flush 到硬碟中，最後假如斷電了，則可以根據 log file 來進行恢復。
 
-<ImageModal src="/img/cmu15-445/c20/image-7.webp" caption="Write-Ahead Logging" />
-<ImageModal src="/img/cmu15-445/c20/image-8.webp" caption="Write-Ahead Logging" />
-<ImageModal src="/img/cmu15-445/c20/image-9.webp" caption="Write-Ahead Logging" />
-<ImageModal src="/img/cmu15-445/c20/image-10.webp" caption="Write-Ahead Logging" />
+<Carousel
+  items={[
+    { src: "/img/cmu15-445/c20/image-7.webp", caption: "Step 1: Write to WAL Buffer" },
+    { src: "/img/cmu15-445/c20/image-8.webp", caption: "Step 2: Modify Buffer Pool" },
+    { src: "/img/cmu15-445/c20/image-9.webp", caption: "Step 3: Flush WAL to Disk" },
+    { src: "/img/cmu15-445/c20/image-10.webp", caption: "Step 4: System Crash" }
+  ]}
+  autoPlay={false}
+/>
 
 ### WAL Group Commit
 

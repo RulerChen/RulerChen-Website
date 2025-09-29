@@ -152,20 +152,30 @@ Latch Crabbing 是一種可以允許多個 thread 同時訪問 (修改) 一個 n
 
 從 root 開始往下遍歷，不斷的獲取 child 的 read latch 並釋放 parent 的 latch 直到 leaf node。
 
-<ImageModal src="/img/cmu15-445/c09/image.webp" caption="Search Latch Crabbing - 1" />
-<ImageModal src="/img/cmu15-445/c09/image-1.webp" caption="Search Latch Crabbing - 2" />
-<ImageModal src="/img/cmu15-445/c09/image-2.webp" caption="Search Latch Crabbing - 3" />
-<ImageModal src="/img/cmu15-445/c09/image-3.webp" caption="Search Latch Crabbing - 4" />
+<Carousel
+  items={[
+    { src: "/img/cmu15-445/c09/image.webp", caption: "Search Latch Crabbing - 1" },
+    { src: "/img/cmu15-445/c09/image-1.webp", caption: "Search Latch Crabbing - 2" },
+    { src: "/img/cmu15-445/c09/image-2.webp", caption: "Search Latch Crabbing - 3" },
+    { src: "/img/cmu15-445/c09/image-3.webp", caption: "Search Latch Crabbing - 4" }
+  ]}
+  autoPlay={false}
+/>
 
 #### Insert / Delete
 
 從 root 開始往下遍歷，並獲取 child 的 write latch，如果獲取就檢查 child 是否 `safe`，如果是的話就釋放之前獲取的所有 latch。
 
-<ImageModal src="/img/cmu15-445/c09/image-4.webp" caption="Insert Latch Crabbing - 1" />
-<ImageModal src="/img/cmu15-445/c09/image-5.webp" caption="Insert Latch Crabbing - 2" />
-<ImageModal src="/img/cmu15-445/c09/image-6.webp" caption="Insert Latch Crabbing - 3" />
-<ImageModal src="/img/cmu15-445/c09/image-7.webp" caption="Insert Latch Crabbing - 4" />
-<ImageModal src="/img/cmu15-445/c09/image-8.webp" caption="Insert Latch Crabbing - 5" />
+<Carousel
+  items={[
+    { src: "/img/cmu15-445/c09/image-4.webp", caption: "Insert Latch Crabbing - 1" },
+    { src: "/img/cmu15-445/c09/image-5.webp", caption: "Insert Latch Crabbing - 2" },
+    { src: "/img/cmu15-445/c09/image-6.webp", caption: "Insert Latch Crabbing - 3" },
+    { src: "/img/cmu15-445/c09/image-7.webp", caption: "Insert Latch Crabbing - 4" },
+    { src: "/img/cmu15-445/c09/image-8.webp", caption: "Insert Latch Crabbing - 5" }
+  ]}
+  autoPlay={false}
+/>
 
 ### Better Latching Algorithm
 

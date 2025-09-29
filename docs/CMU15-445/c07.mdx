@@ -117,9 +117,14 @@ Extendible hashing 與 chained hashing 有點類似，但是在 extendible hashi
 如果相等的話，我們需要將 global depth 加一，並且將 directory 的大小翻倍 (將原本的 pointer 複製一份) 並重新指向 bucket。
 最後將這個 bucket 分裂成兩個 bucket，並且把原本 bucket 中的值重新 hash 到新的 bucket 中。
 
-<ImageModal src="/img/cmu15-445/c07/image-6.webp" caption="Extendible Hashing - Put" />
-<ImageModal src="/img/cmu15-445/c07/image-7.webp" caption="Extendible Hashing - Put" />
-<ImageModal src="/img/cmu15-445/c07/image-8.webp" caption="Extendible Hashing - Put" />
+<Carousel
+  items={[
+    { src: "/img/cmu15-445/c07/image-6.webp", caption: "Extendible Hashing - Put" },
+    { src: "/img/cmu15-445/c07/image-7.webp", caption: "Extendible Hashing - Put" },
+    { src: "/img/cmu15-445/c07/image-8.webp", caption: "Extendible Hashing - Put" }
+  ]}
+  autoPlay={false}
+/>
 
 ### Linear Hashing
 
@@ -127,13 +132,24 @@ Linear hashing 中放棄了哪裡滿了就分裂哪裡的概念，而是採用�
 
 維護一個 split pointer 指向下一個要被分裂的 bucket，當任意一個 bucket 滿了時，就新增一個 bucket 並將指針指向的 bucket 分裂，最後把這個分裂的 bucket 中的值重新 hash 到新的 bucket 中。
 
-<ImageModal src="/img/cmu15-445/c07/image-9.webp" caption="Linear Hashing - Get" />
-<ImageModal src="/img/cmu15-445/c07/image-10.webp" caption="Linear Hashing - Put" />
-<ImageModal src="/img/cmu15-445/c07/image-11.webp" caption="Linear Hashing - Put" />
-<ImageModal src="/img/cmu15-445/c07/image-12.webp" caption="Linear Hashing - Get" />
+<Carousel
+  items={[
+    { src: "/img/cmu15-445/c07/image-9.webp", caption: "Linear Hashing - Get" },
+    { src: "/img/cmu15-445/c07/image-10.webp", caption: "Linear Hashing - Put" },
+    { src: "/img/cmu15-445/c07/image-11.webp", caption: "Linear Hashing - Put" },
+    { src: "/img/cmu15-445/c07/image-12.webp", caption: "Linear Hashing - Get" }
+  ]}
+  autoPlay={false}
+/>
+
 
 隨著分裂指針的移動，最終所有溢出的桶都會被處理到，當分裂指針到達最後一個 bucket 時，我們可以將第一個 hash 移除只使用第二個 hash，並且將分裂指針歸零。
 如果在最下面一個 bucket 是空的，我們可以移除這個 bucket 並反向移動指針。
 
-<ImageModal src="/img/cmu15-445/c07/image-13.webp" caption="Linear Hashing - Delete" />
-<ImageModal src="/img/cmu15-445/c07/image-14.webp" caption="Linear Hashing - Delete" />
+<Carousel
+  items={[
+    { src: "/img/cmu15-445/c07/image-13.webp", caption: "Linear Hashing - Delete" },
+    { src: "/img/cmu15-445/c07/image-14.webp", caption: "Linear Hashing - Delete" }
+  ]}
+  autoPlay={false}
+/>

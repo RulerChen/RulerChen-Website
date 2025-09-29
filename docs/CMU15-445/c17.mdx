@@ -64,9 +64,14 @@ DBMS 會有專門的 lock manager 來負責管理整個系統的 locks，只要�
 
 以下是一個舉例，比較 Non-2PL、2PL、Rigorous 2PL 的差異，假設是 T1 是 A 轉帳給 B 100，T2 是印出 A+B 的餘額
 
-<ImageModal src="/img/cmu15-445/c17/image-6.webp" caption="Non-2PL" />
-<ImageModal src="/img/cmu15-445/c17/image-7.webp" caption="2PL" />
-<ImageModal src="/img/cmu15-445/c17/image-8.webp" caption="Rigorous 2PL" />
+<Carousel
+  items={[
+    { src: "/img/cmu15-445/c17/image-6.webp", caption: "Non-2PL" },
+    { src: "/img/cmu15-445/c17/image-7.webp", caption: "2PL" },
+    { src: "/img/cmu15-445/c17/image-8.webp", caption: "Rigorous 2PL" }
+  ]}
+  autoPlay={false}
+/>
 
 ### Universe of Schedules
 
