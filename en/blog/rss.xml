@@ -16,21 +16,21 @@
             <description><![CDATA[Netskope 實習心得]]></description>
             <content:encoded><![CDATA[<p>2025 Software Summer Intern @ Netskope</p>
 <!-- -->
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="前情提要">前情提要<a href="https://rulerchen.github.io/RulerChen-Website/en/blog/NetskopeIntern/#%E5%89%8D%E6%83%85%E6%8F%90%E8%A6%81" class="hash-link" aria-label="Direct link to 前情提要" title="Direct link to 前情提要">​</a></h2>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="前情提要">前情提要<a href="https://rulerchen.github.io/RulerChen-Website/en/blog/NetskopeIntern/#%E5%89%8D%E6%83%85%E6%8F%90%E8%A6%81" class="hash-link" aria-label="Direct link to 前情提要" title="Direct link to 前情提要" translate="no">​</a></h2>
 <p>書接上文，由於當時在旋轉的人很多都跳到了 Netskope，考量到想在當兵前多看看不同的方向並看看有沒有 return offer 可以拿，所以後來就投了一下想說試看看，也沒有特別準備，只報了一下旋轉的 mentor 的名字就上了。</p>
 <p>這是 Netskope 在臺灣的第一屆實習生，據他們所說之後會想招募更多的實習生。實習的內容可能會根據我們的回饋做很多的改變，所以如果有幸有人看到這篇的話可以不用太參考實習內容。</p>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="面試過程">面試過程<a href="https://rulerchen.github.io/RulerChen-Website/en/blog/NetskopeIntern/#%E9%9D%A2%E8%A9%A6%E9%81%8E%E7%A8%8B" class="hash-link" aria-label="Direct link to 面試過程" title="Direct link to 面試過程">​</a></h2>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="面試過程">面試過程<a href="https://rulerchen.github.io/RulerChen-Website/en/blog/NetskopeIntern/#%E9%9D%A2%E8%A9%A6%E9%81%8E%E7%A8%8B" class="hash-link" aria-label="Direct link to 面試過程" title="Direct link to 面試過程" translate="no">​</a></h2>
 <p>面試的過程可以分為 OA 跟 BQ 兩面。</p>
 <p>OA 其實還蠻簡單的，大概就是 easy ~ medium 左右的程度，比較特別的是它還要開鏡頭寫。</p>
 <p>BQ 會有兩個臺灣的 EM 用英文跟你面試，所以其實沒有甚麼語言障礙。
 主要就是詢問一些履歷跟一些行為面試的問題，像是你在團隊中遇到衝突怎麼處理、你覺得你最大的優點是什麼之類的，以及一些少部份的技術問題，我記得是問跟 Restful API 相關的問題。</p>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="實習過程">實習過程<a href="https://rulerchen.github.io/RulerChen-Website/en/blog/NetskopeIntern/#%E5%AF%A6%E7%BF%92%E9%81%8E%E7%A8%8B" class="hash-link" aria-label="Direct link to 實習過程" title="Direct link to 實習過程">​</a></h2>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="實習過程">實習過程<a href="https://rulerchen.github.io/RulerChen-Website/en/blog/NetskopeIntern/#%E5%AF%A6%E7%BF%92%E9%81%8E%E7%A8%8B" class="hash-link" aria-label="Direct link to 實習過程" title="Direct link to 實習過程" translate="no">​</a></h2>
 <p>這次臺灣的 intern 大概有 5 (-1) 個人，分成了兩個不同的 project，五個人都會各自分配到一個 manager，project 也有 project manager 負責整體的進度跟協調。</p>
 <p>我們這組負責的是一個內部監控系統的系統，主要是用來監控公司內部各種服務的健康狀態，這是一個完整的前後端專案，可以學習前後端以及使用 k8s + helm chart。</p>
 <p>我們會有固定的跟 project mentor 的 bi-weekly meeting，也會每周定期跟各自的 manager 一起 1 on 1，討論進度跟遇到的問題。</p>
 <p>另一組則是負責做一個 github action 的 workflow，透過接內部的 API 來讓大模型 review 單元測試寫的好不好，那邊做的東西感覺比較無聊，原本應該是一個可以很快結束的專案，但因為後來有一位實習生出了一點問題所以那邊就拖了很久。</p>
 <p>結束之後每個人都要用英文作一個簡短的 presentation，介紹自己做了什麼東西跟有甚麼 takeaway。</p>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="實習心得">實習心得<a href="https://rulerchen.github.io/RulerChen-Website/en/blog/NetskopeIntern/#%E5%AF%A6%E7%BF%92%E5%BF%83%E5%BE%97" class="hash-link" aria-label="Direct link to 實習心得" title="Direct link to 實習心得">​</a></h2>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="實習心得">實習心得<a href="https://rulerchen.github.io/RulerChen-Website/en/blog/NetskopeIntern/#%E5%AF%A6%E7%BF%92%E5%BF%83%E5%BE%97" class="hash-link" aria-label="Direct link to 實習心得" title="Direct link to 實習心得" translate="no">​</a></h2>
 <p>先講這裡的優點吧，公司有提供午餐，大部分的午餐都還蠻好吃的，同事也都非常友善，願意提供很多經驗跟職涯的建議，manager 跟 mentor 也都蠻不錯的，不太會有不被重視的感覺。</p>
 <p>但除此之外，由於是第一屆的實習，整體內容沒有太符合我的預期，所以我覺得這次的實習體驗是有點可惜的。</p>
 <p>首先是專案吧，我們做的專案跟公司的其他業務沒什麼關係，並且是實習生要自己合作，mentor 雖然會給予建議但是不會參與開發，所以其實會有一種自己在做 side project 的感覺，自己並沒有感覺到這兩個月有甚麼 technical growth。
@@ -59,13 +59,13 @@
 <p>今天應該就是我待在 Carousell 的 last day 了吧，說起來也在這個地方待了快整整六個月，感覺也該久違的寫一下 blog 紀錄一下這段時間的實習生活。</p>
 <p>整體來說感覺這次的實習沒有甚麼很充實的被事情塞滿的感覺，但可以看到一個快要沒落的公司和一個組在經歷 reorg 和裁員之後的變化，同時也能認識到很好的同事跟了解一些公司的 domain know how，感覺也是一個蠻特別的經驗。</p>
 <figure class="image-modal-container"><img src="https://rulerchen.github.io/RulerChen-Website/en/img/blog/carousell-1.jpg" alt="" width="100%" class="image-modal-thumbnail" style="cursor:pointer" loading="lazy"><figcaption class="image-modal-caption">Carousell mission in the office</figcaption></figure>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="前情提要">前情提要<a href="https://rulerchen.github.io/RulerChen-Website/en/blog/CarousellBackendIntern/#%E5%89%8D%E6%83%85%E6%8F%90%E8%A6%81" class="hash-link" aria-label="Direct link to 前情提要" title="Direct link to 前情提要">​</a></h2>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="前情提要">前情提要<a href="https://rulerchen.github.io/RulerChen-Website/en/blog/CarousellBackendIntern/#%E5%89%8D%E6%83%85%E6%8F%90%E8%A6%81" class="hash-link" aria-label="Direct link to 前情提要" title="Direct link to 前情提要" translate="no">​</a></h2>
 <p>從大三下開始我就在找我的下一份實習，但由於之前的履歷我把入學日期寫錯了，導致幾乎都沒有收到任何回信，改了之後才成功在大四上找到這份實習。</p>
 <p>在投上一份實習的時候，我其實沒有甚麼特別的期待，就只是單純想要找一份實習來打發時間，當時的我還是個大二的菜鳥，對未來沒有想法，也不知道自己能幹麼，所以有公司讓我去我就也沒想太多就直接去了。
 但在這次投的時候我已經要大四了，由於一些原因，我幾乎已經確定自己會畢業後先工作而不是繼續升學，因此感覺也是時候認真思考一下自己的職涯規劃。
 由於是資管系做不了太偏硬體的東西，也沒有太多經驗跟興趣，也很不喜歡 CSS，因此這次的目標就是 Backend 或是 General 的 SWE。</p>
 <p>在來這間公司之前，感覺這邊福利跟薪水也都蠻不錯，正職可以全遠端工作，再加上當時面試的時候我加入的應該是一個主要位在新加坡的團隊，感覺是一個很不錯的機會可以讓我體驗在跨國公司工作並順便練習英文，所以接到 offer 之後沒什麼猶豫就決定要來了。</p>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="面試過程">面試過程<a href="https://rulerchen.github.io/RulerChen-Website/en/blog/CarousellBackendIntern/#%E9%9D%A2%E8%A9%A6%E9%81%8E%E7%A8%8B" class="hash-link" aria-label="Direct link to 面試過程" title="Direct link to 面試過程">​</a></h2>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="面試過程">面試過程<a href="https://rulerchen.github.io/RulerChen-Website/en/blog/CarousellBackendIntern/#%E9%9D%A2%E8%A9%A6%E9%81%8E%E7%A8%8B" class="hash-link" aria-label="Direct link to 面試過程" title="Direct link to 面試過程" translate="no">​</a></h2>
 <p>面試主要分成四個部分，OA、HR 聊天關、技術面試、最後是跟 EM BQ 關。</p>
 <p>首先就是投遞履歷的時候沒過幾天就會收到 OA，我記得是兩題不難的 leetcode 跟一題給你一段 code 叫你 review 的題目，但由於我沒寫過 Go 所以也不知道要 review 甚麼東西，隨便寫了幾個可能的問題之後就過了。</p>
 <p>接下來就是 HR 會找你聊聊天，主要是了解你的背景跟為什麼想來這邊之類的問題，這部分我記得應該是還蠻輕鬆的。</p>
@@ -73,11 +73,11 @@
 第一部分會叫你實作一個 OOXX 的遊戲，然後寫完之後會稍微跟你討論一下你的寫法和複雜度，壓力應該是不大。
 第二部分會是一個小型的 system design，我記得是叫你設計一個排行榜，包含 API design 跟 schema design，同時也會討論一下怎麼優化，scale 跟一些 edge case，這部分我覺得還蠻有趣的，是我第一次經歷這種面試。</p>
 <p>最後就是跟一個新加坡的 EM 用英文進行一些比較像 BQ 的面試，主要就是詢問過去實習跟學校的經驗以及如何跟 PM 溝通，面試官看起來是一個很溫和的人，所以這雖然是我第一次跟別人講英文，但我覺得還是蠻順利的。</p>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="實習過程">實習過程<a href="https://rulerchen.github.io/RulerChen-Website/en/blog/CarousellBackendIntern/#%E5%AF%A6%E7%BF%92%E9%81%8E%E7%A8%8B" class="hash-link" aria-label="Direct link to 實習過程" title="Direct link to 實習過程">​</a></h2>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="實習過程">實習過程<a href="https://rulerchen.github.io/RulerChen-Website/en/blog/CarousellBackendIntern/#%E5%AF%A6%E7%BF%92%E9%81%8E%E7%A8%8B" class="hash-link" aria-label="Direct link to 實習過程" title="Direct link to 實習過程" translate="no">​</a></h2>
 <p>在進來之前，我只查了這家正職的待遇感覺還蠻不錯的，但是我沒有查到這家公司的經營狀況，進來之後才知道公司的營運情況並不是很好。
 在 2024 年底的時候公司又又又進行了一波裁員跟 reorg，導致我當初面試的組被合併，甚至當時面試我的 EM 也被裁員了，也因此我被丟到合併之後的 buyer &amp; seller team，帶我的 mentor 是在 buyer 這邊。</p>
 <p>工作的內容主要是跟著 team 一起做一些小的 task 或是一些公司的 migration，可以讓你有機會體驗完整的開發流程，像是從需求討論、設計、實作、code review、設定 feature flag、deploy、team test party 到真正上線等等。</p>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="實習心得">實習心得<a href="https://rulerchen.github.io/RulerChen-Website/en/blog/CarousellBackendIntern/#%E5%AF%A6%E7%BF%92%E5%BF%83%E5%BE%97" class="hash-link" aria-label="Direct link to 實習心得" title="Direct link to 實習心得">​</a></h2>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="實習心得">實習心得<a href="https://rulerchen.github.io/RulerChen-Website/en/blog/CarousellBackendIntern/#%E5%AF%A6%E7%BF%92%E5%BF%83%E5%BE%97" class="hash-link" aria-label="Direct link to 實習心得" title="Direct link to 實習心得" translate="no">​</a></h2>
 <p>透過這次實習，技術方面我覺得是有非常大的進步的，了解了許多公司內部的流程跟一些系統設計和 Debug 時的思考方式，也透過跟同事的互動學到了很多東西，甚至還讓我找到了下一份的實習，這些都是我覺得蠻有收穫的地方。</p>
 <p>但我覺得我學到的最多的反而不是技術，是有關於一些有關於公司跟職場的思考。</p>
 <p>首先是一些關於管理上的思考，我記得差不多是到過完年左右，可能是因為不賺錢跟投資方壓力的關係吧，管理層開始持續的把問題甩給下面的人，收先遭殃的就是 marketing team，然後 marketing team 又把壓力持續的向下傳直到工程師這邊，導致整個團隊都覺得很不爽。
@@ -105,10 +105,10 @@
             <content:encoded><![CDATA[
 <p>2023 Frontend Summer Intern @ PChome</p>
 <!-- -->
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="前情提要">前情提要<a href="https://rulerchen.github.io/RulerChen-Website/en/blog/PChomeSummerIntern/#%E5%89%8D%E6%83%85%E6%8F%90%E8%A6%81" class="hash-link" aria-label="Direct link to 前情提要" title="Direct link to 前情提要">​</a></h2>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="前情提要">前情提要<a href="https://rulerchen.github.io/RulerChen-Website/en/blog/PChomeSummerIntern/#%E5%89%8D%E6%83%85%E6%8F%90%E8%A6%81" class="hash-link" aria-label="Direct link to 前情提要" title="Direct link to 前情提要" translate="no">​</a></h2>
 <p>今年本來只想待在家裡好好耍費的，但看到身邊的同學都逐漸找到自己未來的方式，讓有點沒有目標的我也有點不安，決定在暑假找點事情來做。
 記得當時決定的時候已經四月了，幾乎大公司的實習都已經找完，再加上我也才大二，隨便面了幾間不怎麼樣的小公司之後錄取了這裡的前端，就決定來這裡打發一下時間了。</p>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="面試過程">面試過程<a href="https://rulerchen.github.io/RulerChen-Website/en/blog/PChomeSummerIntern/#%E9%9D%A2%E8%A9%A6%E9%81%8E%E7%A8%8B" class="hash-link" aria-label="Direct link to 面試過程" title="Direct link to 面試過程">​</a></h2>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="面試過程">面試過程<a href="https://rulerchen.github.io/RulerChen-Website/en/blog/PChomeSummerIntern/#%E9%9D%A2%E8%A9%A6%E9%81%8E%E7%A8%8B" class="hash-link" aria-label="Direct link to 面試過程" title="Direct link to 面試過程" translate="no">​</a></h2>
 <p>在面試之前，我沒有甚麼特殊的經歷，之前我也沒有接觸過公司或甚麼有人在維護和使用的專案，所以我就只放了幾個做過的小網站就去面試了，可能唯一的優勢就是有一個台大的學歷嗎。</p>
 <p>我記的沒錯的話，一開始會有人資打電話來問你幾個簡單的問題，像是怎麼團隊合作之類的，應該按自己的想法回答就好了。</p>
 <p>接下來我就遇到了一件有點鳥的事，他原本的面試時間我有課所以我想換時間，然後人資說他跟主管確認再連絡，結果到原本要面試的那天都還沒被聯絡，害我不知道到底去不去，結果我跑去了之後他問我說不是要換時間嗎，讓我有點小無語，雖然我沒問也是我的問題啦。</p>
@@ -119,20 +119,20 @@
 整體來說，當時面試還算蠻愉快，主管跟人資都算好聊，我們答不出來也會幫我們接話讓我們不會太尷尬，算是還不錯的體驗。</p>
 <p>有聽說到非技術部的實習不收台政以外的人，似乎學歷的看得很重，確實我記得我們暑期實習的人似乎好像也都符合這個標準，但我們技術部好像收的人不侷限在那幾間學校，比較多元一點。
 面試的部分我也有聽到別人說他們完全沒問技術類的問題就純聊天，所以基本上只要對自己做過的東西有印象應該就可以了，不太需要特別準備。</p>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="環境--福利">環境 &amp; 福利<a href="https://rulerchen.github.io/RulerChen-Website/en/blog/PChomeSummerIntern/#%E7%92%B0%E5%A2%83--%E7%A6%8F%E5%88%A9" class="hash-link" aria-label="Direct link to 環境 &amp; 福利" title="Direct link to 環境 &amp; 福利">​</a></h2>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="環境--福利">環境 &amp; 福利<a href="https://rulerchen.github.io/RulerChen-Website/en/blog/PChomeSummerIntern/#%E7%92%B0%E5%A2%83--%E7%A6%8F%E5%88%A9" class="hash-link" aria-label="Direct link to 環境 &amp; 福利" title="Direct link to 環境 &amp; 福利" translate="no">​</a></h2>
 <p>PChome 在的位置有點尷尬，算是在好幾個捷運站的中間，不管從哪裡走過去都需要一段時間，辦公室也有點小舊，我記得我們整個七月冷氣幾乎每周都壞，所以後來好像常常都可以遠距上班。</p>
 <p>薪水好像是三萬初的樣子我也有點忘了，反正大概就比基本工資高一點點這樣，但因為我主要是去打發時間所以也沒特別在意。</p>
 <p>福利的部分辦公室好像就只有咖啡包能用，雖然我不太吃零食跟喝咖啡，但看到別人去實習的地方都有滿滿的零食櫃跟咖啡機還是覺得少了點甚麼，然後一個月可以去按摩 15 分鐘，除此之外好像也沒想到有其他福利了。</p>
 <p>然後我覺得它配備的東西還蠻鳥的，我感覺電腦常常卡到需要重開 (印象中是 2021 的 surface)，不知道是不是我運氣比較差。
 然後他還配了一個十年前的超舊螢幕，但我大概只用了 10 分鐘不到我就再也沒用過了，我覺得這個螢幕我看一個暑假眼睛會瞎。</p>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="實習過程">實習過程<a href="https://rulerchen.github.io/RulerChen-Website/en/blog/PChomeSummerIntern/#%E5%AF%A6%E7%BF%92%E9%81%8E%E7%A8%8B" class="hash-link" aria-label="Direct link to 實習過程" title="Direct link to 實習過程">​</a></h2>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="實習過程">實習過程<a href="https://rulerchen.github.io/RulerChen-Website/en/blog/PChomeSummerIntern/#%E5%AF%A6%E7%BF%92%E9%81%8E%E7%A8%8B" class="hash-link" aria-label="Direct link to 實習過程" title="Direct link to 實習過程" translate="no">​</a></h2>
 <p>在整個暑假大概會有三件事做，個人專案、黑客松跟上課，我會分開來說。</p>
 <p>首先是個人專案，這個應該是你在進來之前就會知道，像我這次是做 Next.js 的 POC，基本上就是用 Next.js 重寫一個頁面，然後測試看看這樣。
 過程中主管會不斷的給你幫忙和跟你討論，有問題都可以隨時問，主管也會一直關心你的狀況，不會有太大的壓力，我覺得算是蠻開心的。</p>
 <p>再來是黑客松，這應該算是對我這種只想好好寫程式的人來說比較不喜歡的事情，基本上內容就是想一些能做的事讓 PChome 變得更好，然後我真的對這方面比較沒想法，所以基本上就都沒什麼想法然後都在鬼混，有點小小的對不起隊友。
 後來的看了所有人的報告我其實也覺得創新的部分感覺也就是目前其他的電商有但我們還沒有的一些小地方，我其實不覺得能造成多大改變，因為我相信 PChome 的人應該也不是沒想過這些東西，只是礙於可能人力或各種因素所以暫時還沒提上時程而已。</p>
 <p>最後就是上課，基本上就是會有不同的講師來講一些有關電商的東西，算是上班生活的一點小小調劑，但我覺得有些行銷還有社群類的東西好像跟我關聯有點不大就是了，有沒有很大的收穫感覺也是看自己的興趣，我個人希望下次可以乾脆找我們技術部的主管上來分享技術我可能更有興趣。</p>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="實習心得">實習心得<a href="https://rulerchen.github.io/RulerChen-Website/en/blog/PChomeSummerIntern/#%E5%AF%A6%E7%BF%92%E5%BF%83%E5%BE%97" class="hash-link" aria-label="Direct link to 實習心得" title="Direct link to 實習心得">​</a></h2>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="實習心得">實習心得<a href="https://rulerchen.github.io/RulerChen-Website/en/blog/PChomeSummerIntern/#%E5%AF%A6%E7%BF%92%E5%BF%83%E5%BE%97" class="hash-link" aria-label="Direct link to 實習心得" title="Direct link to 實習心得" translate="no">​</a></h2>
 <p>整體來說，雖然我有點抱怨，但我其實還是覺得這裡對我這個大二甚麼都不懂的人來說其實還是可以的，特別是技術部的人跟主管都蠻好的，人也都蠻好相處。
 我記得我在最後的個人專案報告的時候還在上面罵為啥 2023 年了 PChome 還在用 jsonp 這種早該被寫在歷史課本裡面的東西，然後後端的主管還會跟我道歉 XD，我覺得真的是還蠻有趣的體驗。
 在部門裡面也常常聽到有人在大聲笑跟講話，氣氛在我看來也還行，反觀其他非技術部的樓層幾乎都死氣沉沉大家都不講話，然後也有聽到一點小道消息說其他部門有人還跟正職的人有心結，這點在我們這邊根本是無法想像的事。</p>
