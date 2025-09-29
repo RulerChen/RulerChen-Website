@@ -95,7 +95,6 @@ const Carousel: React.FC<CarouselProps> = ({
             </div>
           ))}
         </div>
-
       </div>
 
       {(showIndicators || showArrows) && processedItems.length > 1 && (
@@ -105,16 +104,17 @@ const Carousel: React.FC<CarouselProps> = ({
               ‹
             </button>
           )}
-          
-          {showIndicators && processedItems.map((_, index) => (
-            <button
-              key={index}
-              className={`carousel-indicator ${index === currentIndex ? 'active' : ''}`}
-              onClick={() => goToSlide(index)}
-              aria-label={`Go to slide ${index + 1}`}
-            />
-          ))}
-          
+
+          {showIndicators &&
+            processedItems.map((_, index) => (
+              <button
+                key={index}
+                className={`carousel-indicator ${index === currentIndex ? 'active' : ''}`}
+                onClick={() => goToSlide(index)}
+                aria-label={`Go to slide ${index + 1}`}
+              />
+            ))}
+
           {showArrows && (
             <button className="carousel-arrow carousel-arrow-next" onClick={goToNext} aria-label="Next slide">
               ›
