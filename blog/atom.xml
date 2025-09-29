@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?><?xml-stylesheet type="text/xsl" href="atom.xsl"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://RulerChen.github.io/RulerChen-Website/blog/</id>
-    <title>RulerChen Blog</title>
+    <title>RulerChen's Blog</title>
     <updated>2025-08-30T00:00:00.000Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://RulerChen.github.io/RulerChen-Website/blog/"/>
-    <subtitle>RulerChen Blog</subtitle>
+    <subtitle>Welcome to RulerChen's Blog</subtitle>
     <icon>https://RulerChen.github.io/RulerChen-Website/img/profile/profile.webp</icon>
+    <rights>Copyright © 2025 RulerChen.</rights>
     <entry>
         <title type="html"><![CDATA[Netskope 實習心得]]></title>
         <id>https://RulerChen.github.io/RulerChen-Website/blog/NetskopeIntern/</id>
