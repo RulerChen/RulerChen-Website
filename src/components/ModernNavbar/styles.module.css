@@ -8,7 +8,7 @@
   backdrop-filter: blur(10px);
   border-bottom: 1px solid rgba(75, 85, 99, 0.3);
   transition: all 0.3s ease;
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-family: var(--ifm-font-family-monospace);
   display: block !important; /* Force display to override any hiding */
 }
 
@@ -35,7 +35,7 @@
   color: #ffffff;
   text-decoration: none;
   transition: all 0.3s ease;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--ifm-font-family-monospace);
 }
 
 .brand:hover {
@@ -75,7 +75,7 @@
   border-radius: 8px;
   transition: all 0.3s ease;
   position: relative;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--ifm-font-family-monospace);
 }
 
 .navItem:hover {
@@ -100,21 +100,6 @@
   height: 2px;
   background: linear-gradient(90deg, #60a5fa, #34d399);
   border-radius: 2px;
-}
-
-.githubLink {
-  display: flex;
-  align-items: center;
-  padding: 0.5rem;
-  color: #d1d5db;
-  border-radius: 8px;
-  transition: all 0.3s ease;
-}
-
-.githubLink:hover {
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.1);
-  transform: scale(1.1);
 }
 
 .mobileMenuBtn {
@@ -166,7 +151,7 @@
   text-decoration: none;
   border-radius: 8px;
   transition: all 0.3s ease;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--ifm-font-family-monospace);
 }
 
 .mobileNavItem:hover {

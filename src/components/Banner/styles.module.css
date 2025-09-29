@@ -1,13 +1,6 @@
 /* =============================================================================
-   1. IMPORTS & VARIABLES
+   1. VARIABLES
 ============================================================================= */
-
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
-
-@font-face {
-  font-family: 'Roboto Mono';
-  src: url('../../../static/font/RobotoMono-Bold.ttf') format('truetype');
-}
 
 :root {
   /* Layout */
@@ -278,35 +271,6 @@
   transform: scale(1.05);
 }
 
-.statusIndicator {
-  position: absolute;
-  bottom: 10px;
-  right: 10px;
-  background: rgba(17, 24, 39, 0.9);
-  padding: 0.4rem 0.8rem;
-  border-radius: 20px;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.75rem;
-  color: var(--secondary-color);
-  font-family: var(--font-mono);
-  backdrop-filter: var(--glass-backdrop);
-  border: 1px solid rgba(52, 211, 153, 0.3);
-  white-space: nowrap;
-  max-width: calc(100% - 20px);
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.statusDot {
-  width: 8px;
-  height: 8px;
-  background: var(--secondary-color);
-  border-radius: 50%;
-  animation: pulse 2s infinite;
-}
-
 .introText {
   text-align: left;
   width: 100%;
@@ -375,7 +339,6 @@
   justify-content: flex-start;
 }
 
-.primaryBtn,
 .secondaryBtn {
   display: flex;
   align-items: center;
@@ -387,18 +350,6 @@
   font-family: var(--font-mono);
   transition: all 0.3s ease;
   border: 2px solid transparent;
-}
-
-.primaryBtn {
-  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-  color: #ffffff;
-}
-
-.primaryBtn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 25px rgba(96, 165, 250, 0.3);
-  text-decoration: none;
-  color: #ffffff;
 }
 
 .secondaryBtn {
@@ -413,31 +364,6 @@
   color: #ffffff;
   transform: translateY(-2px);
   text-decoration: none;
-}
-
-.socialLinks {
-  display: flex;
-  gap: 1rem;
-}
-
-.socialLink {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 50px;
-  height: 50px;
-  background: rgba(96, 165, 250, 0.1);
-  color: var(--primary-color);
-  border-radius: 12px;
-  transition: all 0.3s ease;
-  border: 1px solid rgba(96, 165, 250, 0.2);
-}
-
-.socialLink:hover {
-  background: var(--primary-color);
-  color: #ffffff;
-  transform: translateY(-3px);
-  box-shadow: 0 10px 20px rgba(96, 165, 250, 0.3);
 }
 
 /* =============================================================================

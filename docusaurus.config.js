@@ -61,6 +61,21 @@ module.exports = async function createConfigAsync() {
           content: 'QrdRbPEcOsJJ_kfRVewqfwR6GjPcRf0UVgRb85I-5fc',
         },
       },
+      {
+        tagName: 'link',
+        attributes: {
+          rel: 'preconnect',
+          href: 'https://fonts.googleapis.com',
+        },
+      },
+      {
+        tagName: 'link',
+        attributes: {
+          rel: 'preconnect',
+          href: 'https://fonts.gstatic.com',
+          crossorigin: 'anonymous',
+        },
+      },
     ],
 
     presets: [
@@ -103,6 +118,8 @@ module.exports = async function createConfigAsync() {
         integrity: 'sha384-odtC+0UGzzFL/6PNoE8rX/SPcQDXBJ+uRepguP4QkPCm2LBxH3FA3y+fKSiJ+AmM',
         crossorigin: 'anonymous',
       },
+      // Local fonts temporarily disabled - using Google Fonts instead
+      // '/fonts/fonts.css',
     ],
     themeConfig:
       /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
