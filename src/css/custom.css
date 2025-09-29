@@ -37,30 +37,8 @@
   src: url('/fonts/jetbrains-mono-700.ttf') format('truetype');
 }
 
-/* Local Noto Sans TC fonts */
-@font-face {
-  font-family: 'Noto Sans TC';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('/fonts/noto-sans-tc-400.ttf') format('truetype');
-}
-
-@font-face {
-  font-family: 'Noto Sans TC';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url('/fonts/noto-sans-tc-500.ttf') format('truetype');
-}
-
-@font-face {
-  font-family: 'Noto Sans TC';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url('/fonts/noto-sans-tc-700.ttf') format('truetype');
-}
+/* Google Fonts for chinese characters */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
 
 /* You can override the default Infima variables here. */
 :root {
