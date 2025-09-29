@@ -24,7 +24,12 @@ module.exports = async function createConfigAsync() {
     projectName: 'RulerChen-Website', // Usually your repo name.
 
     onBrokenLinks: 'warn',
-    onBrokenMarkdownLinks: 'warn',
+
+    markdown: {
+      hooks: {
+        onBrokenMarkdownLinks: 'warn',
+      },
+    },
 
     // Even if you don't use internalization, you can use this field to set useful
     // metadata like html lang. For example, if your site is Chinese, you may want
@@ -65,14 +70,7 @@ module.exports = async function createConfigAsync() {
         tagName: 'link',
         attributes: {
           rel: 'preconnect',
-          href: 'https://fonts.googleapis.com',
-        },
-      },
-      {
-        tagName: 'link',
-        attributes: {
-          rel: 'preconnect',
-          href: 'https://fonts.gstatic.com',
+          href: 'https://cdn.jsdelivr.net',
           crossorigin: 'anonymous',
         },
       },
@@ -118,8 +116,6 @@ module.exports = async function createConfigAsync() {
         integrity: 'sha384-odtC+0UGzzFL/6PNoE8rX/SPcQDXBJ+uRepguP4QkPCm2LBxH3FA3y+fKSiJ+AmM',
         crossorigin: 'anonymous',
       },
-      // Local fonts temporarily disabled - using Google Fonts instead
-      // '/fonts/fonts.css',
     ],
     themeConfig:
       /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
