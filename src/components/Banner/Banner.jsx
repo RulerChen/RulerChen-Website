@@ -124,7 +124,7 @@ const Home = () => {
           <div className={styles.heroRight}>
             <div className={styles.profileSection}>
               <div className={styles.profileImageContainer}>
-                <img className={styles.profileImage} src={Profile} alt="RulerChen" />
+                <img className={styles.profileImage} src={Profile} alt="RulerChen" fetchPriority="high" />
               </div>
 
               <div className={styles.introText}>
