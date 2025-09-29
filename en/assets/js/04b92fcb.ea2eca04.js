@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkmy_website=self.webpackChunkmy_website||[]).push([[451],{370:e=>{e.exports=JSON.parse('{"tags":[{"label":"Internship","permalink":"/RulerChen-Website/en/blog/tags/internship","description":"\u9019\u88e1\u662f\u6211\u7684\u5be6\u7fd2\u7d93\u6b77","count":3}]}')}}]);
