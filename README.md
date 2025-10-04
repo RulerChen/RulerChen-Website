@@ -40,6 +40,7 @@ This website includes my personal notes, and below are some useful resources I c
 ## Design Pattern
 
 - 📝 [Refactoring Guru](https://refactoring.guru/design-patterns)
+- 🎥 [Fred 聊聊 SOLID 設計原則](https://www.youtube.com/watch?v=e0UOuQ_lCUY)
 
 ## Interview
 
