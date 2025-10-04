@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Layout from '@theme/Layout';
 
-import Banner from '../components/Banner/Banner';
+import HomePage from '../components/Home/Home';
 import ModernNavbar from '../components/ModernNavbar/ModernNavbar';
 
 import './index.css';
@@ -36,7 +36,7 @@ export default function Home() {
     <Layout title={`${siteConfig.title}`} wrapperClassName="homepage-container" noFooter>
       <ModernNavbar />
       <main>
-        <Banner />
+        <HomePage />
       </main>
     </Layout>
   );

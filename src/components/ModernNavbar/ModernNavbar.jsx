@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from '@docusaurus/router';
 import Link from '@docusaurus/Link';
-import { Github, Menu, X, NotebookPen, Rss, User, Mail } from 'lucide-react';
+import { Github, Menu, X, NotebookPen, Rss } from 'lucide-react';
+
 import styles from './styles.module.css';
 
 const ModernNavbar = () => {

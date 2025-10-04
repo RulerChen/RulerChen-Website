@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 
+import './Typewriter.css';
+
 export const useTypewriter = ({ words = [], loop = true, typeSpeed = 70, deleteSpeed = 30, delaySpeed = 2000 }) => {
   const [displayText, setDisplayText] = useState('');
   const [wordIndex, setWordIndex] = useState(0);

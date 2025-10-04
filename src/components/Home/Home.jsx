@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Mail, Facebook, Github, Linkedin, Download, Code2, Terminal } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Mail, Facebook, Github, Linkedin, Terminal } from 'lucide-react';
 import { Typewriter } from '../Typewriter/Typewriter';
 
 import styles from './styles.module.css';
-import '../Typewriter/Typewriter.css';
-import Profile from '../../../static/img/profile/profile.webp';
 
-const Home = () => {
+import Profile from '/img/profile/profile.webp';
+
+const HomePage = () => {
   const [startTyping, setStartTyping] = useState(false);
   const [codeLines, setCodeLines] = useState([]);
   const [currentLineIndex, setCurrentLineIndex] = useState(0);
@@ -175,4 +175,4 @@ const Home = () => {
   );
 };
 
-export default Home;
+export default HomePage;
