@@ -1,1 +1,0 @@
-"use strict";(self.webpackChunkmy_website=self.webpackChunkmy_website||[]).push([["3220"],{4326:function(e){e.exports=JSON.parse('{"blogBasePath":"/RulerChen-Website/blog","blogTitle":"Blog","authorsListPath":"/RulerChen-Website/blog/authors"}')}}]);

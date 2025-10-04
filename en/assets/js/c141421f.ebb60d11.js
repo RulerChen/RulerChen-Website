@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkrulerchen_website=self.webpackChunkrulerchen_website||[]).push([["8366"],{2938:function(e){e.exports=JSON.parse('{"name":"docusaurus-theme-search-algolia","id":"default"}')}}]);
