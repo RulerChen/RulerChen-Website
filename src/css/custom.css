@@ -101,3 +101,19 @@
   width: 32px;
   height: 32px;
 }
+
+/* Desktop homepage - no scroll */
+@media (min-width: 1025px) {
+  html:has(.homepage-container),
+  body:has(.homepage-container) {
+    height: 100vh !important;
+    max-height: 100vh !important;
+    overflow: hidden !important;
+  }
+  
+  .homepage-container {
+    height: 100vh !important;
+    max-height: 100vh !important;
+    overflow: hidden !important;
+  }
+}
