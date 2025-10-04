@@ -1,119 +1,95 @@
-/* Allow natural scrolling on mobile while maintaining fullscreen on desktop */
-@media (min-width: 769px) {
-  html:has(.homepage-container) {
-    overflow: hidden !important;
-    height: 100% !important;
-  }
+/* --------------------------------------------------------------------------
+   Desktop Viewport (min-width: 769px)
+   -------------------------------------------------------------------------- */
 
+@media (min-width: 769px) {
+  /* Root elements - fullscreen without scroll */
+  html:has(.homepage-container),
   body:has(.homepage-container) {
-    overflow: hidden !important;
-    height: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
   }
-}
 
-/* Homepage container styles */
-.homepage-container {
-  font-family: var(--font-chinese) !important;
-}
-
-@media (min-width: 769px) {
+  /* Homepage container - fixed fullscreen */
   .homepage-container {
-    height: 100vh !important;
-    width: 100vw !important;
-    overflow: hidden !important;
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
+    position: fixed;
+    inset: 0; /* Shorthand for top, right, bottom, left */
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* Main content wrapper */
+  .homepage-container .main-wrapper,
+  .homepage-container main {
+    height: 100vh;
+    padding-top: 0;
+    overflow: hidden;
   }
 }
+
+/* --------------------------------------------------------------------------
+   Mobile Viewport (max-width: 768px)
+   -------------------------------------------------------------------------- */
 
 @media (max-width: 768px) {
+  /* Homepage container - natural scrolling */
   .homepage-container {
-    min-height: 100vh;
-    width: 100%;
     position: relative;
+    width: 100%;
+    min-height: 100vh;
+  }
+
+  /* Main content wrapper */
+  .homepage-container .main-wrapper,
+  .homepage-container main {
+    min-height: 100vh;
+    padding-top: 0;
   }
 }
 
-/* Hide default Docusaurus navbar ONLY on homepage - with maximum specificity */
+/* --------------------------------------------------------------------------
+   Navbar Visibility Rules
+   -------------------------------------------------------------------------- */
+
+/* Hide default Docusaurus navbar on homepage
+   Using high specificity selectors instead of !important where possible */
 .homepage-container .navbar,
 .homepage-container nav.navbar,
 .homepage-container .navbar--fixed-top,
 .homepage-container .navbar__inner,
 .homepage-container [class*='navbar']:not([class*='modern']),
 .homepage-container > div .navbar,
+.homepage-container nav:not([class*='modern']),
 body .homepage-container .navbar,
-html .homepage-container .navbar,
-div.homepage-container .navbar {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  height: 0 !important;
-  width: 0 !important;
-  overflow: hidden !important;
-  position: absolute !important;
-  top: -9999px !important;
-  left: -9999px !important;
-  z-index: -1 !important;
-}
-
-/* Ensure our custom navbar is always visible on homepage */
-.homepage-container nav[class*='modern'] {
-  display: block !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  height: auto !important;
-  width: auto !important;
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  z-index: 1000 !important;
-}
-
-/* Ensure no top margin/padding from default layout */
-@media (min-width: 769px) {
-  .homepage-container .main-wrapper {
-    padding-top: 0 !important;
-    height: 100vh !important;
-    overflow: hidden !important;
-  }
-
-  .homepage-container main {
-    height: 100vh !important;
-    overflow: hidden !important;
-  }
-}
-
-@media (max-width: 768px) {
-  .homepage-container .main-wrapper {
-    padding-top: 0 !important;
-    min-height: 100vh;
-  }
-
-  .homepage-container main {
-    min-height: 100vh;
-  }
-}
-
-/* FINAL OVERRIDE - Nuclear option to hide default navbar on homepage */
-.homepage-container nav:not([class*='modern']) {
-  display: none !important;
-}
-
-.homepage-container [class*='navbar']:not([class*='modern']) {
-  display: none !important;
-}
-
-/* Force hide any Docusaurus navbar elements on homepage */
 body:has(.homepage-container) nav.navbar,
 body:has(.homepage-container) .navbar--fixed-top,
+html .homepage-container .navbar,
 html:has(.homepage-container) nav.navbar,
-html:has(.homepage-container) .navbar--fixed-top {
-  display: none !important;
-  visibility: hidden !important;
+html:has(.homepage-container) .navbar--fixed-top,
+div.homepage-container .navbar {
+  display: none !important; /* !important needed to override Docusaurus fixed navbar */
+  visibility: hidden;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  position: absolute;
+  top: -9999px;
+  left: -9999px;
+  z-index: -1;
+}
+
+/* Show custom modern navbar on homepage */
+.homepage-container nav[class*='modern'] {
+  display: block;
+  visibility: visible;
+  opacity: 1;
+  position: fixed;
+  inset: 0 0 auto 0; /* Shorthand for top: 0, right: 0, left: 0 */
+  width: auto;
+  height: auto;
+  z-index: 1000;
 }
