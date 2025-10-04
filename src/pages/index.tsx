@@ -1,12 +1,13 @@
+import type { ReactNode } from 'react';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Layout from '@theme/Layout';
 
-import HomePage from '../components/Home/Home';
-import ModernNavbar from '../components/ModernNavbar/ModernNavbar';
+import HomePage from '@site/src/components/Home/Home';
+import ModernNavbar from '@site/src/components/ModernNavbar/ModernNavbar';
 
-import './index.css';
+import './index.module.css';
 
-export default function Home() {
+export default function Home(): ReactNode {
   const { siteConfig } = useDocusaurusContext();
 
   return (

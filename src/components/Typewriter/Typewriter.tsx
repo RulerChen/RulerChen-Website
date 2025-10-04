@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, ReactNode } from 'react';
 
-import './Typewriter.css';
+import styles from './styles.module.css';
 
 export const useTypewriter = ({ words = [], loop = true, typeSpeed = 70, deleteSpeed = 30, delaySpeed = 2000 }) => {
   const [displayText, setDisplayText] = useState('');
@@ -47,13 +47,22 @@ export const useTypewriter = ({ words = [], loop = true, typeSpeed = 70, deleteS
   return displayText;
 };
 
-export const Typewriter = ({ words, loop, typeSpeed, deleteSpeed, delaySpeed, className, ...props }) => {
+type TypewriterProps = {
+  words: string[];
+  loop?: boolean;
+  typeSpeed?: number;
+  deleteSpeed?: number;
+  delaySpeed?: number;
+  className?: string;
+};
+
+export const Typewriter = ({ words, loop, typeSpeed, deleteSpeed, delaySpeed, className, ...props }: TypewriterProps): ReactNode => {
   const text = useTypewriter({ words, loop, typeSpeed, deleteSpeed, delaySpeed });
 
   return (
     <span className={className} {...props}>
       {text}
-      <span className="typewriter-cursor">_</span>
+      <span className={styles.cursor}>_</span>
     </span>
   );
 };

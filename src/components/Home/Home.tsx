@@ -1,12 +1,12 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, ReactNode } from 'react';
 import { Mail, Facebook, Github, Linkedin, Terminal } from 'lucide-react';
-import { Typewriter } from '../Typewriter/Typewriter';
+import { Typewriter } from '@site/src/components/Typewriter/Typewriter';
 
 import styles from './styles.module.css';
 
-import Profile from '/img/profile/profile.webp';
+import Profile from '@site/static/img/profile/profile.webp';
 
-const HomePage = () => {
+const HomePage = (): ReactNode => {
   const [startTyping, setStartTyping] = useState(false);
   const [codeLines, setCodeLines] = useState([]);
   const [currentLineIndex, setCurrentLineIndex] = useState(0);

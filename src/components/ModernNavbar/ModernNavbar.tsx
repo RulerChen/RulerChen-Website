@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, ReactNode } from 'react';
 import { useLocation } from '@docusaurus/router';
 import Link from '@docusaurus/Link';
 import { Github, Menu, X, NotebookPen, Rss } from 'lucide-react';
 
 import styles from './styles.module.css';
 
-const ModernNavbar = () => {
+const ModernNavbar = (): ReactNode => {
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
