@@ -1,0 +1,336 @@
+---
+title: 'Design a URL Shortener like TinyURL'
+sidebar_position: '1'
+description: Design a URL Shortener like TinyURL
+keywords: [URL Shortener, System Design]
+tags: [System Design]
+---
+
+## Background
+
+[TinyURL](https://tinyurl.com/) 是一個 URL 縮短服務，使用者可以輸入一個長網址並得到一個短網址，當訪問這個短網址時，會被重定向到原始的長網址。
+
+舉例來說，當使用者想要分享網址的時候，可以將 `https://www.example.com/some/very/long/url` 丟給 TinyURL，TinyURL 會回傳一個短網址 `https://tinyurl.com/abc123`，使用者可以將這個短網址分享給其他人，當其他人訪問這個短網址時，會被重定向到 `https://www.example.com/some/very/long/url`。
+
+## Requirements
+
+### Functional Requirements
+
+- 使用者能夠提交一個長網址並獲得一個對應的短網址
+- 使用者能夠通過短網址來被重定向到原始的長網址
+- ~~使用者可以設置過期時間或是刪除短網址~~
+- ~~使用者可以自訂短網址的別名~~
+- ~~可以提供統計資訊，如點擊次數等~~
+
+本篇將專注於生成短網址和重定向功能。
+
+### Non-Functional Requirements
+
+- 重定向需要確保低延遲 (< 100ms)
+- 高可用性 (availability > consistency)
+- 可擴展性，可以處理 100M DAU
+- 保證短網址的唯一性，不會有一個短網址對應多個長網址的情況
+
+## Estimation
+
+### Assumptions
+
+- 100M DAU
+- 每日產生 5M 個短網址
+- 讀寫比例 100:1
+
+### QPS Estimation
+
+- 每秒平均寫入請求數: 500M / 86400 ≈ 58 (writes/sec)
+- 每秒平均讀取請求數: 58 * 100 = 5800 (reads/sec)
+- 高峰期流量假設為平均的 5 倍: 29000 (reads/sec), 290 (writes/sec)
+
+### Storage Estimation
+
+首先對每個欄位的大小進行估算 :
+
+- 長網址: 150 bytes
+- 短網址: 20 bytes
+- 使用者 ID: 16 bytes
+- 創建時間戳: 8 bytes
+- 過期時間戳: 8 bytes
+- 索引和其他開銷: 100 bytes
+
+從上述估算可得每條紀錄約 300 bytes。
+
+- 每日產生的短網址數量: 5M
+- 每日存儲需求: 5M * 300B = 1.5GB
+- 每年存儲需求: 1.5GB * 365 = 547.5GB
+
+可以依據資料需要保留的時間來決定總存儲需求。
+
+## Schema Design
+
+**URL Table**
+
+- short_url
+- long_url
+- user_id
+- created_at
+- expiry_date
+
+**User Table** (not included in this design)
+
+- user_id
+- ...
+
+## API Design
+
+### Create Short URL
+
+```
+POST /api/urls
+{
+    "long_url": "https://www.example.com/some/very/long/url",
+    "custom_alias": "optional-custom-alias",
+    "expiry_date": "optional-expiry-date"
+}
+Response: HTTP 200 OK
+{
+    "short_url": "https://tinyurl.com/abc123"
+}
+```
+
+### Redirect to Long URL
+
+```http
+GET /{short_url}
+Response: HTTP 301 Moved Permanently
+Location: https://www.example.com/some/very/long/url
+```
+
+這裡的 HTTP status code 有兩種選擇 :
+
+- 301 Moved Permanently: 表示這個重定向是永久性的，瀏覽器跟搜尋引擎都會將這個短網址記錄下來
+- 302 Found: 表示這個重定向是臨時性的，每次訪問短網址都會需要重新發送請求到伺服器
+
+對於短網址服務來說，乍看之下由於會有過期時間且有時候需要蒐集點擊次數等統計資訊，似乎選擇 302 是比較合理的選擇。
+
+但以 TinyURL 來舉例，它是使用 301 搭配 `max-age=0, must-revalidate, no-cache, no-store, private` 來忽略瀏覽器的快取，這樣就能夠同時達到 SEO 跟統計資訊的需求。
+
+:::note
+Cache-Control 的設定可以參考 [MDN Web Docs](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control) :
+
+- max-age=N: 表示回應可以被快取 N 秒
+- must-revalidate: 表示在快取過期後，必須重新向伺服器驗證資源是否有更新，需要搭配 ETag 或是 Last-Modified 使用
+- no-cache: 表示回應可以被快取，但在使用前必須先向伺服器驗證資源是否有更新
+- no-store: 表示回應不能被任何快取儲存
+- public / private: public 表示回應可以被任何快取 (如 CDN) 儲存，private 表示回應只能被瀏覽器的快取儲存
+
+TinyURL 採取的做法是為了讓很舊的瀏覽器也能正確忽略快取，因此使用了很多功能重複的指令，實際上應該只需要 `no-store` 就可以達到同樣的效果。
+:::
+
+同時也有不少短網址服務使用 302 ，因此兩種做法都是可以接受的。
+
+## High Level Design
+
+<ImageModal src="/img/system-design/tinyurl/image.webp" caption="High Level Design" />
+
+- `API Gateway`: 負責處理所有進入的請求，並將請求路由到適當的服務，同時也可以處理登入驗證和速率限制
+- `Application Server`: 負責處理業務邏輯，如生成短網址、查找長網址等
+- `Database`: 用於儲存資料，這裡會使用關聯式資料庫 (PostgreSQL) 來儲存 URL 資料
+
+### User should be able to create a short URL
+
+1. 使用者呼叫 POST /api/urls 並提交長網址
+2. 驗證長網址是否符合 url 格式
+3. 生成唯一的短網址
+4. 將長網址和短網址儲存到資料庫中
+
+### User should be able to access the original URL by using the short URL
+
+1. 使用者訪問短網址
+2. application server 查詢資料庫以獲取對應的長網址
+3. 如果有找到並且沒有過期，返回 301 重定向到長網址
+
+## Deep Dive
+
+### How to generate a unique short URL?
+
+在設計短網址的生成策略時，需要考慮以下幾點 :
+
+- 短網址的唯一性
+- 長度盡可能短
+- 生成短網址的速度要快
+
+常見的做法是先產生一個唯一的 ID，然後將這個 ID 進行編碼 (encoding) 來生成短網址。
+
+對於如何產生唯一的 ID，有幾種方法 :
+
+- Random Function
+- Hash Function
+- Counter
+- Any unique ID generation algorithm (如 Snowflake、UUID)
+
+而對於編碼方式，通常會使用 Base64、Base62 或 Base58 編碼。
+
+:::note
+- Base64: 使用 A-Z, a-z, 0-9, +, / 共 64 個字符
+- Base62: 使用 A-Z, a-z, 0-9 共 62 個字符
+- Base58: 使用 A-Z, a-z, 1-9 (去除容易混淆的 0, O, I, l) 共 58 個字符
+:::
+
+常見的選擇是 Base62 或 Base58，因為 Base64 中的 + 和 / 是特殊字符，需要做 URL encoding，會增加短網址的長度。
+
+假設使用 Base62 編碼，代表 :
+
+- 如果是 5 個字符的短網址，總共有 62^5 ≈ 9 億種組合
+- 如果是 6 個字符的短網址，總共有 62^6 ≈ 568 億種組合
+- 如果是 7 個字符的短網址，總共有 62^7 ≈ 3.5 兆種組合
+
+以這個系統來說，每日產生 5M 個短網址，一年大約會產生 18.25 億個短網址，因此 6 個字符的短網址應該是足夠的。
+
+但如果使用 random function 或是 hash function，就需要特別注意碰撞的機率問題。
+假設資料庫中已經有 10 億個短網址，然後現在要再生成一個新的短網址，碰撞的機率大約是 10 億 / 568 億 ≈ 1.8%，這個機率看起來不高，但如果每天都產生 5M 個短網址，那麼一天就會有大約 90000 個短網址會碰撞。
+
+#### Solution 1: Hash Function
+
+第一種可行的方法是使用 hash function 來生成短網址，常見的 hash function 有 MD5、SHA-256 等等。
+我們可以使用 HMAC-SHA256 來生成一個無法被預測的 hash 值，然後將這個 hash 值進行 Base62 編碼來生成短網址，最後取前 6 個字符作為短網址。
+
+但這樣同樣會產生問題，因為 hash function 並不是完美的，仍然有可能會產生碰撞，並且如果使用者輸入相同的長網址，就必定會產生相同的短網址，這不是我們想要的行為。
+
+要解決碰撞問題，可以採取以下幾種策略 :
+
+1. Unique Constraint: 在資料庫中對短網址欄位設置唯一約束，這樣當插入一個已存在的短網址時會產生錯誤，系統可以捕捉這個錯誤並重新生成短網址
+2. Nonce / Salt: 在生成短網址時加入一個隨機的 nonce 或是 salt，這樣即使使用者輸入相同的長網址，也會產生不同的短網址
+3. Retry: 如果產生的短網址已經存在，可以嘗試加入不同的 nonce 或是 salt 並重新生成，直到重試的次數達到上限
+
+同時，也可以選擇把輸入改成長網址 + timestamp，這樣就能降低碰撞的機率。
+
+#### Solution 2: Counter
+
+第二種可行的方法是使用一個全局的計數器，每次有新的長網址時，計數器就加 1，然後將這個計數器的值進行 Base62 編碼來生成短網址，這樣就可以確保生成的數字是唯一且不會碰撞的。
+
+Redis 提供了 `INCR` 命令，可以用來實現這個計數器，並且這個命令是原子操作，能夠保證在高併發的情況下不會產生重複的值。
+
+這個做法的問題是要如何在分散式系統中確保計數器的一致性，以及生成的短網址是可預測的，可能會產生資安問題，我們會在最後討論這個問題。
+
+### How to ensure low latency?
+
+對於 read-heavy 的系統來說，有幾種常見的優化手段 :
+
+- Database Indexing
+- Caching
+- CDN and Edge Servers
+
+#### Database Indexing
+
+由於這裡的 SQL 查詢主要是 point search (根據 short_url 查找 long_url)，在 short_url 欄位上建立索引可以大幅提升查詢速度。
+
+```sql
+SELECT long_url 
+FROM url_table 
+WHERE short_url = 'abc123';
+```
+
+以 PostgreSQL 為例，甚至可以使用 hash index 而非 B-tree index 來進一步提升查詢速度。
+
+```sql
+CREATE INDEX idx_short_url ON url_table USING HASH (short_url);
+```
+
+#### Caching
+
+以前面估計的 QPS 來看 (29000 r/s, 290 w/s)，單單引入索引不足以應付這樣的讀取量。
+
+由於讀寫比例高達 100:1，且資料一旦寫入後通常不會再更改，因此很適合使用 cache (如 Redis) 來快取熱門的短網址，減少對資料庫的讀取壓力。
+
+:::note
+對於一般的 RDBMS (PostgreSQL、MySQL) 來說，在簡單的查詢下單個資料庫節點大約能處理 1000 writes/sec 或 3000 reads/sec 左右的請求。
+
+而對於像 Redis 這樣的 in-memory database，簡單的 GET/SET 操作在單個節點上可以輕鬆達到 100000 req/sec 以上的處理能力。
+:::
+
+引入快取雖然可以提升效能，但也會帶來可用性與一致性上的挑戰。
+為了提升可用性，可以使用 Redis Cluster 或其他 Redis 高可用方案。
+
+而在快取的使用上則可以採用 cache aside pattern :
+
+- 讀取時先查快取，若快取未命中再查資料庫並將結果寫入快取
+- 寫入時先更新資料庫，並採用 lazy write 的方式更新快取 (不立即更新快取，等到下一次讀取時再更新)
+
+同時因為記憶體的大小有限，可以使用 LRU 搭配 TTL 來移除較少使用或過期的資料。
+
+#### CDN and Edge Servers
+
+除了快取之外，還可以使用 CDN (Content Delivery Network) 來將熱門的查詢放在離使用者更近的邊緣節點 (Edge Servers)。
+
+以短網址系統來說，我認為 CDN 的必要性不是特別大，而且會造成額外的成本，因此這部分可以視情況而定。
+如果要使用 CDN 的話還需要額外考慮到快取失效的問題。
+
+### How to scale up to support 100M DAU?
+
+以短網址系統來說，主要的瓶頸可能會出現在資料庫上，這裡有幾個點需要注意 :
+
+- 讀寫的 QPS 吞吐量是否足夠
+- 儲存空間是否足夠
+- 過期資料如何處理
+
+#### Read/Write Throughput
+
+以資料庫的寫入量來說 (290 w/s)，單一節點應該是足夠的，但讀取量 (29000 r/s) 就需要特別注意。
+
+假設快取可以處理 90% 的讀取請求，那麼實際上資料庫需要處理的讀取請求大約是 2900 r/s，這對於單一資料庫節點來說壓力稍微有點大。
+
+對於這樣的情況，最好的解決方法就是採用 read replica 的方式來分散讀取的負載，可以把主資料庫的內容同步到多個從資料庫節點，並且將讀取請求分散到這些從節點上。
+以前面估計的值來說，可以把寫入請求都導向主節點，而讀取請求則可以分散到 2-3 個從節點上，這樣每個從節點大約只需要處理 1000 r/s 的請求。
+
+#### Storage
+
+對於資料庫的儲存空間來說 (547.5GB/年)，即使需要保存 3-5 年的資料量對於現代的資料庫來說也不是特別大的問題，但問題在於這個資料量對於單一表來說非常大，進而影響到查詢效能。
+
+假設系統需要保存 3 年的資料，代表資料庫需要保存 5M * 365 * 3 = 5.5B 行的資料在單一的表中，這會產生如索引過大、查詢效能下降的問題。
+
+因此需要進行 partitioning 來將資料分散到多個表中，常見的分區方式有 range partitioning (依照時間範圍分區) 或是 hash partitioning (依照某個欄位的 hash 值分區)。
+以這裡的查詢來說，對 short_url 進行 hash partitioning 是比較合適的，這樣可以確保在讀取的時候可以很輕易的知道要查詢哪一個分區。
+
+#### Outdated Data Deletion
+
+由於目前系統中沒有刪除資料的機制，即使 `expiry_date` 已經過期，資料仍然會保留在資料庫中，這會導致資料庫的大小不斷膨脹，進而影響到查詢效能。
+
+由於一次使用 `DELETE * FROM url_table WHERE expiry_date < now()` 來刪除過期資料會對資料庫造成很大的負擔，因此可以採用懶惰刪除 (lazy deletion) 搭配批次工作 (batch job) 來定期刪除過期資料。
+
+懶惰刪除的做法是當使用者訪問一個短網址時，先檢查這個短網址是否過期，如果過期就直接返回錯誤，並刪掉這筆資料。
+而後台的批次工作則可以新增一個 `is_deleted` 欄位，然後定期將過期的資料標記為已刪除，再用專門的低優先級工作來小批次的刪除這些資料。
+
+## Final Design
+
+<ImageModal src="/img/system-design/tinyurl/image-2.webp" caption="Final Design" />
+
+在最後的設計中，我選擇使用了 hash function 而非使用計數器來生成短網址，主要是為了降低系統的複雜度。
+
+首先，對於 Redis 這樣的資料庫來說，寫入顯然不是瓶頸，它也可以提供原子化的計數器功能，但問題在於系統是分散式的，這代表所有的 application server 都需要連接到同一個 Redis 節點來取得計數器的值，這會導致跨區域的延遲成為一個重要的問題。
+
+舉例來說，從臺灣打到美國西岸的 EC2 伺服器，網路延遲大概是 200ms 左右:
+
+```bash
+ping ec2.us-west-2.amazonaws.com
+```
+
+```txt
+Pinging ec2.us-west-2.amazonaws.com [52.119.164.21] with 32 bytes of data:
+Reply from 52.119.164.21: bytes=32 time=187ms TTL=239
+Reply from 52.119.164.21: bytes=32 time=202ms TTL=239
+Reply from 52.119.164.21: bytes=32 time=214ms TTL=239
+Reply from 52.119.164.21: bytes=32 time=183ms TTL=239
+
+Ping statistics for 52.119.164.21:
+    Packets: Sent = 4, Received = 4, Lost = 0 (0% loss),
+Approximate round trip times in milli-seconds:
+    Minimum = 183ms, Maximum = 214ms, Average = 196ms
+```
+
+當然這個問題也有解決方法，譬如說可以將 Redis 部屬在多個區域，並把計數器的值分散到不同的區域，或是一次性就給 application server 一大段的計數器值，但這些都會增加系統的複雜度，同時會大幅增加部屬 Redis 的成本。
+
+## References
+
+- [Design Bit.ly](https://www.hellointerview.com/learn/system-design/problem-breakdowns/bitly)
+- [Design a URL Shortening Service TinyURL](https://github.com/RulerChen/Grokking-Modern-System-Design-Interview/tree/main/Design%20a%20URL%20Shortening%20Service%20TinyURL)
+- [System Design : Scalable URL shortener service like TinyURL](https://medium.com/@sandeep4.verma/system-design-scalable-url-shortener-service-like-tinyurl-106f30f23a82)
+- [Design a URL Shortener (TinyURL, Bit.ly) | Systems Design Questions 3.0 With Ex-Google SWE](https://www.youtube.com/watch?v=xFeWVugaouk&list=PLjTveVh7FakLGZ36GbWAk_DMf_0xBZpGv&index=13)
