@@ -9,12 +9,12 @@ type Props = WrapperProps<typeof NavbarType>;
 
 export default function NavbarWrapper(props: Props): ReactNode {
   const location = useLocation();
-  
+
   // Hide navbar on the homepage
   if (location.pathname === useBaseUrl('/')) {
     return null;
   }
-  
+
   return (
     <>
       <Navbar {...props} />
