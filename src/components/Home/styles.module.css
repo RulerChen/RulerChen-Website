@@ -153,6 +153,7 @@
   overflow-y: hidden;
   width: 100%;
   box-sizing: border-box;
+  min-height: 310px;
 }
 
 .terminalPrompt {
