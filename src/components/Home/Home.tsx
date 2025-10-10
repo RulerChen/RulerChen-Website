@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, ReactNode } from 'react';
-import { Mail, Facebook, Github, Linkedin, Terminal } from 'lucide-react';
+import Link from '@docusaurus/Link';
+import { Mail, Facebook, Github, Linkedin, Terminal, NotebookPen, Rss } from 'lucide-react';
+
 import { Typewriter } from '@site/src/components/Typewriter/Typewriter';
 
 import styles from './styles.module.css';
@@ -75,12 +77,13 @@ const HomePage = (): ReactNode => {
       {/* Hero Section */}
       <div className={styles.heroContainer}>
         <div className={styles.particlesBackground}>
-          {[...Array(50)].map((_, i) => (
+          {[...Array(300)].map((_, i) => (
             <div
               key={i}
               className={styles.particle}
               style={{
                 left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
                 animationDelay: `${Math.random() * 3}s`,
                 animationDuration: `${3 + Math.random() * 4}s`,
               }}
@@ -148,24 +151,32 @@ const HomePage = (): ReactNode => {
                   )}
                 </div>
 
-                <p className={styles.description}>
+                {/* <p className={styles.description}>
                   Passionate about building scalable web applications and exploring cutting-edge technologies.
-                </p>
+                </p> */}
 
                 <div className={styles.ctaButtons}>
-                  <a href="mailto:a20196780@gmail.com" className={styles.secondaryBtn}>
-                    <Mail size={24} />
-                    Get In Touch
-                  </a>
-                  <a href="https://github.com/RulerChen" target="_blank" aria-label="github" className={styles.secondaryBtn}>
-                    <Github size={24} />
-                  </a>
-                  <a href="https://www.linkedin.com/in/rulerchen/" target="_blank" aria-label="linkedin" className={styles.secondaryBtn}>
-                    <Linkedin size={24} />
-                  </a>
+                  <Link href="mailto:a20196780@gmail.com" className={styles.secondaryBtn}>
+                    <Mail size={20} />
+                    Email
+                  </Link>
+                  <Link href="/docs/intro" className={styles.secondaryBtn}>
+                    <NotebookPen size={20} />
+                    Note
+                  </Link>
+                  <Link href="/blog" className={styles.secondaryBtn}>
+                    <Rss size={20} />
+                    Blog
+                  </Link>
+                  <Link href="https://github.com/RulerChen" target="_blank" aria-label="github" className={styles.secondaryBtn}>
+                    <Github size={20} />
+                    GitHub
+                  </Link>
+                  <Link href="https://www.linkedin.com/in/rulerchen/" target="_blank" aria-label="linkedin" className={styles.secondaryBtn}>
+                    <Linkedin size={20} />
+                    LinkedIn
+                  </Link>
                 </div>
-
-                {/* <div className={styles.socialLinks}></div> */}
               </div>
             </div>
           </div>

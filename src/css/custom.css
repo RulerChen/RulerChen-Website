@@ -4,40 +4,8 @@
  * work well for content-centric websites.
  */
 
-/* Local JetBrains Mono fonts - highest priority */
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('/fonts/jetbrains-mono-400.ttf') format('truetype');
-}
-
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url('/fonts/jetbrains-mono-500.ttf') format('truetype');
-}
-
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url('/fonts/jetbrains-mono-600.ttf') format('truetype');
-}
-
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url('/fonts/jetbrains-mono-700.ttf') format('truetype');
-}
-
-/* Google Fonts for chinese characters */
+/* Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
 
 /* You can override the default Infima variables here. */
@@ -51,8 +19,6 @@
   --ifm-color-primary-lightest: #3cad6e;
   --ifm-code-font-size: 95%;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
-  --ifm-font-family-monospace: 'JetBrains Mono', 'Courier New', monospace;
-  --font-chinese: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 /* For readability concerns, you should choose a lighter palette in dark mode. */
@@ -67,53 +33,7 @@
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--ifm-background-color);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--ifm-color-primary);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--ifm-color-primary-dark);
-}
-
-/* Override Docusaurus default styles for better consistency */
-.markdown {
-  --ifm-h1-font-size: 2.5rem;
-  --ifm-h2-font-size: 2rem;
-  --ifm-h3-font-size: 1.5rem;
-}
-
-/* Code block improvements */
+/* Override default code block font family */
 .prism-code {
   font-family: 'JetBrains Mono', 'Courier New', monospace !important;
-}
-
-.navbar__logo {
-  width: 32px;
-  height: 32px;
-}
-
-/* Desktop homepage - no scroll */
-@media (min-width: 1025px) {
-  html:has(.homepage-container),
-  body:has(.homepage-container) {
-    height: 100vh !important;
-    max-height: 100vh !important;
-    overflow: hidden !important;
-  }
-  
-  .homepage-container {
-    height: 100vh !important;
-    max-height: 100vh !important;
-    overflow: hidden !important;
-  }
 }

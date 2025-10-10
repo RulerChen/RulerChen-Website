@@ -3,9 +3,6 @@
 ============================================================================= */
 
 :root {
-  /* Layout */
-  --navbar-height: 80px;
-
   /* Colors */
   --primary-color: #60a5fa;
   --secondary-color: #34d399;
@@ -41,12 +38,10 @@
 .heroContainer {
   background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-medium) 50%, var(--bg-light) 100%);
   position: relative;
+  height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow-x: hidden;
-  min-height: 100vh;
-  padding: calc(var(--navbar-height) + 1rem) 1rem 2rem;
 }
 
 .particlesBackground {
@@ -88,7 +83,6 @@
   grid-template-columns: 1fr 1fr;
   gap: 4rem;
   align-items: center;
-  z-index: 10;
   position: relative;
   box-sizing: border-box;
 }
@@ -463,7 +457,6 @@
 /* Base styles (mobile-first) */
 @media (max-width: 768px) {
   .heroContainer {
-    padding: calc(var(--navbar-height) + 1rem) 1rem 2rem;
     overflow: visible;
   }
 
@@ -474,8 +467,9 @@
     padding: 0 1rem;
   }
 
+  /* Hide terminal on mobile */
   .heroLeft {
-    display: none; /* Hide terminal on mobile */
+    display: none;
   }
 
   .heroRight {
@@ -541,10 +535,6 @@
 
 /* Small mobile adjustments */
 @media (max-width: 480px) {
-  .heroContainer {
-    padding: var(--navbar-height) 0.75rem 1.5rem;
-  }
-
   .heroContent {
     padding: 0 0.75rem;
     gap: 1.5rem;
@@ -592,7 +582,7 @@
 /* Tablet styles */
 @media (min-width: 769px) and (max-width: 1024px) {
   .heroContainer {
-    padding: calc(var(--navbar-height) + 2rem) 1.5rem 2rem;
+    padding: 2rem 1.5rem 2rem;
     overflow: visible;
   }
 
@@ -632,15 +622,6 @@
 
   .ctaButtons {
     justify-content: center;
-  }
-}
-
-/* Desktop styles */
-@media (min-width: 1025px) {
-  .heroContainer {
-    height: 100vh;
-    overflow: hidden;
-    padding: var(--navbar-height) 2rem 0;
   }
 }
 
