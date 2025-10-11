@@ -134,10 +134,9 @@ const config: Config = {
           changefreq: 'daily',
           priority: 0.5,
           ignorePatterns: [
-            '/RulerChen-Website/blog/archive/',
             '/RulerChen-Website/search/',
             '/RulerChen-Website/docs/intro/',
-            '/RulerChen-Website/blog/',
+            '/RulerChen-Website/blog/**',
           ],
           filename: 'sitemap.xml',
         },
