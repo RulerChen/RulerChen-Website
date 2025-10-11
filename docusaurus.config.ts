@@ -133,11 +133,7 @@ const config: Config = {
         sitemap: {
           changefreq: 'daily',
           priority: 0.5,
-          ignorePatterns: [
-            '/RulerChen-Website/search/',
-            '/RulerChen-Website/docs/intro/',
-            '/RulerChen-Website/blog/**',
-          ],
+          ignorePatterns: ['/RulerChen-Website/search/', '/RulerChen-Website/docs/intro/', '/RulerChen-Website/blog/**'],
           filename: 'sitemap.xml',
         },
       } satisfies Preset.Options,
