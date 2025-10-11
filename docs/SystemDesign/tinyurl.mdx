@@ -31,7 +31,7 @@ tags: [System Design]
 - 可擴展性，可以處理 100M DAU
 - 保證短網址的唯一性，不會有一個短網址對應多個長網址的情況
 
-## Estimation
+## Back of the Envelope Estimation
 
 ### Assumptions
 
@@ -39,13 +39,13 @@ tags: [System Design]
 - 每日產生 5M 個短網址
 - 讀寫比例 100:1
 
-### QPS Estimation
+### QPS
 
 - 每秒平均寫入請求數: 5M / 86400 ≈ 58 (writes/sec)
 - 每秒平均讀取請求數: 58 * 100 = 5800 (reads/sec)
 - 高峰期流量假設為平均的 5 倍: 29000 (reads/sec), 290 (writes/sec)
 
-### Storage Estimation
+### Storage
 
 首先對每個欄位的大小進行估算 :
 
@@ -63,6 +63,22 @@ tags: [System Design]
 - 每年存儲需求: 1.5GB * 365 = 547.5GB
 
 可以依據資料需要保留的時間來決定總存儲需求。
+
+### Bandwidth
+
+兩隻 API 的請求大小差距不大，假設每次請求的大小約 500 bytes (包含 HTTP headers) :
+
+- Ingress: (58 + 5800) * 500 bytes * 8 (bits/byte) / 1000000 (Mbps) ≈ 23.23 Mbps
+- Egress: 同上 ≈ 23.23 Mbps
+
+即使是在高峰期 (115 Mbps)，這樣的頻寬需求對於現代的雲端服務來說並不是瓶頸。
+
+### Memory
+
+使用 Redis 快取一年中最熱門的 20% 的短網址 (依據 80/20 法則)，並假設每個短網址的資料大小約 200 bytes (short_url -> long_url) :
+
+- 需要快取的短網址數量: 5M * 365 * 20% = 365M
+- 需要的記憶體大小: 365M * 200B = 73GB
 
 ## Schema Design
 
@@ -111,7 +127,7 @@ Location: https://www.example.com/some/very/long/url
 
 對於短網址服務來說，乍看之下由於會有過期時間且有時候需要蒐集點擊次數等統計資訊，似乎選擇 302 是比較合理的選擇。
 
-但以 TinyURL 來舉例，它是使用 301 搭配 `max-age=0, must-revalidate, no-cache, no-store, private` 來忽略瀏覽器的快取，這樣就能夠同時達到 SEO 跟統計資訊的需求。
+但以 TinyURL 來舉例，它是使用 301 搭配 `Cache-Control: max-age=0, must-revalidate, no-cache, no-store, private` 來忽略瀏覽器的快取，這樣就能夠同時達到 SEO 跟統計資訊的需求。
 
 :::note
 Cache-Control 的設定可以參考 [MDN Web Docs](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control) :
