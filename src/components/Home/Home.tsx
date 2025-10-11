@@ -13,7 +13,9 @@ const HomePage = (): ReactNode => {
   const [codeLines, setCodeLines] = useState([]);
   const [currentLineIndex, setCurrentLineIndex] = useState(0);
   const [animationComplete, setAnimationComplete] = useState(false);
+  const [particles, setParticles] = useState([]);
   const terminalRef = useRef(null);
+  const containerRef = useRef(null);
 
   const codeSnippets = [
     { text: 'const developer = {', type: 'keyword' },
@@ -24,6 +26,18 @@ const HomePage = (): ReactNode => {
     { text: "    status: 'Open to opportunities'", type: 'property' },
     { text: '};', type: 'keyword' },
   ];
+
+  // Initialize particles with random positions
+  useEffect(() => {
+    const initialParticles = [...Array(50)].map((_, index) => ({
+      id: index,
+      x: Math.random() * 100,
+      y: -10, // All start above viewport
+      delay: Math.random() * 5,
+      duration: 5 + Math.random() * 5,
+    }));
+    setParticles(initialParticles);
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -75,17 +89,17 @@ const HomePage = (): ReactNode => {
   return (
     <>
       {/* Hero Section */}
-      <div className={styles.heroContainer}>
+      <div className={styles.heroContainer} ref={containerRef}>
         <div className={styles.particlesBackground}>
-          {[...Array(300)].map((_, i) => (
+          {particles.map((particle) => (
             <div
-              key={i}
+              key={particle.id}
               className={styles.particle}
               style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 3}s`,
-                animationDuration: `${3 + Math.random() * 4}s`,
+                left: `${particle.x}%`,
+                top: `${particle.y}%`,
+                animationDelay: `${particle.delay}s`,
+                animationDuration: `${particle.duration}s`,
               }}
             />
           ))}

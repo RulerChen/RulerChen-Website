@@ -56,22 +56,36 @@
 
 .particle {
   position: absolute;
-  width: 2px;
-  height: 2px;
-  border-radius: 50%;
-  animation: float 6s ease-in-out infinite;
-  opacity: 0.7;
-  background: var(--primary-color);
+  width: 10px;
+  height: 10px;
+  color: #fff;
+  opacity: 0.8;
+  animation: snowfall 6s linear infinite;
+  pointer-events: none;
+}
+
+.particle::before {
+  content: '❄';
+  font-size: 12px;
+  display: block;
 }
 
 .particle:nth-child(even) {
-  background: var(--secondary-color);
   animation-duration: 8s;
+  opacity: 0.6;
+}
+
+.particle:nth-child(even)::before {
+  font-size: 10px;
 }
 
 .particle:nth-child(3n) {
-  background: var(--accent-color);
   animation-duration: 10s;
+  opacity: 0.9;
+}
+
+.particle:nth-child(3n)::before {
+  font-size: 14px;
 }
 
 .heroContent {
@@ -382,6 +396,23 @@
   75% {
     transform: translateY(-40px) rotate(270deg);
     opacity: 0.5;
+  }
+}
+
+@keyframes snowfall {
+  0% {
+    transform: translateY(-10vh) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(110vh) rotate(360deg);
+    opacity: 0;
   }
 }
 
