@@ -8,28 +8,30 @@ tags: [System Design]
 
 ## Background
 
-[TinyURL](https://tinyurl.com/) 是一個 URL 縮短服務，使用者可以輸入一個長網址並得到一個短網址，當訪問這個短網址時，會被重定向到原始的長網址。
+[TinyURL](https://tinyurl.com/) 是一個網址縮短服務，使用者可以輸入一個長網址並得到一個短網址，當其他使用者訪問這個短網址時，會被重定向到原始的長網址。
 
-舉例來說，當使用者想要分享網址的時候，可以將 `https://www.example.com/some/very/long/url` 丟給 TinyURL，TinyURL 會回傳一個短網址 `https://tinyurl.com/abc123`，使用者可以將這個短網址分享給其他人，當其他人訪問這個短網址時，會被重定向到 `https://www.example.com/some/very/long/url`。
+舉例來說，使用者可以將 `https://www.example.com/some/very/long/url` 丟給 TinyURL，TinyURL 會回傳一個短網址 `https://tinyurl.com/abc123`，當其他人訪問這個短網址時，會被重定向到 `https://www.example.com/some/very/long/url`。
 
 ## Requirements
 
 ### Functional Requirements
 
-- 使用者能夠提交一個長網址並獲得一個對應的短網址
-- 使用者能夠通過短網址來被重定向到原始的長網址
-- ~~使用者可以設置過期時間或是刪除短網址~~
+- 使用者可以提交一個長網址並獲得一個對應的短網址
+- 使用者可以通過短網址來被重定向到原始的長網址
+- 短網址預設會在 3 年後過期
+- ~~使用者可以自行設定過期時間~~
+- ~~使用者可以刪除短網址~~
 - ~~使用者可以自訂短網址的別名~~
-- ~~可以提供統計資訊，如點擊次數等~~
+- ~~可以提供統計資訊，如點擊次數或是使用者的地理位置分布~~
 
-本篇將專注於生成短網址和重定向功能。
+本文將專注於短網址的核心功能，也就是生成短網址並進行重定向，其他的功能則不在本文的討論範圍內。
 
 ### Non-Functional Requirements
 
 - 重定向需要確保低延遲 (< 100ms)
-- 高可用性 (availability > consistency)
+- 高可用性 (可用性 > 一致性)
 - 可擴展性，可以處理 100M DAU
-- 保證短網址的唯一性，不會有一個短網址對應多個長網址的情況
+- 保證短網址的唯一性，不會有一個短網址對應到多個長網址
 
 ## Back of the Envelope Estimation
 
@@ -59,41 +61,40 @@ tags: [System Design]
 從上述估算可得每條紀錄約 300 bytes。
 
 - 每日產生的短網址數量: 5M
-- 每日存儲需求: 5M * 300B = 1.5GB
-- 每年存儲需求: 1.5GB * 365 = 547.5GB
-
-可以依據資料需要保留的時間來決定總存儲需求。
+- 每日儲存空間需求: 5M * 300B = 1.5GB
+- 3 年的儲存空間需求: 1.5GB * 365 * 3 = 1.6TB
 
 ### Bandwidth
 
-兩隻 API 的請求大小差距不大，假設每次請求的大小約 500 bytes (包含 HTTP headers) :
+兩隻 API 的請求大小差距不大，假設每次請求輸入輸出大小均為 500 bytes (包含 HTTP headers) :
 
-- Ingress: (58 + 5800) * 500 bytes * 8 (bits/byte) / 1000000 (Mbps) ≈ 23.23 Mbps
-- Egress: 同上 ≈ 23.23 Mbps
+- Ingress: (58 + 5800) * 500 bytes * 8 (bits/byte) / 1000000 (Mbps) ≈ 23 Mbps
+- Egress: 同上 ≈ 23 Mbps
 
 即使是在高峰期 (115 Mbps)，這樣的頻寬需求對於現代的雲端服務來說並不是瓶頸。
 
 ### Memory
 
-使用 Redis 快取一年中最熱門的 20% 的短網址 (依據 80/20 法則)，並假設每個短網址的資料大小約 200 bytes (short_url -> long_url) :
+使用 in-memory 的資料庫快取最熱門的 10% 短網址，並假設每個短網址的資料大小約 200 bytes (short_url -> long_url) :
 
-- 需要快取的短網址數量: 5M * 365 * 20% = 365M
-- 需要的記憶體大小: 365M * 200B = 73GB
+- 需要快取的短網址數量: 5M * 365 * 3 * 10% = 547.5M
+- 需要的記憶體大小: 547.5M * 200B = 109.5GB
 
 ## Schema Design
 
-**URL Table**
 
-- short_url
-- long_url
-- user_id
-- created_at
-- expiry_date
+- url_table
+    - short_url
+    - long_url
+    - user_id
+    - created_at
+    - expiry_date
 
-**User Table** (not included in this design)
-
-- user_id
-- ...
+- user_table (not included in this design)
+    - user_id
+    - email
+    - created_at
+    - ...
 
 ## API Design
 
@@ -127,21 +128,23 @@ Location: https://www.example.com/some/very/long/url
 
 對於短網址服務來說，乍看之下由於會有過期時間且有時候需要蒐集點擊次數等統計資訊，似乎選擇 302 是比較合理的選擇。
 
-但以 TinyURL 來舉例，它是使用 301 搭配 `Cache-Control: max-age=0, must-revalidate, no-cache, no-store, private` 來忽略瀏覽器的快取，這樣就能夠同時達到 SEO 跟統計資訊的需求。
+但以 TinyURL 為例，它是使用 301 搭配 `Cache-Control: max-age=0, must-revalidate, no-cache, no-store, private` 來忽略瀏覽器的快取，這樣就能夠同時達到 SEO 跟統計資訊的需求。
 
-:::note
+:::info
+
 Cache-Control 的設定可以參考 [MDN Web Docs](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control) :
 
 - max-age=N: 表示回應可以被快取 N 秒
-- must-revalidate: 表示在快取過期後，必須重新向伺服器驗證資源是否有更新，需要搭配 ETag 或是 Last-Modified 使用
-- no-cache: 表示回應可以被快取，但在使用前必須先向伺服器驗證資源是否有更新
+- must-revalidate: 表示在快取過期後，必須重新向服務器驗證資源是否有更新，需要搭配 ETag 或是 Last-Modified 使用
+- no-cache: 表示回應可以被快取，但使用前必須先向服務器驗證資源是否有更新
 - no-store: 表示回應不能被任何快取儲存
 - public / private: public 表示回應可以被任何快取 (如 CDN) 儲存，private 表示回應只能被瀏覽器的快取儲存
 
-TinyURL 採取的做法是為了讓很舊的瀏覽器也能正確忽略快取，因此使用了很多功能重複的指令，實際上應該只需要 `no-store` 就可以達到同樣的效果。
+TinyURL 採取的做法可能是為了讓很舊的瀏覽器也能正確忽略快取，因此使用了很多功能重複的指令，實際上應該只需要 `no-store` 就可以達到同樣的效果。
+
 :::
 
-同時也有不少短網址服務使用 302 ，因此兩種做法都是可以接受的。
+同時也有一些短網址服務使用 302 ，因此兩種做法都是可以接受的。
 
 ## High Level Design
 
@@ -153,14 +156,14 @@ TinyURL 採取的做法是為了讓很舊的瀏覽器也能正確忽略快取，
 
 ### User should be able to create a short URL
 
-1. 使用者呼叫 POST /api/urls 並提交長網址
+1. 使用者呼叫 `POST /api/urls` 並提交長網址
 2. 驗證長網址是否符合 url 格式
 3. 生成唯一的短網址
 4. 將長網址和短網址儲存到資料庫中
 
 ### User should be able to access the original URL by using the short URL
 
-1. 使用者訪問短網址
+1. 使用者訪問短網址並呼叫 `GET /{short_url}`
 2. application server 查詢資料庫以獲取對應的長網址
 3. 如果有找到並且沒有過期，返回 301 重定向到長網址
 
@@ -168,48 +171,54 @@ TinyURL 採取的做法是為了讓很舊的瀏覽器也能正確忽略快取，
 
 ### How to generate a unique short URL?
 
-在設計短網址的生成策略時，需要考慮以下幾點 :
+在設計短網址的生成方法時，需要考慮以下幾點 :
 
 - 短網址的唯一性
 - 長度盡可能短
 - 生成短網址的速度要快
 
-常見的做法是先產生一個唯一的 ID，然後將這個 ID 進行編碼 (encoding) 來生成短網址。
+常見的做法是先產生一個唯一的 ID，然後對這個 ID 進行編碼 (encoding) 來生成短網址。
 
 對於如何產生唯一的 ID，有幾種方法 :
 
-- Random Function
-- Hash Function
+- Hash Functions
 - Counter
-- Any unique ID generation algorithm (如 Snowflake、UUID)
+- Any unique ID generation algorithm (e.g. Snowflake、UUID)
+- Random Generation
 
-而對於編碼方式，通常會使用 Base64、Base62 或 Base58 編碼。
+而對於編碼方式，常見的選擇是 Base62 或 Base58，因為 Base64 中的 + 和 / 是特殊字符，需要做 URL encoding，會增加短網址的長度。
 
-:::note
+:::info
+
 - Base64: 使用 A-Z, a-z, 0-9, +, / 共 64 個字符
 - Base62: 使用 A-Z, a-z, 0-9 共 62 個字符
 - Base58: 使用 A-Z, a-z, 1-9 (去除容易混淆的 0, O, I, l) 共 58 個字符
-:::
 
-常見的選擇是 Base62 或 Base58，因為 Base64 中的 + 和 / 是特殊字符，需要做 URL encoding，會增加短網址的長度。
+:::
 
 假設使用 Base62 編碼，代表 :
 
-- 如果是 5 個字符的短網址，總共有 62^5 ≈ 9 億種組合
-- 如果是 6 個字符的短網址，總共有 62^6 ≈ 568 億種組合
-- 如果是 7 個字符的短網址，總共有 62^7 ≈ 3.5 兆種組合
+- 如果是 5 個字元的短網址，總共有 62^5 ≈ 9 億種組合，約 30 bits
+- 如果是 6 個字元的短網址，總共有 62^6 ≈ 568 億種組合，約 36 bits
+- 如果是 7 個字元的短網址，總共有 62^7 ≈ 3.5 兆種組合，約 42 bits
 
-以這個系統來說，每日產生 5M 個短網址，一年大約會產生 18.25 億個短網址，因此 6 個字符的短網址應該是足夠的。
+每日產生 5M 個短網址，3 年下來大約是 5M * 365 * 3 = 5.5B 個短網址，因此最好使用 6-7 個字元來確保不容易碰撞。
 
-但如果使用 random function 或是 hash function，就需要特別注意碰撞的機率問題。
-假設資料庫中已經有 10 億個短網址，然後現在要再生成一個新的短網址，碰撞的機率大約是 10 億 / 568 億 ≈ 1.8%，這個機率看起來不高，但如果每天都產生 5M 個短網址，那麼一天就會有大約 90000 個短網址會碰撞。
+:::note
 
-#### Solution 1: Hash Function
+如果是使用 hash function 的話，就需要特別注意碰撞的機率問題。
 
-第一種可行的方法是使用 hash function 來生成短網址，常見的 hash function 有 MD5、SHA-256 等等。
-我們可以使用 HMAC-SHA256 來生成一個無法被預測的 hash 值，然後將這個 hash 值進行 Base62 編碼來生成短網址，最後取前 6 個字符作為短網址。
+假設資料庫中已經有 50 億個短網址且使用 6 個字元，現在要再生成一個新的短網址，碰撞的機率大約是 50 億 / 568 億 ≈ 9%，這個機率看起來不高，但如果每天都產生 5M 個短網址，那麼一天就會有大約 450000 個短網址會碰撞。
 
-但這樣同樣會產生問題，因為 hash function 並不是完美的，仍然有可能會產生碰撞，並且如果使用者輸入相同的長網址，就必定會產生相同的短網址，這不是我們想要的行為。
+:::
+
+#### Option 1: Hash Function
+
+常見的哈希函數有 MD5、SHA256 等等，其中 MD5 會產生 128 bits 的哈希值，SHA256 則會產生 256 bits 的哈希值。
+
+我們可以使用 SHA256 並加入一個密碼來生成一個無法被預測的哈希值，再將這個值進行 Base62 編碼，最後取前 7 個字符作為短網址。
+
+但這樣同樣會產生問題，即使我們使用了碰撞機率極低的哈希函數，但因為我們需要截斷，所以仍然有可能會產生碰撞，並且如果使用者輸入相同的長網址，就必定會產生相同的短網址，這不是我們想要的行為。
 
 要解決碰撞問題，可以採取以下幾種策略 :
 
@@ -217,15 +226,84 @@ TinyURL 採取的做法是為了讓很舊的瀏覽器也能正確忽略快取，
 2. Nonce / Salt: 在生成短網址時加入一個隨機的 nonce 或是 salt，這樣即使使用者輸入相同的長網址，也會產生不同的短網址
 3. Retry: 如果產生的短網址已經存在，可以嘗試加入不同的 nonce 或是 salt 並重新生成，直到重試的次數達到上限
 
-同時，也可以選擇把輸入改成長網址 + timestamp，這樣就能降低碰撞的機率。
+```python
+import hashlib
+import os
 
-#### Solution 2: Counter
+def generate_short_url(long_url, secret_key, nonce=None):
+    if nonce is None:
+        nonce = os.urandom(8).hex()
+    
+    input_data = f"{long_url}{secret_key}{nonce}"
+    
+    hash_object = hashlib.sha256(input_data.encode())
+    hash_hex = hash_object.hexdigest()
+    
+    base62_chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+    base62 = ""
+    num = int(hash_hex, 16)
+    
+    while num > 0:
+        num, rem = divmod(num, 62)
+        base62 = base62_chars[rem] + base62
+    
+    short_code = base62[:7]
+    return short_code, nonce
 
-第二種可行的方法是使用一個全局的計數器，每次有新的長網址時，計數器就加 1，然後將這個計數器的值進行 Base62 編碼來生成短網址，這樣就可以確保生成的數字是唯一且不會碰撞的。
+secret = "my-secret-key"
+short_code, nonce = generate_short_url("https://github.com/", secret)
+print(f"short_code: {short_code}, nonce: {nonce}")
+# Output: short_code: l6H1MFB, nonce: a0039d516f604c19
+```
 
-Redis 提供了 `INCR` 命令，可以用來實現這個計數器，並且這個命令是原子操作，能夠保證在高併發的情況下不會產生重複的值。
+#### Option 2: Counter
 
-這個做法的問題是要如何在分散式系統中確保計數器的一致性，以及生成的短網址是可預測的，可能會產生資安問題，我們會在最後討論這個問題。
+第二種方法是使用一個全局的計數器，每次有新的長網址時，計數器就加 1，然後將這個計數器的值進行 Base62 編碼來生成短網址，這樣就可以確保生成的數字是唯一且不會碰撞的。
+
+這裡的實作有幾種不同的方法 :
+
+- 使用 Redis 的 `INCR` 命令來實現全局計數器，這個命令是原子操作，能夠保證在高併發的情況下不會產生重複的值
+- 使用機器 ID 搭配計數器，這樣每台機器都有自己的計數器，並且在生成短網址時會將機器 ID 加入到計數器的值中，這樣就能夠確保不同機器生成的短網址不會重複
+
+第一種方法的缺點是所有的 application server 都需要連接到同一個 Redis 節點來取得計數器的值，這會導致跨區域的延遲成為一個重要的問題，舉例來說，從臺灣打到美國西岸的 EC2 伺服器，網路延遲大概是 200ms 左右。
+
+解決方案有幾種，一種是不要使用中心化的單一 Redis cluster，而是在不同區域都部屬節點來降低跨區延遲，另一種方式是一次性跟 redis 獲取多個值 (如 1000 個)，然後在本地使用這些值來生成短網址，這樣就能夠大幅降低跨區延遲的影響。
+
+第二種做法的缺點是要思考機器 ID 的分配方式，由於本地的計數器通常會放在記憶體中，因此需要保證機器 ID 要是唯一的，需要其他方法來維護這個性質。
+
+這兩種方法的優點同樣非常明顯，他們都能保證生成的短網址是不會碰撞的，所以速度相對來說會更快。
+
+#### Option 3: UUID / Snowflake
+
+目前來說，比較常見的 UUID 版本大致有以下幾種 :
+
+- UUIDv1: 60 bits 的時間戳 (自 1582 年以來的 100ns 數) + 48 bits 的 MAC address
+- UUIDv4: 122 bits 的隨機數
+- UUIDv7: 使用 48 bits 的時間戳 (自 1970 年以來的毫秒數) 加上 74 bits 的隨機數來生成 UUID
+
+而 Snowflake 則是 Twitter 提出的分散式 ID 生成演算法，使用 1 bit 的符號位 1 + 41 bits 的時間戳 (自某個時間點以來的毫秒數) + 10 bits 的機器 ID + 12 bits 的序列號來生成 64 bits 的整數 ID。
+
+這類型的 ID 生成演算法都有一個共同的缺點是，生成的 ID 通常比較長，如果使用截斷的話就會產生各種碰撞的問題，變成不如直接使用 hash function 或是使用 random generation 來得好。
+
+#### Option 4: Random Generation
+
+最後一個方法就是直接使用隨機數來生成短網址。
+
+```python
+import random
+import string
+
+def generate_short_url(length):
+    characters = string.ascii_letters + string.digits
+    short_url = ''.join(random.choice(characters) for _ in range(length))
+    return short_url
+
+short_code = generate_short_url(7)
+print(f"short_code: {short_code}")
+# Output: short_code: aZ3bX9K
+```
+
+這個方法的優點是簡單且不需要額外的基礎設施 (如 Redis)，缺點跟使用 hash function 類似，會有碰撞的機率問題，並且程式語言內建的隨機數生成器通常熵不夠，因此碰撞的機率可能會比預期的高。
 
 ### How to ensure low latency?
 
@@ -245,7 +323,7 @@ FROM url_table
 WHERE short_url = 'abc123';
 ```
 
-以 PostgreSQL 為例，甚至可以使用 hash index 而非 B-tree index 來進一步提升查詢速度。
+以 PostgreSQL 為例，可以使用 hash index 來進一步提升查詢速度。
 
 ```sql
 CREATE INDEX idx_short_url ON url_table USING HASH (short_url);
@@ -257,10 +335,12 @@ CREATE INDEX idx_short_url ON url_table USING HASH (short_url);
 
 由於讀寫比例高達 100:1，且資料一旦寫入後通常不會再更改，因此很適合使用 cache (如 Redis) 來快取熱門的短網址，減少對資料庫的讀取壓力。
 
-:::note
+:::info
+
 對於一般的 RDBMS (PostgreSQL、MySQL) 來說，在簡單的查詢下單個資料庫節點大約能處理 1000 writes/sec 或 3000 reads/sec 左右的請求。
 
-而對於像 Redis 這樣的 in-memory database，簡單的 GET/SET 操作在單個節點上可以輕鬆達到 100000 req/sec 以上的處理能力。
+而對於像 Redis 這樣的 in-memory 資料庫，簡單的 GET / SET 操作在單個節點上可以輕鬆達到 100000 req/sec 以上的處理能力。
+
 :::
 
 引入快取雖然可以提升效能，但也會帶來可用性與一致性上的挑戰。
@@ -280,42 +360,24 @@ CREATE INDEX idx_short_url ON url_table USING HASH (short_url);
 以短網址系統來說，我認為 CDN 的必要性不是特別大，而且會造成額外的成本，因此這部分可以視情況而定。
 如果要使用 CDN 的話還需要額外考慮到快取失效的問題。
 
-### How to scale up to support 100M DAU?
+### How to handle expired data?
 
-以短網址系統來說，主要的瓶頸可能會出現在資料庫上，這裡有幾個點需要注意 :
+為了避免資料量不斷膨脹，因此我們需要定期清除過期的資料來保證資料庫的大小在可控範圍內。
 
-- 讀寫的 QPS 吞吐量是否足夠
-- 儲存空間是否足夠
-- 過期資料如何處理
+這裡有幾種常見的做法 :
 
-#### Read/Write Throughput
+1. 將資料依據 `expiry_date` 進行 partitioning，並定期刪除整個 partition
+2. 使用批次工作 (batch job) 來定期刪除過期資料
 
-以資料庫的寫入量來說 (290 w/s)，單一節點應該是足夠的，但讀取量 (29000 r/s) 就需要特別注意。
+針對第一種方式，由於主要的查詢是針對 `short_url` 進行 point search，因此如果用 `expiry_date` 來做 partitioning，會導致查詢時需要掃描多個 partition，進而影響查詢效能。
 
-假設快取可以處理 90% 的讀取請求，那麼實際上資料庫需要處理的讀取請求大約是 2900 r/s，這對於單一資料庫節點來說壓力稍微有點大。
-
-對於這樣的情況，最好的解決方法就是採用 read replica 的方式來分散讀取的負載，可以把主資料庫的內容同步到多個從資料庫節點，並且將讀取請求分散到這些從節點上。
-以前面估計的值來說，可以把寫入請求都導向主節點，而讀取請求則可以分散到 2-3 個從節點上，這樣每個從節點大約只需要處理 1000 r/s 的請求。
-
-#### Storage
-
-對於資料庫的儲存空間來說 (547.5GB/年)，即使需要保存 3-5 年的資料量對於現代的資料庫來說也不是特別大的問題，但問題在於這個資料量對於單一表來說非常大，進而影響到查詢效能。
-
-假設系統需要保存 3 年的資料，代表資料庫需要保存 5M * 365 * 3 = 5.5B 行的資料在單一的表中，這會產生如索引過大、查詢效能下降的問題。
-
-因此需要進行 partitioning 來將資料分散到多個表中，常見的分區方式有 range partitioning (依照時間範圍分區) 或是 hash partitioning (依照某個欄位的 hash 值分區)。
-以這裡的查詢來說，對 short_url 進行 hash partitioning 是比較合適的，這樣可以確保在讀取的時候可以很輕易的知道要查詢哪一個分區。
-
-#### Outdated Data Deletion
-
-由於目前系統中沒有刪除資料的機制，即使 `expiry_date` 已經過期，資料仍然會保留在資料庫中，這會導致資料庫的大小不斷膨脹，進而影響到查詢效能。
-
+因此需要使用第二種方式來定期刪除過期資料。
 由於一次使用 `DELETE * FROM url_table WHERE expiry_date < now()` 來刪除過期資料會對資料庫造成很大的負擔，因此可以採用懶惰刪除 (lazy deletion) 搭配批次工作 (batch job) 來定期刪除過期資料。
 
 懶惰刪除的做法是當使用者訪問一個短網址時，先檢查這個短網址是否過期，如果過期就直接返回錯誤，並刪掉這筆資料。
 而後台的刪除工作則可以使用行級鎖 (row-level locking) 並在低峰時段批量刪除過期資料。
 
-舉例來說可以使用 `SKIP LOCKED` 來跳過已經被鎖定的資料，其中 `expiry_date` 最好有索引 :
+舉例來說可以使用 `SKIP LOCKED` 來跳過已經被鎖定的資料 :
 
 ```sql
 With candidates AS (
@@ -331,38 +393,44 @@ USING candidates
 WHERE url_table.short_url = candidates.short_url;
 ```
 
+特別注意由於有使用 cache，因此在刪除資料時也需要同時刪除快取中的資料。
+
+### How to scale up to support 100M DAU?
+
+以短網址系統來說，主要的瓶頸可能會出現在資料庫上，這裡有幾個點需要注意 :
+
+- 讀寫的 QPS 吞吐量是否足夠
+- 內部的儲存空間是否足夠
+
+#### Read/Write Throughput
+
+以資料庫的寫入量來說 (290 w/s)，單一節點應該是足夠的，但讀取量 (29000 r/s) 就需要特別注意。
+
+假設快取可以處理 90% 的讀取請求，那麼實際上資料庫需要處理的讀取請求大約是 2900 r/s，這對於單一資料庫節點來說壓力稍微有點大。
+
+對於這樣的情況，最好的解決方法就是採用 read replica 的方式來分散讀取的負載，可以把主資料庫的內容同步到多個從資料庫節點，並且將讀取請求分散到這些從節點上。
+以前面估計的值來說，可以把寫入請求都導向主節點，而讀取請求則可以分散到 2-3 個從節點上，這樣每個從節點大約只需要處理 1000 r/s 的請求。
+
+#### Storage
+
+以目前所需的儲存空間來說 (1.6TB/3y)，對於現代的資料庫不是特別大的問題，但問題在於這個資料量對於單一表來說非常大，進而影響到查詢效能。
+
+假設系統需要保存 3 年的資料，代表資料庫需要保存 5M * 365 * 3 = 5.5B 行的資料在單一的表中，這會產生如索引過大、查詢效能下降的問題。
+
+因此需要進行 partitioning 來將資料分散到多個表中，以減少單一表的大小。
+以這裡的情境來說，對 short_url 做 consistent hashing 來決定資料要存放在哪一個 partition 是一個不錯的選擇，可以快速知道要去哪一張表查資料，也可以簡單的新增節點。
+
+
 ## Final Design
 
 <ImageModal src="/img/system-design/tinyurl/image-2.webp" caption="Final Design" />
 
-在最後的設計中，我選擇使用了 hash function 而非使用計數器來生成短網址，主要是為了降低系統的複雜度。
-
-首先，對於 Redis 這樣的資料庫來說，寫入顯然不是瓶頸，它也可以提供原子化的計數器功能，但問題在於系統是分散式的，這代表所有的 application server 都需要連接到同一個 Redis 節點來取得計數器的值，這會導致跨區域的延遲成為一個重要的問題。
-
-舉例來說，從臺灣打到美國西岸的 EC2 伺服器，網路延遲大概是 200ms 左右:
-
-```bash
-ping ec2.us-west-2.amazonaws.com
-```
-
-```txt
-Pinging ec2.us-west-2.amazonaws.com [52.119.164.21] with 32 bytes of data:
-Reply from 52.119.164.21: bytes=32 time=187ms TTL=239
-Reply from 52.119.164.21: bytes=32 time=202ms TTL=239
-Reply from 52.119.164.21: bytes=32 time=214ms TTL=239
-Reply from 52.119.164.21: bytes=32 time=183ms TTL=239
-
-Ping statistics for 52.119.164.21:
-    Packets: Sent = 4, Received = 4, Lost = 0 (0% loss),
-Approximate round trip times in milli-seconds:
-    Minimum = 183ms, Maximum = 214ms, Average = 196ms
-```
-
-當然這個問題也有解決方法，譬如說可以將 Redis 部屬在多個區域，並把計數器的值分散到不同的區域，或是一次性就給 application server 一大段的計數器值，但這些都會增加系統的複雜度，同時會大幅增加部屬 Redis 的成本。
+我認為生成短網址的方案中，選擇使用哈希函數跟計數器都是合理的選擇，前者實作較為簡單，後者則能保證不會碰撞。
 
 ## References
 
 - [Design Bit.ly](https://www.hellointerview.com/learn/system-design/problem-breakdowns/bitly)
+- [Design URL Shortener](https://systemdesignschool.io/problems/url-shortener/solution#what-are-the-two-properties-we-need-for-the-ids)
 - [Design a URL Shortening Service TinyURL](https://github.com/RulerChen/Grokking-Modern-System-Design-Interview/tree/main/Design%20a%20URL%20Shortening%20Service%20TinyURL)
 - [System Design : Scalable URL shortener service like TinyURL](https://medium.com/@sandeep4.verma/system-design-scalable-url-shortener-service-like-tinyurl-106f30f23a82)
 - [Design a URL Shortener (TinyURL, Bit.ly) | Systems Design Questions 3.0 With Ex-Google SWE](https://www.youtube.com/watch?v=xFeWVugaouk&list=PLjTveVh7FakLGZ36GbWAk_DMf_0xBZpGv&index=13)
