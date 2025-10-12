@@ -372,12 +372,9 @@ CREATE INDEX idx_short_url ON url_table USING HASH (short_url);
 針對第一種方式，由於主要的查詢是針對 `short_url` 進行 point search，因此如果用 `expiry_date` 來做 partitioning，會導致查詢時需要掃描多個 partition，進而影響查詢效能。
 
 因此需要使用第二種方式來定期刪除過期資料。
-由於一次使用 `DELETE * FROM url_table WHERE expiry_date < now()` 來刪除過期資料會對資料庫造成很大的負擔，因此可以採用懶惰刪除 (lazy deletion) 搭配批次工作 (batch job) 來定期刪除過期資料。
+由於一次使用 `DELETE * FROM url_table WHERE expiry_date < now()` 來刪除過期資料會對資料庫造成很大的負擔，因此可以在低峰時段使用批次工作來分批刪除過期資料。
 
-懶惰刪除的做法是當使用者訪問一個短網址時，先檢查這個短網址是否過期，如果過期就直接返回錯誤，並刪掉這筆資料。
-而後台的刪除工作則可以使用行級鎖 (row-level locking) 並在低峰時段批量刪除過期資料。
-
-舉例來說可以使用 `SKIP LOCKED` 來跳過已經被鎖定的資料 :
+可以使用行級鎖搭配 `FOR UPDATE SKIP LOCKED` 來啟動多個 worker 同時刪除過期資料 :
 
 ```sql
 With candidates AS (
