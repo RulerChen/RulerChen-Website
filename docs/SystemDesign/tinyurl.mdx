@@ -415,7 +415,7 @@ WHERE url_table.short_url = candidates.short_url;
 假設系統需要保存 3 年的資料，代表資料庫需要保存 5M * 365 * 3 = 5.5B 行的資料在單一的表中，這會產生如索引過大、查詢效能下降的問題。
 
 因此需要進行 partitioning 來將資料分散到多個表中，以減少單一表的大小。
-以這裡的情境來說，對 short_url 做 consistent hashing 來決定資料要存放在哪一個 partition 是一個不錯的選擇，可以快速知道要去哪一張表查資料，也可以簡單的新增節點。
+以這裡的情境來說，對 short_url 做 hashing 來決定資料要存放在哪一個 partition 是一個不錯的選擇。
 
 
 ## Final Design
