@@ -19,7 +19,7 @@ tags: [System Design]
 - 使用者可以提交一個長網址並獲得一個對應的短網址
 - 使用者可以通過短網址來被重定向到原始的長網址
 - 短網址預設會在 3 年後過期
-- ~~使用者可以自行設定過期時間~~
+- ~~使用者可以設定過期時間~~
 - ~~使用者可以刪除短網址~~
 - ~~使用者可以自訂短網址的別名~~
 - ~~可以提供統計資訊，如點擊次數或是使用者的地理位置分布~~
@@ -33,23 +33,23 @@ tags: [System Design]
 - 可擴展性，可以處理 100M DAU
 - 保證短網址的唯一性，不會有一個短網址對應到多個長網址
 
-## Back of the Envelope Estimation
+## The Set up
 
-### Assumptions
+### Back of the Envelope Estimation
+
+#### Assumptions
 
 - 100M DAU
 - 每日產生 5M 個短網址
 - 讀寫比例 100:1
 
-### QPS
+#### QPS
 
 - 每秒平均寫入請求數: 5M / 86400 ≈ 58 (writes/sec)
 - 每秒平均讀取請求數: 58 * 100 = 5800 (reads/sec)
 - 高峰期流量假設為平均的 5 倍: 29000 (reads/sec), 290 (writes/sec)
 
-### Storage
-
-首先對每個欄位的大小進行估算 :
+#### Storage
 
 - 長網址: 150 bytes
 - 短網址: 20 bytes
@@ -64,25 +64,25 @@ tags: [System Design]
 - 每日儲存空間需求: 5M * 300B = 1.5GB
 - 3 年的儲存空間需求: 1.5GB * 365 * 3 = 1.6TB
 
-### Bandwidth
+#### Bandwidth
 
 兩隻 API 的請求大小差距不大，假設每次請求輸入輸出大小均為 500 bytes (包含 HTTP headers) :
 
 - Ingress: (58 + 5800) * 500 bytes * 8 (bits/byte) ≈ 23 Mbps
 - Egress: 同上 ≈ 23 Mbps
 
-即使是在高峰期 (115 Mbps)，這樣的頻寬需求對於現代的雲端服務來說並不是瓶頸。
+即使是在高峰期 (115 Mbps)，這樣的頻寬需求對於現代的系統來說並不是瓶頸。
 
-### Memory
+#### Cache
 
 使用 in-memory 的資料庫快取最熱門的 10% 短網址，並假設每個短網址的資料大小約 200 bytes (short_url -> long_url) :
 
 - 需要快取的短網址數量: 5M * 365 * 3 * 10% = 547.5M
 - 需要的記憶體大小: 547.5M * 200B = 109.5GB
 
-## Schema Design
+### Schema Design
 
-使用者的資料不在討論範圍內，這裡只針對 URL 的部分來設計 schema :
+這裡只針對 URL 的部分來設計 schema，不考慮如使用者、權限等其他功能。
 
 - url_mapping
     - short_url
@@ -91,9 +91,9 @@ tags: [System Design]
     - created_at
     - expiry_date
 
-## API Design
+### API Design
 
-### Create Short URL
+#### 1. Create Short URL
 
 ```http
 POST /api/urls
@@ -108,7 +108,7 @@ Response: HTTP 200 OK
 }
 ```
 
-### Redirect to Long URL
+#### 2. Redirect to Long URL
 
 ```http
 GET /{short_url}
@@ -127,7 +127,7 @@ Location: https://www.example.com/some/very/long/url
 
 :::info
 
-Cache-Control 的設定可以參考 [MDN Web Docs](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control) :
+Cache-Control 的設定可以參考 [MDN Web Docs](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control) : 
 
 - max-age=N: 表示回應可以被快取 N 秒
 - must-revalidate: 表示在快取過期後，必須重新向服務器驗證資源是否有更新，需要搭配 ETag 或是 Last-Modified 使用
@@ -135,18 +135,18 @@ Cache-Control 的設定可以參考 [MDN Web Docs](https://developer.mozilla.org
 - no-store: 表示回應不能被任何快取儲存
 - public / private: public 表示回應可以被任何快取 (如 CDN) 儲存，private 表示回應只能被瀏覽器的快取儲存
 
-TinyURL 採取的做法可能是為了讓很舊的瀏覽器也能正確忽略快取，因此使用了很多功能重複的指令，實際上應該只需要 `no-store` 就可以達到同樣的效果。
-
 :::
 
-同時也有一些短網址服務使用 302 ，因此兩種做法都是可以接受的。
+TinyURL 採取的做法可能是為了讓很舊的瀏覽器也能正確忽略快取，因此使用了很多功能重複的指令，實際上應該只需要 `no-store` 就可以達到同樣的效果。
 
-## High Level Design
+也有一些其他的短網址服務使用 302，兩種做法都是可以的。
+
+## High-Level Design
 
 <ImageModal src="/img/system-design/tinyurl/image.webp" caption="High Level Design" />
 
-- `API Gateway`: 負責處理所有進入的請求，並將請求路由到適當的服務，同時也可以處理登入驗證和速率限制
-- `Application Server`: 負責處理業務邏輯，如生成短網址、查找長網址等
+- `API Gateway`: 負責處理所有進入的請求，可以做負載均衡依據路由把請求導向不同的服務，同時也能處理登入驗證跟流量控制
+- `Application Server`: 負責處理業務邏輯，包含生成短網址以及查找長網址
 - `Database`: 用於儲存資料，這裡會使用關聯式資料庫 (PostgreSQL) 來儲存 URL 資料
 
 ### User should be able to create a short URL
@@ -159,10 +159,10 @@ TinyURL 採取的做法可能是為了讓很舊的瀏覽器也能正確忽略快
 ### User should be able to access the original URL by using the short URL
 
 1. 使用者訪問短網址並呼叫 `GET /{short_url}`
-2. application server 查詢資料庫以獲取對應的長網址
+2. 查詢資料庫並獲取對應的長網址
 3. 如果有找到並且沒有過期，返回 301 重定向到長網址
 
-## Deep Dive
+## Deep Dives
 
 ### How to generate a unique short URL?
 
@@ -298,7 +298,8 @@ print(f"short_code: {short_code}")
 # Output: short_code: aZ3bX9K
 ```
 
-這個方法的優點是簡單且不需要額外的基礎設施 (如 Redis)，缺點跟使用 hash function 類似，會有碰撞的機率問題，並且程式語言內建的隨機數生成器通常熵不夠，因此碰撞的機率可能會比預期的高。
+這個方法的優點是簡單且不需要額外的基礎設施 (如 Redis)，缺點跟使用 hash function 類似，會有碰撞的機率問題。
+並且程式語言內建的隨機數生成器通常熵 (entropy) 不夠，因此碰撞的機率可能會比預期的高。
 
 ### How to ensure low latency?
 
@@ -359,7 +360,7 @@ CREATE INDEX idx_short_url ON url_mapping USING HASH (short_url);
 
 為了避免資料量不斷膨脹，因此我們需要定期清除過期的資料來保證資料庫的大小在可控範圍內。
 
-這裡有幾種常見的做法 :
+這裡有幾種做法 :
 
 1. 將資料依據 `expiry_date` 進行 partitioning，並定期刪除整個 partition
 2. 使用批次工作 (batch job) 來定期刪除過期資料
@@ -407,10 +408,9 @@ WHERE url_mapping.short_url = candidates.short_url;
 
 以目前所需的儲存空間來說 (1.6TB/3y)，對於現代的資料庫不是特別大的問題，但問題在於這個資料量對於單一表來說非常大，進而影響到查詢效能。
 
-假設系統需要保存 3 年的資料，代表資料庫需要保存 5M * 365 * 3 = 5.5B 行的資料在單一的表中，這會產生如索引過大、查詢效能下降的問題。
+假設系統需要保存 3 年的資料，代表資料庫需要保存 5M * 365 * 3 = 5.5B 行的資料在單一的表中，這會產生如索引過大、查詢效能下降的問題，因此需要進行 partitioning 來將資料分散到多個表中，以減少單一表的大小。
 
-因此需要進行 partitioning 來將資料分散到多個表中，以減少單一表的大小。
-以這裡的情境來說，對 short_url 做 hashing 來決定資料要存放在哪一個 partition 是一個不錯的選擇。
+以這裡的情境來說，對 short_url 做 hashing 來決定資料要存放在哪一個 partition 是一個不錯的選擇，可以保證每次查詢都只需要查詢一個 partition。
 
 ## Final Design
 
@@ -424,4 +424,4 @@ WHERE url_mapping.short_url = candidates.short_url;
 - [Design URL Shortener](https://systemdesignschool.io/problems/url-shortener/solution#what-are-the-two-properties-we-need-for-the-ids)
 - [Design a URL Shortening Service TinyURL](https://github.com/RulerChen/Grokking-Modern-System-Design-Interview/tree/main/Design%20a%20URL%20Shortening%20Service%20TinyURL)
 - [System Design : Scalable URL shortener service like TinyURL](https://medium.com/@sandeep4.verma/system-design-scalable-url-shortener-service-like-tinyurl-106f30f23a82)
-- [Design a URL Shortener (TinyURL, Bit.ly) | Systems Design Questions 3.0 With Ex-Google SWE](https://www.youtube.com/watch?v=xFeWVugaouk&list=PLjTveVh7FakLGZ36GbWAk_DMf_0xBZpGv&index=13)
+- [Design a URL Shortener (TinyURL, Bit.ly)](https://www.youtube.com/watch?v=xFeWVugaouk&list=PLjTveVh7FakLGZ36GbWAk_DMf_0xBZpGv&index=13)
