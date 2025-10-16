@@ -24,7 +24,7 @@ tags: [System Design]
 - ~~使用者可以自訂短網址的別名~~
 - ~~可以提供統計資訊，如點擊次數或是使用者的地理位置分布~~
 
-本文將專注於短網址的核心功能，也就是生成短網址並進行重定向，其他的功能則不在本文的討論範圍內。
+本文將專注於短網址的核心功能，也就是生成短網址並進行重定向，其他的功能不在本文的討論範圍內。
 
 ### Non-Functional Requirements
 
@@ -68,7 +68,7 @@ tags: [System Design]
 
 兩隻 API 的請求大小差距不大，假設每次請求輸入輸出大小均為 500 bytes (包含 HTTP headers) :
 
-- Ingress: (58 + 5800) * 500 bytes * 8 (bits/byte) / 1000000 (Mbps) ≈ 23 Mbps
+- Ingress: (58 + 5800) * 500 bytes * 8 (bits/byte) ≈ 23 Mbps
 - Egress: 同上 ≈ 23 Mbps
 
 即使是在高峰期 (115 Mbps)，這樣的頻寬需求對於現代的雲端服務來說並不是瓶頸。
@@ -82,19 +82,14 @@ tags: [System Design]
 
 ## Schema Design
 
+使用者的資料不在討論範圍內，這裡只針對 URL 的部分來設計 schema :
 
-- url_table
+- url_mapping
     - short_url
     - long_url
     - user_id
     - created_at
     - expiry_date
-
-- user_table (not included in this design)
-    - user_id
-    - email
-    - created_at
-    - ...
 
 ## API Design
 
@@ -319,14 +314,14 @@ print(f"short_code: {short_code}")
 
 ```sql
 SELECT long_url 
-FROM url_table 
+FROM url_mapping
 WHERE short_url = 'abc123';
 ```
 
 以 PostgreSQL 為例，可以使用 hash index 來進一步提升查詢速度。
 
 ```sql
-CREATE INDEX idx_short_url ON url_table USING HASH (short_url);
+CREATE INDEX idx_short_url ON url_mapping USING HASH (short_url);
 ```
 
 #### Caching
@@ -372,22 +367,22 @@ CREATE INDEX idx_short_url ON url_table USING HASH (short_url);
 針對第一種方式，由於主要的查詢是針對 `short_url` 進行 point search，因此如果用 `expiry_date` 來做 partitioning，會導致查詢時需要掃描多個 partition，進而影響查詢效能。
 
 因此需要使用第二種方式來定期刪除過期資料。
-由於一次使用 `DELETE * FROM url_table WHERE expiry_date < now()` 來刪除過期資料會對資料庫造成很大的負擔，因此可以在低峰時段使用批次工作來分批刪除過期資料。
+由於一次使用 `DELETE * FROM url_mapping WHERE expiry_date < now()` 來刪除過期資料會對資料庫造成很大的負擔，因此可以在低峰時段使用批次工作來分批刪除過期資料。
 
 可以使用行級鎖搭配 `FOR UPDATE SKIP LOCKED` 來啟動多個 worker 同時刪除過期資料 :
 
 ```sql
 With candidates AS (
     SELECT short_url
-    FROM url_table 
+    FROM url_mapping
     WHERE expiry_date < now() 
     LIMIT 100
     FOR UPDATE SKIP LOCKED
 )
 
-DELETE FROM url_table 
+DELETE FROM url_mapping
 USING candidates 
-WHERE url_table.short_url = candidates.short_url;
+WHERE url_mapping.short_url = candidates.short_url;
 ```
 
 特別注意由於有使用 cache，因此在刪除資料時也需要同時刪除快取中的資料。
