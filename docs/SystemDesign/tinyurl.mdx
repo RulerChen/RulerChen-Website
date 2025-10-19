@@ -95,6 +95,9 @@ tags: [System Design]
 
 #### 1. Create Short URL
 
+<details>
+  <summary>建立新的短網址</summary>
+
 ```http
 POST /api/urls
 {
@@ -108,13 +111,20 @@ Response: HTTP 200 OK
 }
 ```
 
+</details>
+
 #### 2. Redirect to Long URL
+
+<details>
+  <summary>重定向到長網址</summary>
 
 ```http
 GET /{short_url}
 Response: HTTP 301 Moved Permanently
 Location: https://www.example.com/some/very/long/url
 ```
+
+</details>
 
 這裡的 HTTP status code 有兩種選擇 :
 
