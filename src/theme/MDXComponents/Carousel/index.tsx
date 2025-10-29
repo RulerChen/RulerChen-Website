@@ -65,12 +65,12 @@ const Carousel: React.FC<CarouselProps> = ({
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === 'ArrowLeft') {
-        setCurrentIndex((prevIndex) => (prevIndex === 0 ? processedItems.length - 1 : prevIndex - 1));
+        goToPrevious();
       } else if (e.key === 'ArrowRight') {
-        setCurrentIndex((prevIndex) => (prevIndex === processedItems.length - 1 ? 0 : prevIndex + 1));
+        goToNext();
       }
     },
-    [processedItems.length],
+    [goToPrevious, goToNext],
   );
 
   if (!processedItems || processedItems.length === 0) {
