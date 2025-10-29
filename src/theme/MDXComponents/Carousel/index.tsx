@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import useBaseUrl from '@docusaurus/useBaseUrl';
 import './styles.css';
 
@@ -30,11 +30,15 @@ const Carousel: React.FC<CarouselProps> = ({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
 
-  // Convert relative URLs to absolute URLs
-  const processedItems = items.map((item) => ({
-    ...item,
-    src: useBaseUrl(item.src),
-  }));
+  // Convert relative URLs to absolute URLs - memoized to prevent recalculation
+  const processedItems = useMemo(
+    () =>
+      items.map((item) => ({
+        ...item,
+        src: useBaseUrl(item.src),
+      })),
+    [items],
+  );
 
   useEffect(() => {
     if (!autoPlay || isHovered || processedItems.length <= 1) return;

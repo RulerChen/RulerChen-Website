@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, ReactNode } from 'react';
+import { useState, useEffect, useRef, ReactNode, useCallback, useMemo } from 'react';
 import Link from '@docusaurus/Link';
 import { Mail, Facebook, Github, Linkedin, Terminal, NotebookPen, Rss } from 'lucide-react';
 
@@ -29,7 +29,7 @@ const HomePage = (): ReactNode => {
 
   // Initialize particles with random positions
   useEffect(() => {
-    const initialParticles = [...Array(50)].map((_, index) => ({
+    const initialParticles = Array.from({ length: 50 }, (_, index) => ({
       id: index,
       x: Math.random() * 100,
       y: -10, // All start above viewport
@@ -67,15 +67,7 @@ const HomePage = (): ReactNode => {
     }
   }, [startTyping, currentLineIndex, animationComplete]);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setStartTyping(true);
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  const getLineClass = (type) => {
+  const getLineClass = useCallback((type) => {
     switch (type) {
       case 'keyword':
         return styles.keywordLine;
@@ -84,7 +76,7 @@ const HomePage = (): ReactNode => {
       default:
         return styles.codeContent;
     }
-  };
+  }, []);
 
   return (
     <>
