@@ -1,4 +1,4 @@
-import { useState, useEffect, ReactNode } from 'react';
+import { useState, useEffect, useMemo, ReactNode } from 'react';
 
 import styles from './styles.module.css';
 
@@ -8,8 +8,11 @@ export const useTypewriter = ({ words = [], loop = true, typeSpeed = 70, deleteS
   const [isDeleting, setIsDeleting] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
 
+  // Memoize words length to prevent unnecessary re-renders
+  const wordsLength = useMemo(() => words.length, [words.length]);
+
   useEffect(() => {
-    if (words.length === 0) return;
+    if (wordsLength === 0) return;
 
     const currentWord = words[wordIndex];
 
@@ -26,13 +29,13 @@ export const useTypewriter = ({ words = [], loop = true, typeSpeed = 70, deleteS
 
           if (displayText === '') {
             setIsDeleting(false);
-            setWordIndex((prev) => (prev + 1) % words.length);
+            setWordIndex((prev) => (prev + 1) % wordsLength);
           }
         } else {
           setDisplayText(currentWord.substring(0, displayText.length + 1));
 
           if (displayText === currentWord) {
-            if (loop || wordIndex < words.length - 1) {
+            if (loop || wordIndex < wordsLength - 1) {
               setIsPaused(true);
             }
           }
@@ -42,7 +45,7 @@ export const useTypewriter = ({ words = [], loop = true, typeSpeed = 70, deleteS
     );
 
     return () => clearTimeout(timeout);
-  }, [displayText, wordIndex, isDeleting, isPaused, words, loop, typeSpeed, deleteSpeed, delaySpeed]);
+  }, [displayText, wordIndex, isDeleting, isPaused, words, loop, typeSpeed, deleteSpeed, delaySpeed, wordsLength]);
 
   return displayText;
 };

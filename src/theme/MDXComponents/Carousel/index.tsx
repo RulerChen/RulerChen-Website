@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import useBaseUrl from '@docusaurus/useBaseUrl';
 import './styles.css';
 
@@ -30,11 +30,15 @@ const Carousel: React.FC<CarouselProps> = ({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
 
-  // Convert relative URLs to absolute URLs
-  const processedItems = items.map((item) => ({
-    ...item,
-    src: useBaseUrl(item.src),
-  }));
+  // Convert relative URLs to absolute URLs - memoized to prevent recalculation
+  const processedItems = useMemo(
+    () =>
+      items.map((item) => ({
+        ...item,
+        src: useBaseUrl(item.src),
+      })),
+    [items],
+  );
 
   useEffect(() => {
     if (!autoPlay || isHovered || processedItems.length <= 1) return;
@@ -46,25 +50,28 @@ const Carousel: React.FC<CarouselProps> = ({
     return () => clearInterval(interval);
   }, [autoPlay, autoPlayInterval, isHovered, processedItems.length]);
 
-  const goToSlide = (index: number) => {
+  const goToSlide = useCallback((index: number) => {
     setCurrentIndex(index);
-  };
+  }, []);
 
-  const goToPrevious = () => {
+  const goToPrevious = useCallback(() => {
     setCurrentIndex((prevIndex) => (prevIndex === 0 ? processedItems.length - 1 : prevIndex - 1));
-  };
+  }, [processedItems.length]);
 
-  const goToNext = () => {
+  const goToNext = useCallback(() => {
     setCurrentIndex((prevIndex) => (prevIndex === processedItems.length - 1 ? 0 : prevIndex + 1));
-  };
+  }, [processedItems.length]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'ArrowLeft') {
-      goToPrevious();
-    } else if (e.key === 'ArrowRight') {
-      goToNext();
-    }
-  };
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') {
+        goToPrevious();
+      } else if (e.key === 'ArrowRight') {
+        goToNext();
+      }
+    },
+    [goToPrevious, goToNext],
+  );
 
   if (!processedItems || processedItems.length === 0) {
     return null;
