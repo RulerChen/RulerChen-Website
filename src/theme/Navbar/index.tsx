@@ -1,4 +1,4 @@
-import React, { type ReactNode } from 'react';
+import React, { type ReactNode, useMemo } from 'react';
 import Navbar from '@theme-original/Navbar';
 import type NavbarType from '@theme/Navbar';
 import type { WrapperProps } from '@docusaurus/types';
@@ -9,9 +9,12 @@ type Props = WrapperProps<typeof NavbarType>;
 
 export default function NavbarWrapper(props: Props): ReactNode {
   const location = useLocation();
+  const baseUrl = useBaseUrl('/');
 
   // Hide navbar on the homepage
-  if (location.pathname === useBaseUrl('/')) {
+  const shouldHideNavbar = useMemo(() => location.pathname === baseUrl, [location.pathname, baseUrl]);
+
+  if (shouldHideNavbar) {
     return null;
   }
 

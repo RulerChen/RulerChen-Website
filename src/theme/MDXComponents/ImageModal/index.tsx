@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import useBaseUrl from '@docusaurus/useBaseUrl';
 import './styles.css';
 
@@ -14,20 +14,26 @@ const ImageModal: React.FC<ImageModalProps> = ({ src, alt = '', caption, width =
   const [isModalOpen, setIsModalOpen] = useState(false);
   const imageUrl = useBaseUrl(src);
 
-  const openModal = () => setIsModalOpen(true);
-  const closeModal = () => setIsModalOpen(false);
+  const openModal = useCallback(() => setIsModalOpen(true), []);
+  const closeModal = useCallback(() => setIsModalOpen(false), []);
 
-  const handleModalClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      closeModal();
-    }
-  };
+  const handleModalClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.target === e.currentTarget) {
+        closeModal();
+      }
+    },
+    [closeModal],
+  );
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      closeModal();
-    }
-  };
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        closeModal();
+      }
+    },
+    [closeModal],
+  );
 
   return (
     <>
