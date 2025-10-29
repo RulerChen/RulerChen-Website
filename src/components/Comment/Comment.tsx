@@ -1,7 +1,8 @@
+import React from 'react';
 import Giscus from '@giscus/react';
 import { useColorMode } from '@docusaurus/theme-common';
 
-export default function GiscusComponent() {
+function GiscusComponent() {
   const { colorMode } = useColorMode();
 
   return (
@@ -24,3 +25,5 @@ export default function GiscusComponent() {
     </div>
   );
 }
+
+export default React.memo(GiscusComponent);
