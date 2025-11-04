@@ -1,0 +1,122 @@
+---
+title: 'Introduction to Network'
+sidebar_position: '1'
+description: 'Big Picture of Computer Networks'
+keywords: ['Computer Networks', 'Networking']
+tags: ['Network']
+---
+
+## Brief History of Computer Networks
+
+網路的歷史最早可以追溯到 1960 年代，當時的美國跟蘇聯依舊處於冷戰狀態，為了應對可能的核戰威脅，美國國防部先進研究中心 (ARPA) 開始研究分散式通訊系統，用來確保在部分通訊節點被摧毀的情況下仍然有辦法維持指揮跟通訊。
+這個研究計劃促成了世界上第一個分散式封包交換網路 ARPANET 的誕生。
+
+在 ARPANET 中，為了規範這些電腦間的通訊，網路工作小組開發了一個用於主機對主機傳輸的通訊協議，叫做 NCP (Network Control Protocol)。
+但隨著網路的擴展以及傳輸媒介的多樣化，NCP 在連結不同網路方面顯得力不從心，原因是當時的 NCP 使用了太多專用設備，導致很難連結不同的網路，因此科學家開始尋找一種通用的解決方案來將不同的網路串接起來。
+
+1974 年，Vint Cerf 和 Bob Kahn 提出了現在廣為人知的 TCP/IP 協議，用來解決不同網路之間的互通性問題，而到了 1983 年 1 月 1 日，ARPANET 正式將 NCP 換成了 TCP/IP。
+
+但即便有了 ARPANET 與 TCP/IP 技術的出現，早期的網路對一般民眾來說依然是陌生的，直到 1990 年代，隨著 Tim Berners-Lee 開發出了 World Wide Web 以及制訂了 URL、HTTP、HTML 等相關標準後，現代網路的架構才開始逐漸成形。
+
+因為有了這些標準，1993 年 Mosaic 瀏覽器正式問世，隨後網路世界迎來了爆炸性的成長，越來越多的人開始使用網路。
+
+## Layered Architecture
+
+> Modularity based on abstraction is the way things are done. — Barbara Liskov, Turing lecture
+
+模組化 (Modularity) 是軟體工程中的一個重要概念，它強調將系統劃分為獨立且可互換的模組，每個模組負責特定的功能，這樣可以提高系統的可擴展性和可重用性。
+
+分層設計就是網路系統中用來實現模組化的方式。
+透過將網路功能劃分為多個層次，每層可以專注於特定的任務，並且只與相鄰的層進行互動，簡化設計和實現過程。
+同時，使用者也可以選擇適合自己的協議來實現各種功能，來最大化系統的效能。
+
+現代網路主要有兩種常見的分層模型，分別是 TCP/IP 和 OSI，而大多數的教科書都會以 TCP/IP 模型作為主要介紹的架構。
+
+### OSI Model
+
+OSI (Open Systems Interconnection) 模型是一個 **理論上** 的網路分層模型，由 ISO 在 1984 年提出。
+
+OSI 模型將網路劃分為七個層次，與 TCP/IP 模型相比多了兩層，分別是 Presentation Layer 與 Session Layer。
+在 TCP/IP 模型中，這兩層的功能通常被整合到 Application Layer 中。
+
+### TCP/IP Model
+
+TCP/IP 模型是現代網路的主要架構，它將網路功能劃分為五個層次 (也可以說是四層，這裡將 Layer 1 獨立出來)，分別是 :
+
+- Layer 7: Application Layer
+- Layer 4: Transport Layer
+- Layer 3: Network Layer
+- Layer 2: Data Link Layer
+- Layer 1: Physical Layer
+
+這篇文章會簡單介紹這五個層次的功能，並以郵局作為例子來說明每一層的角色。
+
+<ImageModal src="/img/network/intro/image-3.webp" caption="Common Network Protocols"/>
+
+### Layer 1: Physical Layer
+
+物理層是網路的最底層，它負責將位元轉換成適合傳輸媒介 (如電線上的電壓、光纖中的光脈衝) 的訊號形式，並把接收到的訊號轉換回位元。
+
+這部分通常是屬於電機 / 物理的範疇，涉及到硬體設備跟材料的部分，對於軟體工程師來說通常不太需要深入了解，一般的網路課本通常也會直接跳過這一層的細節。
+
+物理層就像是負責送信的交通工具，例如卡車、飛機等。
+
+### Layer 2: Data Link Layer
+
+區域網路 (Local Area Network, LAN) 是一種在有限的地理範圍內連結多台設備的網路，通常是由 Wi-Fi 熱點或家用路由器所建立的網路，而資料連結層的主要任務就是負責在區域網路之間傳送資料。
+
+資料連結層會將來自網路層的 packet 包裝成 frame，並透過 MAC address 來識別區域網路中的設備，確保資料能夠正確地傳送到目的地。
+MAC address 是一個全球唯一的標號，由生產公司在製造網卡時固定的，格式通常是六組兩位數的十六進位數字 (例如 00:1A:2B:3C:4D:5E)。
+
+資料連結層就像郵差幫你把信件送到信箱之後，你家的人在負責依照收件人的名字把信拿給對應的人。
+
+### Layer 3: Network Layer
+
+網路的世界是由許多不同的網路組成，每個區域網路內部可以自己管理資料傳輸，但當資料需要跨越不同的網路時，就需要網路層來負責路由。
+
+網路層採用的是 best-effort 方式，也就是說它會盡力把封包傳到目的地，但並不保證資料一定能夠成功抵達。
+這樣做的好處是可以提高網路的彈性與擴展性，並把錯誤處理跟重送的責任交給終端的主機來決定。
+
+網路層就像是郵局會幫你依照地址 (IP) 幫你把郵件投送到全世界任何一個地方。
+
+### Layer 4: Transport Layer
+
+在網路層中提供的是 best-effort 的服務，這意味著資料在傳輸過程中可能會遺失、重複或亂序，為了確保資料一定可以傳送到目的地，傳輸層會負責在兩台主機之間建立端對端的連接，並提供錯誤檢測與修正的機制。
+
+因為有了這層的存在，應用程式不需要再擔心底層網路可能出現的問題，可以專注於處理自己的邏輯。
+
+這就像你在寄信時可以選擇寄掛號信 (TCP) 或是平信 (UDP)，如果是掛號信的話郵局就會負責確保信件能夠安全送達，並且在寄送過程中提供追蹤服務。
+
+### Layer 7: Application Layer
+
+在有了前面幾層之後，我們已經解決了資料如何在網路中傳輸的問題，最後一層應用層則是直接面向使用者。
+它定義了應用程式之間如何交換資料，例如可以使用 HTTP 協議來傳輸網頁、使用 DNS 來解析網域。
+
+## Header
+
+在有了分層架構之後，網路需要一種方法來讓每一層能夠理解它所接收到的資料，這就是 Header 的作用。
+每一層在傳送資料時，會在資料前面加上自己的標頭，當資料到達接收端時，會依照相反的順序將標頭一層層剝除，並根據標頭中的資訊來處理資料。
+
+<ImageModal src="/img/network/intro/image.webp" caption="Header"/>
+
+終端主機會把要傳送的資料一層一層封裝，而每個經過的路由器都會至少將其解開到網路層來獲取 IP 地址，然後再重新封裝送到下一個節點，直到目標主機為止。
+
+<ImageModal src="/img/network/intro/image-2.webp" caption="Header Journey" width="600"/>
+
+## Network Performance
+
+在了解了網路的架構之後，接下來就可以來看看資料在網路中傳輸時的效能表現。
+這裡會解釋三個常見的名詞，分別是 bandwidth、propagation delay、queuing delay，這些名詞是用來描述網路效能的重要指標。
+
+- Bandwidth: 指的是在單位時間內能夠傳輸的資料量，通常以 bps (bits per second) 為單位來表示。頻寬越大，表示網路能夠同時傳輸更多的資料
+- Propagation Delay: 指的是資料從一個節點傳送到另一個節點所需的時間，這個時間主要取決於傳輸媒介的物理特性 (例如光纖的速度) 以及兩個節點之間的距離
+- Queuing Delay: 指的是資料在路由器中等待的時間，當網路流量過大時，封包可能需要在緩衝區中排隊等待傳輸
+
+:::note
+這裡需要特別注意的是，1kbps 並不是指每秒可以傳送 1KB 的資料，這裡的 1k 指的是 1000 bits，而 1 KB 總共有 1024 * 8 bits。
+:::
+
+舉例來說，如果我們有一個 1 Mbps 的連接，並且需要傳輸一個 1 MB 的檔案，假設傳播延遲為 100 ms，且排隊延遲為 0.1 s，那麼總的傳輸時間可以這樣計算 :
+
+- 傳輸時間 = 1 MB (1024 * 1024 * 8 bits) / 1 Mbps (1000000 bits per second) = 8.192 s
+- 總延遲 = 傳輸時間 + 傳播延遲 + 排隊延遲 = 8.192 s + 0.1 s + 0.1 s = 8.392 s
