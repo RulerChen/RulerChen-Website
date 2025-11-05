@@ -103,6 +103,24 @@ MAC address 是一個全球唯一的標號，由生產公司在製造網卡時�
 
 <ImageModal src="/img/network/intro/image-2.webp" caption="Header Journey" width="600"/>
 
+## Socket & OS
+
+應用程式都會有自己的通訊協定，像是 HTTP、DNS 等等，而這些協定需要透過作業系統提供的介面來使用傳輸層的服務，而這個介面就是 Socket。
+
+Socket 是一個抽象的概念，代表了一個 ip:port 的連接端點，當在連結時作業系統會分配一個本地的 port 給應用程式，並且透過這個 port 來識別不同的連接。
+
+下面是一個簡單的 C++ 範例 :
+
+```cpp
+int sockfd = socket(AF_INET, SOCK_STREAM, 0); // AF_INET: IPv4, SOCK_STREAM: TCP
+connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr));
+send(sockfd, data, data_length, 0);
+recv(sockfd, buffer, buffer_length, 0);
+close(sockfd);
+```
+
+在作業系統中，物理層跟資料連結層通常是由網卡來負責的，網路層跟傳輸層則是由作業系統來處理，而應用層則是由軟體本身 (套件) 來實現。
+
 ## Network Performance
 
 在了解了網路的架構之後，接下來就可以來看看資料在網路中傳輸時的效能表現。

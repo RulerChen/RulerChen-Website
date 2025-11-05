@@ -1,0 +1,213 @@
+---
+title: 'End-to-End Overview of Network'
+sidebar_position: '2'
+description: 'Big Picture of Computer Networks'
+keywords: ['Computer Networks', 'Networking']
+tags: ['Network']
+---
+
+這篇文章會透過從我本地的電腦發送請求到 `ec2.us-east-1.amazonaws.com` 的過程，來簡單說明一個請求在網路中傳送的整個流程。
+
+```bash
+curl -v https://ec2.us-east-1.amazonaws.com
+```
+
+## Step 1: DHCP
+
+在電腦剛連上網路的時候，需要先透過 DHCP 請求來得到 IP 位址、子網路遮罩、預設閘道以及 DNS 伺服器等資訊，這樣電腦才能夠順利地和其他裝置溝通。
+
+一般家用網路的 DHCP 伺服器通常是由路由器來扮演，因此預設閘道跟 DHCP 伺服器通常就是路由器的 IP 位址。
+
+DHCP 流程如下 :
+
+1. 電腦廣播 DHCP Discover 封包來尋找 DHCP 伺服器
+2. DHCP 伺服器回應 DHCP Offer 封包，提供所需的相關資訊
+3. 電腦回應 DHCP Request 封包，表示接受這些資訊
+4. DHCP 伺服器回應 DHCP Acknowledgment 封包，完成設定
+
+我們也可以透過 `ipconfig /all` 指令來查看目前的網路設定。
+
+```bash
+ipconfig /all
+```
+
+```
+Wireless LAN adapter Wi-Fi:
+
+   Connection-specific DNS Suffix  . :
+   Description . . . . . . . . . . . : Intel(R) Wi-Fi 6 AX201 160MHz
+   Physical Address. . . . . . . . . : 70-D8-23-B6-7A-1F
+   DHCP Enabled. . . . . . . . . . . : Yes
+   Autoconfiguration Enabled . . . . : Yes
+   Link-local IPv6 Address . . . . . : fe80::b9d:feaf:a050:97e8%18(Preferred)
+   IPv4 Address. . . . . . . . . . . : 172.21.88.186(Preferred)
+   Subnet Mask . . . . . . . . . . . : 255.255.255.0
+   Lease Obtained. . . . . . . . . . : Tuesday, November 4, 2025 3:04:13 PM
+   Lease Expires . . . . . . . . . . : Tuesday, November 4, 2025 5:04:11 PM
+   Default Gateway . . . . . . . . . : 172.21.88.206
+   DHCP Server . . . . . . . . . . . : 172.21.88.206
+   DHCPv6 IAID . . . . . . . . . . . : 309385251
+   DHCPv6 Client DUID. . . . . . . . : 00-01-00-01-2C-8E-E0-8A-08-BF-B8-15-4A-8C
+   DNS Servers . . . . . . . . . . . : 172.21.88.206
+   NetBIOS over Tcpip. . . . . . . . : Enabled
+```
+
+- `IPv4 Address`: 電腦被分配到的 IP 位址
+- `Subnet Mask`: 子網路遮罩，用來區分是不是本地網路的裝置
+- `Default Gateway`: 預設閘道，當封包不是發送到本地網路時，會送到這個位址
+- `DNS Servers`: DNS 伺服器的位址，用來解析網域名稱
+
+## Step 2: ARP
+
+現在電腦已經有了 Gateway 的 IP 位址了，但記得我們前面提到過，區域網路是使用 MAC address 來溝通的，因此需要使用 ARP 協議來查詢 Gateway 的 MAC address。
+
+ARP 的運作方式如下 :
+
+1. 檢查本地的 ARP 快取表，看看有沒有 Gateway 的 MAC address
+2. 如果沒有，廣播 ARP Request 封包，詢問 "誰是 172.21.88.206?"
+3. Gateway 收到請求後，回應 ARP Reply 封包，提供自己的 MAC address
+4. 電腦收到回應後，將 IP 和 MAC address 對應關係存到 ARP 快取表中
+
+我們可以使用 `arp -a` 指令來查看目前的 ARP 快取表。
+
+```bash
+arp -a
+```
+
+```
+Interface: 172.21.88.186 --- 0x12
+  Internet Address      Physical Address      Type
+  172.21.88.206         4a-fb-86-53-d9-8d     dynamic
+  172.21.88.255         ff-ff-ff-ff-ff-ff     static
+  224.0.0.22            01-00-5e-00-00-16     static
+  224.0.0.251           01-00-5e-00-00-fb     static
+  224.0.0.252           01-00-5e-00-00-fc     static
+  239.255.255.250       01-00-5e-7f-ff-fa     static
+  255.255.255.255       ff-ff-ff-ff-ff-ff     static
+```
+
+可以看到我們的 IPv4 地址 `172.21.88.186` 中有一個 `172.21.88.206` 的對應 MAC address `4a-fb-86-53-d9-8d`，且類型是 dynamic，表示這是透過 ARP 協議動態取得的。
+
+## Step 3: DNS
+
+有了 Gateway 的 MAC address 後就可以開始發送封包了。
+
+但在這之前還需要先將我們要存取的網域名稱 `ec2.us-east-1.amazonaws.com` 解析成 IP 位址，這時就需要用到 DNS 協議。
+
+DNS 的運作方式如下 :
+
+1. 電腦會先檢查本地的 DNS 快取，看看有沒有對應的 IP 位址
+2. 如果沒有，會向設定的 DNS 伺服器發送 DNS 查詢請求，DNS 伺服器會先向根域伺服器查詢，再逐層向下查詢直到取得最終的 IP 位址
+3. 電腦收到回應後，將網域名稱和 IP 位址存到本地的 DNS 快取中
+
+我們可以使用 `nslookup` 指令來查看 DNS 解析的結果。
+
+```bash
+nslookup ec2.us-east-1.amazonaws.com
+```
+
+```
+Server:  UnKnown
+Address:  172.21.88.206
+
+Non-authoritative answer:
+Name:    ec2.us-east-1.amazonaws.com
+Address:  52.94.232.172
+```
+
+可以看到 `ec2.us-east-1.amazonaws.com` 的 IP 是 `52.94.232.172`。
+
+## Step 4: NAT
+
+在把封包送到外部網路之前，因為公網 IP 的稀缺性，很多網路會使用 NAT 來讓多台內部裝置可以共用一個公網 IP 位址來存取外部網路。
+
+NAT 的運作方式如下 :
+
+1. 當內部裝置要存取外部網路時，會將封包發送到 NAT 路由器
+2. NAT 路由器會將內部裝置的 IP 和埠號轉換成公網 IP 和埠號，並記錄這個對應關係
+3. 當外部回應到達 NAT 路由器時，會根據之前記錄的對應關係，將封包轉發回正確的內部裝置
+
+這樣一來，內部裝置就可以透過 NAT 路由器共享同一個公網 IP 位址，並且仍然能夠正常地與外部網路進行通訊。
+
+:::info
+根據 RFC 1918，以下是常見的私有 IP 位址範圍 :
+
+- 10.0.0.0/8
+- 172.16.0.0/12
+- 192.168.0.0/16
+
+由此可知，我們的 IP 位址 `172.21.88.186` 是屬於私有的 IP 位址範圍，因此我們的網路環境是使用 NAT 的。
+:::
+
+## Step 5: Routing
+
+現在我們的封包已經出了本地網路，接下來就會透過一連串的路由器來將封包送到目的地。
+
+而在這個過程中，封包需要在 intra-domain 以及 inter-domain 之間進行路由選擇。
+
+Intra-domain routing 是指在同一個自治系統 (AS) 內部進行的路由選擇，ISP 可以自行選擇使用的協議，常見的有 OSPF、RIP 跟 IS-IS 等，現代的大型網路也有可能使用 SDN 來進行路由管理。
+
+Inter-domain routing 則是指在不同自治系統之間進行的路由選擇，使用的協議是 BGP。
+
+可以用 `traceroute` 來觀察一下封包傳送的路徑。
+
+```bash
+tracert ec2.us-east-1.amazonaws.com
+```
+
+```
+Tracing route to ec2.us-east-1.amazonaws.com [54.239.28.168]
+over a maximum of 30 hops:
+
+  1     4 ms     1 ms     3 ms  172.21.88.206
+  2     *        *        *     Request timed out.
+  3    20 ms    20 ms    39 ms  10.54.52.202
+  4    39 ms    21 ms    28 ms  10.254.74.147
+  5     *        *        *     Request timed out.
+  6    36 ms    16 ms    30 ms  60-199-4-189.static.tfn.net.tw [60.199.4.189]
+  7    28 ms    18 ms    27 ms  60-199-14-241.static.tfn.net.tw [60.199.14.241]
+  8     *        *       20 ms  ce-1-1-c43-1-200.a01.taiptw01.tw.bb.gin.ntt.net [61.58.33.221]
+  9    23 ms    17 ms    28 ms  ae-2.r24.taiptw01.tw.bb.gin.ntt.net [129.250.6.86]
+ 10     *      206 ms   187 ms  ae-0.amazon.dllstx14.us.bb.gin.ntt.net [128.241.14.138]
+ 11     *        *        *     Request timed out.
+ 12   215 ms   179 ms   188 ms  176.32.125.179
+ 13     *        *        *     Request timed out.
+ 14     *        *        *     Request timed out.
+ 15     *        *        *     Request timed out.
+ 16     *        *        *     Request timed out.
+ 17     *        *        *     Request timed out.
+ 18     *        *        *     Request timed out.
+ 19     *        *        *     Request timed out.
+ 20     *        *        *     Request timed out.
+ 21     *        *        *     Request timed out.
+ 22     *        *        *     Request timed out.
+ 23     *        *        *     Request timed out.
+ 24     *        *        *     Request timed out.
+ 25   236 ms   219 ms   219 ms  54.239.28.168
+
+Trace complete.
+```
+
+可以看到封包經過了多個路由器，其中 `static.tfn.net.tw` 是台灣大哥大的路由器 (我手機的網路是台灣大哥大)，而 `gin.ntt.net` 則是一個國際的 AS (AS2914)，也就是說我的封包是先經過台灣大哥大的網路，然後再透過 NTT 的網路送到 Amazon 的伺服器。
+
+除此之外，也可以使用 [bgp.he.net](https://bgp.he.net/) 來查看自己的公網 IP 位址所屬的 AS 以及相關資訊。
+
+## Step 6: TCP
+
+到目前為止，我們已經成功發送了 DNS 請求，在經過了一連串的路由器之後，終於抵達了 DNS 伺服器並且拿到了 `ec2.us-east-1.amazonaws.com` 的 IP 位址，接著就要開始發送 HTTP 請求了。
+
+在發送 HTTP 請求之前，首先會透過 TCP 協議來建立一個可靠的連接。
+
+TCP 的三次握手過程如下 :
+
+1. 客戶端發送一個 SYN 封包給伺服器，表示想要建立連接
+2. 伺服器收到 SYN 封包後，回應一個 SYN-ACK 封包，表示同意建立連接
+3. 客戶端收到 SYN-ACK 封包後，回應一個 ACK 封包，表示連接已經建立
+
+## Step 7: TLS
+
+在建立了 TCP 連接之後，為了防止中間人攻擊以及確保資料的機密性，接下來會透過 TLS 協議來進行加密。
+
+## Step 8: HTTPS
+
+在完成了 TLS 握手之後，現在我們已經有了一個安全的通道，接下來就可以透過這個通道來發送 HTTPS 請求了。
