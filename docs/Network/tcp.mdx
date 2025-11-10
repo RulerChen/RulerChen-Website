@@ -1,0 +1,141 @@
+---
+title: 'TCP'
+sidebar_position: '200'
+description: 'Transmission Control Protocol'
+keywords: ['Computer Networks', 'Networking', 'TCP']
+tags: ['Network']
+---
+
+## TCP Overview
+
+TCP (Transmission Control Protocol) 是一個運作在傳輸層的協議。
+
+由於很多應用程式需要仰賴可靠的網路傳輸服務，但是網路層提供的服務是 best-effort 的，無法保證資料的可靠傳輸，因此我們需要一個能夠提供可靠傳輸的協議，這就是 TCP 的主要目標。
+
+TCP 主要提供以下功能 :
+
+- Reliability: 確保資料完整且有序地傳送
+- Flow Control: 接收端會告訴發送端其緩衝區大小
+- Congestion Control: 根據網路擁塞狀況調整發送速率
+- Full-duplex Communication: 接收方和發送方可以同時互相傳輸資料
+
+## TCP header structure
+
+MTU 裡面包含了 IP header、 TCP header 跟資料，而 MSS 則是只包含資料的大小。
+
+- MTU (Maximum Transmission Unit): 資料連結層可以傳送的大小 (整個第三層的 IP 封包)，以 Ethernet 為例，MTU 通常是 1500 bytes
+- MSS (Maximum Segment Size): 在 TCP 層可以傳送的最大資料大小，也就是 MTU - IP header - TCP header
+
+對於 IP header 來說，IPv4 的標頭大小最小為 20 bytes，可以依據 IHL 欄位增加選項欄位，最大可達 60 bytes，IPv6 的標頭大小則為固定 40 bytes。
+而 TCP header 同樣最小為 20 bytes，可以依據 Data Offset 增加欄位，最大可達 60 bytes。
+
+<ImageModal src="/img/network/tcp/image.webp" caption="Packet Structure" width="800" />
+
+接著來看看 TCP header 的結構。
+
+<ImageModal src="/img/network/tcp/tcp-header.webp" caption="TCP Header Structure" width="600" />
+
+- Source Port (16 bits): 發送方的 port 
+- Destination Port (16 bits): 接收方的 port
+- Sequence Number (32 bits): 用於排序跟去重，表示這個封包中第一個位元組的序號
+- Acknowledgment Number (32 bits): 確認號，表示期望接收到的下一個位元組序號，只有在 ACK 設置時才有效
+- Data Offset (4 bits): 表示 TCP 標頭的長度 (以 32-bit 為單位)，最小值為 5 (20 bytes)，最大值為 15 (60 bytes)
+- Reserved (4 bits): 保留欄位，目前不需要
+- Control Flags (8 bits): 用來控制連接的狀態，常見的有 ACK、SYN、FIN、RST 等
+- Window Size (16 bits): 表示接收端還有多少緩衝區可以接收資料，用於 flow control
+- Checksum (16 bits): 用於錯誤偵測，確保資料在傳輸過程中沒有被破壞
+- Urgent Pointer (16 bits): 幾乎不會使用，用在 URG 被設置時資料的結束位置
+- Options: 用於擴展 TCP 功能，常見選項有 MSS, Window Scale (擴大 window size), SACK (告知傳送方收到甚麼不連續的資料), Timestamps 等
+
+## TCP connection
+
+### Three-way Handshake
+
+TCP 使用三向交握來建立連接，確保雙方都準備好進行資料傳輸。
+
+這裡所說的 seq 指的是 ISN，是一個隨機生成的初始序號，用來告訴對方資料的起始位置，並防止舊連接的封包干擾新連接。
+
+- 客戶端發送 SYN 跟 seq `x` 給伺服器
+- 伺服器回應 SYN-ACK，seq `y`，ack `x+1`
+- 客戶端發送 ACK，seq `x+1`，ack `y+1`
+
+為什麼需要三次而不是兩次? [解釋](https://draven.co/whys-the-design-tcp-three-way-handshake/)
+
+簡單來說，有以下兩個原因 :
+
+- 為了防止舊連接重複初始化
+- 確保雙方都能接收到對方的初始序號
+
+### Four-way Handshake
+
+因為 TCP 有特殊的半關閉 (half-close) 狀態，允許一方先通知另一方它已經完成資料傳送，但仍然可以接收資料，所以 TCP 使用四次揮手來終止連接。
+
+- 發送端發送 FIN，告訴接收端資料已經不會再發送了
+- 接收端回應 ACK，告訴發送端已經收到 FIN
+- 接收端發送 FIN，告訴發送端資料已經不會再發送了
+- 發送端回應 ACK，告訴接收端已經收到 FIN
+
+在最後一個 ACK 發送後，發送端會進入 TIME_WAIT 狀態，持續一段時間 (通常是 2 倍的 MSL, 一個 MSL 指的是封包在網路上最大的存活時間)，以確保最後的 ACK 能夠被接收端收到，防止舊連接的封包干擾新連接。
+
+## Window Size
+
+為了最大效率的利用網路頻寬，TCP 不可能每傳送一個封包就等待確認，而是允許在等待 ACK 的同時繼續傳送更多的封包，這就是所謂的滑動視窗機制。
+
+而要怎麼決定一次最多可以傳送幾個封包呢? 這就要看視窗大小而定，TCP 會透過兩個機制來控制視窗大小，分別是流量控制 (flow control) 跟擁塞控制 (congestion control)，並取最小值作為實際的發送視窗大小。
+
+### Flow Control
+
+對於接收端來說，為了保持資料的順序性，它需要一個緩衝區來暫存接收到的資料，並按照序號順序交給應用程式。
+然而，接收端的緩衝區大小是有限的，如果發送端一次傳送過多的資料，可能會導致接收端的緩衝區溢位，進而丟棄封包，造成資料遺失。
+
+接收端會在 TCP 的 Window Size 欄位告訴發送端它目前還有多少緩衝區可以接收資料，這個值稱為接收視窗 (rwnd)。
+
+### Congestion Control
+
+Congestion control 的目標是防止網路因為過多的資料而擁塞，進而導致封包遺失跟延遲增加。
+
+一個好的 congestion control 機制有三個主要目標 :
+
+1. 防止網路因為過多的資料而擁塞
+2. 在網路不崩潰的情況下，最大化頻寬利用率跟吞吐量
+3. 公平地分配頻寬給不同的 TCP 連接
+
+在設計上，congestion control 有很多種可行的設計方式，但主流的做法都是由發送方來監控發送的效率 (丟包)，無須接收方或是路由器的幫助。
+
+大多數的演算法都可以分成三個部分 :
+
+1. 如何偵測擁塞
+2. 初始的速率應該怎麼決定
+3. 面對擁塞時應該如何調整發送速率
+
+#### Detecting Congestion
+
+偵測擁塞的方式主要有三種 :
+
+- 丟包偵測: 發送方發現封包遺失時認定網路出現擁塞，這是主流的做法
+- 延遲增加偵測: 發送方發現封包的 RTT 增加時認定網路出現擁塞，這是新興的做法，如 Google 的 BBR
+- Explicit Congestion Notification (ECN): 路由器主動標記封包，告訴發送方網路出現擁塞，較難實現，因為需要路由器的支援
+
+#### Discovering Initial Rate
+
+對於剛建立的連接，TCP 並不知道網路的狀況，因此 TCP 採取的是慢啟動的機制，從一個較低的速率開始，然後逐漸增加發送速率，直到發現網路開始出現擁塞的跡象。
+
+一開始的擁塞視窗大小通常設為 1 個 MSS，然後每收到一個 ACK 就增加一個 MSS，這樣每經過一個 RTT，cwnd 就會翻倍增加，方便快速找到網路的可用頻寬。
+而當 cwnd 增加到一個閾值 (ssthresh) 時，TCP 會進入擁塞避免階段，改為每經過一個 RTT 才增加 1 個 MSS，這樣可以避免過快地增加發送速率而導致擁塞。
+
+#### Adjusting Sending Rate
+
+在遇到擁塞時，TCP 會採取不同的策略來調整發送速率 :
+
+- Fast Retransmit and Fast Recovery: 當發送方收到三個重複的 ACK 時，將 ssthresh 設定為 cwnd 的一半，並立即重傳遺失的封包，再將 cwnd 減半，然後進入快速恢復階段，每個 RTT 增加 1 個 MSS
+- Timeout Retransmission: 當發送方在一定時間內沒有收到 ACK 時，認定封包遺失，重傳遺失的封包，並將 cwnd 重設為 1 個 MSS，然後重新進入慢啟動階段
+
+這種慢速增加快速減少的做法被稱作 AIMD (Additive Increase Multiplicative Decrease)。
+使用這種做法的原因在於這種模式才能使得多個 TCP 連接能夠公平地分享頻寬，可以參考[這裡](https://textbook.cs168.io/transport/cc-design.html#adjustments-aimd-dynamics)。
+
+#### Other Algorithms
+
+上述我們提到的機制主要是基於 TCP Reno 的設計，然而隨著網路技術的進步，Reno 過於保守的增長策略已經無法滿足現代網路的需求，因此後續出現了許多改進的擁塞控制演算法。
+
+- Cubic: 現今 Linux 系統的預設擁塞控制演算法，使用三次方函數來調整 cwnd，避免 Reno 過於保守的增長方式
+- Google BBR (Bottleneck Bandwidth and Round-trip propagation time): 基於頻寬估計的擁塞控制演算法，透過測量頻寬跟 RTT 來調整發送速率
