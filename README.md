@@ -3,33 +3,23 @@
 This website includes my personal notes, and below are some useful resources I collected during my study and interview preparation.
 
 > [!NOTE]
-> 🎓 : Online Course  
-> 📝 : Articles / Blog Posts  
-> ⚙️ : Tools / Platforms  
-> 📖 : Books  
-> 🎥 : Videos
+> 🎓 Online Course 📝 Article / Blog Post  ⚙️ Tool / Platform  📖 Book  🎥 Video
 
 ## Computer System
 
-- 🎓 [CMU 15-213 Introduction to Computer Systems](https://www.cs.cmu.edu/~213/)
-  - 🎥 [B站動畫講解 (只到第八章)](https://www.bilibili.com/video/BV1cD4y1D7uR/?vd_source=0b8d45cc2260b9a7a9d948d819ac16f3)
-  - 📝 [Course Note](https://github.com/zhuozhiyongde/Introduction-to-Computer-System-2023Fall-PKU/tree/main?tab=readme-ov-file)
-  - 📖 [CSAPP3e](https://csapp.cs.cmu.edu/)
+- 🎓 [CMU 15-213 Introduction to Computer Systems](https://www.cs.cmu.edu/~213/) ([動畫講解 (只到第八章)](https://www.bilibili.com/video/BV1cD4y1D7uR/?vd_source=0b8d45cc2260b9a7a9d948d819ac16f3)、[Course Note](https://github.com/zhuozhiyongde/Introduction-to-Computer-System-2023Fall-PKU/tree/main?tab=readme-ov-file)、[CSAPP3e](https://csapp.cs.cmu.edu/))
 
 ## Operating System
 
-- 🎓 [MIT 6.1810 Operating System Engineering](https://pdos.csail.mit.edu/6.828/2025/index.html)
-  - 📝 [MIT 6.1810 中文翻譯](https://mit-public-courses-cn-translatio.gitbook.io/mit6-s081)
+- 🎓 [MIT 6.1810 Operating System Engineering](https://pdos.csail.mit.edu/6.828/2025/index.html) ([中文翻譯](https://mit-public-courses-cn-translatio.gitbook.io/mit6-s081))
 
 ## Computer Network
 
-- 🎓 [UCB CS168 Introduction to the Internet: Architecture and Protocols](https://su25.cs168.io/)
-  - 📝 [Course Notes](https://textbook.cs168.io/)
+- 🎓 [UCB CS168 Introduction to the Internet: Architecture and Protocols](https://su25.cs168.io/) ([Course Notes](https://textbook.cs168.io/))
 
 ## Distributed System
 
-- 🎓 [MIT 6.5840 Distributed Systems](https://pdos.csail.mit.edu/6.824)
-  - 🎥 [MIT 6.5840 Lecture Videos (2020)](https://www.youtube.com/watch?v=cQP8WApzIQQ&list=PLrw6a1wE39_tb2fErI4-WkMbsvGQk9_UB)
+- 🎓 [MIT 6.5840 Distributed Systems](https://pdos.csail.mit.edu/6.824) ([Lecture Videos (2020)](https://www.youtube.com/watch?v=cQP8WApzIQQ&list=PLrw6a1wE39_tb2fErI4-WkMbsvGQk9_UB))
 
 ## Database
 
@@ -62,7 +52,7 @@ This website includes my personal notes, and below are some useful resources I c
 
 ### System Design
 
-- 📝⚙️ [Hello Interview](https://www.hellointerview.com/)
+- ⚙️ [Hello Interview](https://www.hellointerview.com/)
 - 🎥 [Jordan Has No Life](https://www.youtube.com/@jordanhasnolife5163)
 
 ### Behavioral Questions
