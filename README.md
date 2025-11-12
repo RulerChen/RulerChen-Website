@@ -3,7 +3,7 @@
 This website includes my personal notes, and below are some useful resources I collected during my study and interview preparation.
 
 > [!NOTE]
-> 🎓 Online Course 📝 Article / Blog Post  ⚙️ Tool / Platform  📖 Book  🎥 Video
+> 🎓=Online Course, 📝=Article/Blog Post, ⚙️=Tool/Platform, 📖=Book, 🎥=Video
 
 ## Computer System
 
