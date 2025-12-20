@@ -61,6 +61,13 @@ const config: Config = {
 
   headTags: [
     {
+      tagName: 'meta',
+      attributes: {
+        name: 'robots',
+        content: 'noindex, nofollow',
+      },
+    },
+    {
       tagName: 'link',
       attributes: {
         rel: 'preconnect',

@@ -1,4 +1,3 @@
 User-agent: *
+Disallow: /
 Sitemap: https://rulerchen.github.io/RulerChen-Website/sitemap.xml
-Disallow: /blog/archives/
-Allow: /
