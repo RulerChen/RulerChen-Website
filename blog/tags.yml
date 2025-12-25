@@ -1,4 +1,8 @@
 Internship:
   label: Internship
   permalink: /internship
-  description: 這裡是我的實習經歷
+  description: 實習經歷
+Retrospect:
+  label: Retrospect
+  permalink: /retrospect
+  description: 回顧與反思
