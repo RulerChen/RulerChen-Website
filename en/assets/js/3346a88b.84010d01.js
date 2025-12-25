@@ -1,1 +1,0 @@
-"use strict";(self.webpackChunkrulerchen_website=self.webpackChunkrulerchen_website||[]).push([["8007"],{4965:function(e){e.exports=JSON.parse('{"metadata":{"permalink":"/RulerChen-Website/en/blog","page":1,"postsPerPage":10,"totalPages":1,"totalCount":3,"blogDescription":"Blog","blogTitle":"Blog"}}')}}]);
